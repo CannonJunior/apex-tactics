@@ -1,0 +1,32 @@
+{
+  "unit_generation": {
+    "base_attributes": {
+      "min_value": 5,
+      "max_value": 15,
+      "random_bonus_min": 3,
+      "random_bonus_max": 8
+    },
+    "derived_stats": {
+      "health_multiplier": 10,
+      "mana_multiplier": 5,
+      "movement_base": 3,
+      "movement_bonus_per_speed": 0.2,
+      "attack_range_base": 1,
+      "effect_area_base": 1
+    },
+    "combat_formulas": {
+      "physical_attack": "strength + (finesse * 0.5)",
+      "magical_attack": "wisdom + (wonder * 0.5)",
+      "spiritual_attack": "faith + (spirit * 0.5)",
+      "physical_defense": "fortitude + (strength * 0.3)",
+      "magical_defense": "wonder + (wisdom * 0.3)",
+      "spiritual_defense": "worthy + (faith * 0.3)"
+    },
+    "level_scaling": {
+      "base_level": 1,
+      "attribute_per_level": 2,
+      "health_per_level": 5,
+      "mana_per_level": 2
+    }
+  }
+}

@@ -1,5 +1,5 @@
 def main():
-    print("Hello from apex-tactics!")
+    print("Hello from alt-apex-tactics!")
 
 
 if __name__ == "__main__":
