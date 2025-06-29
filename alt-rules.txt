@@ -1,0 +1,31 @@
+Rule 1: If you create a new folder, immediately create a CLAUDE.md file within that folder and     │
+│   add any documentation that you think is needed. Rule 2: Do not exceed 100 lines in a CLAUDE.md     │
+│   file unless you think the current progress is critical to the game development. Rule 3: Do not     │
+│   exceed 200 lines in a CLAUDE.md file without first asking permission. Rule 4: after created a      │
+│   CLAUDE.md files, review and update them with XML tags for consistency and clarity. Useful XML      │
+│   tags include <system_context> — overview and purpose                                               │
+│   <critical_notes> — must-know information                                                           │
+│   <paved_path> — the canonical way                                                                   │
+│   <file_map> — where to find things                                                                  │
+│   <patterns> — common code patterns                                                                  │
+│   <example> — examples                                                                               │
+│   <workflow> — for chain of thought steps                                                            │
+│   <common_tasks> — step-by-step guides                                                               │
+│   <hatch> — alternative approaches                                                                   │
+│   <advanced_pattern> — complex use cases                                                             │
+│   <fatal_implications> — for when things go wrong. Create a single XML.md file at the top level. If  │
+│   you create a new XML tag in a CLAUDE.md file, add that tag to XML.md and define the new tag.       │
+│   Rule 5: use <file_map> tags in CLAUDE.md files pointing to example files. These will tell you      │
+│   where to look for things, without adding too much detail to your context window. Rule 6: Create a  │
+│   single EXAMPLES.md file at the top level. If you find that you create good patterns of code, add   │
+│   these to EXAMPLES.md. Rule 7: Use @ syntax to tag files. This adds the @ symbol before file        │
+│   paths so that you know how to index it. You can use this in CLAUDE.md files, in code comments, or  │
+│   elsewhere if it helps. Rule 8: If you anticipate that a task will take a long time, use            │
+│   parallelTasksCount or additional agents. This is particularly useful if you are reading multiple   │
+│   files, especially multiple CLAUDE.md files. Rule 9: Whenever you reach 30% of available context    │
+│   remaining automatically /compact. Rule 10: The day ends at midnight eastern time (same time zone   │
+│   as New York City). At the end of the day enter Plan Mode and use "ultrathink" to evaluate the      │
+│   work that you have done in the past 24 hours. Rule 11: Look for opportunities to create MCP        │
+│   servers whenever possible. Create a MCP.md file at the top level that contains a list of every     │
+│   MCP server in the code bases and their tools, resources, prompts, and templates. Rule 12: Let it   │
+│   rip!
