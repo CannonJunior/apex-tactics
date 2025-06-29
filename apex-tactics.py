@@ -34,10 +34,14 @@ class Unit:
         self.current_move_points = self.move_points  # Current movement available this turn
         self.alive = True
         
-        # Combat attributes
-        self.attack_range = 1  # Default attack range
-        self.attack_effect_area = 0  # Default single-target attack (0 means only target tile)
-        self.equipped_weapon = None  # Could be expanded later
+        # Combat attributes - base values
+        self.base_attack_range = 1  # Default attack range
+        self.base_attack_effect_area = 0  # Default single-target attack (0 means only target tile)
+        
+        # Equipment slots
+        self.equipped_weapon = None
+        self.equipped_armor = None
+        self.equipped_accessory = None
         
         # Default action options for all units
         self.action_options = ["Move", "Attack", "Spirit", "Magic", "Inventory"]
@@ -86,12 +90,50 @@ class Unit:
         return (self.spirit + self.faith + self.worthy) // 3
         
     @property
+    def attack_range(self):
+        """Get current attack range including weapon bonuses"""
+        base_range = self.base_attack_range
+        
+        # Add weapon range bonus
+        if self.equipped_weapon and isinstance(self.equipped_weapon, dict) and 'stats' in self.equipped_weapon:
+            weapon_range = self.equipped_weapon['stats'].get('attack_range', 0)
+            return max(base_range, weapon_range)  # Use higher value
+        
+        return base_range
+    
+    @property
+    def attack_effect_area(self):
+        """Get current attack effect area including weapon bonuses"""
+        base_area = self.base_attack_effect_area
+        
+        # Add weapon area bonus
+        if self.equipped_weapon and isinstance(self.equipped_weapon, dict) and 'stats' in self.equipped_weapon:
+            weapon_area = self.equipped_weapon['stats'].get('effect_area', 0)
+            return max(base_area, weapon_area)  # Use higher value
+        
+        return base_area
+    
+    @property
     def physical_attack(self):
-        return (self.speed + self.strength + self.finesse) // 2
+        base_attack = (self.speed + self.strength + self.finesse) // 2
+        
+        # Add weapon attack bonus
+        if self.equipped_weapon and isinstance(self.equipped_weapon, dict) and 'stats' in self.equipped_weapon:
+            weapon_attack = self.equipped_weapon['stats'].get('physical_attack', 0)
+            base_attack += weapon_attack
+        
+        return base_attack
         
     @property
     def magical_attack(self):
-        return (self.wisdom + self.wonder + self.spirit) // 2
+        base_attack = (self.wisdom + self.wonder + self.spirit) // 2
+        
+        # Add weapon magical attack bonus
+        if self.equipped_weapon and isinstance(self.equipped_weapon, dict) and 'stats' in self.equipped_weapon:
+            weapon_attack = self.equipped_weapon['stats'].get('magical_attack', 0)
+            base_attack += weapon_attack
+        
+        return base_attack
         
     @property
     def spiritual_attack(self):
@@ -105,6 +147,62 @@ class Unit:
     def can_move_to(self, x, y, grid):
         distance = abs(x - self.x) + abs(y - self.y)
         return distance <= self.current_move_points and grid.is_valid(x, y)
+    
+    def equip_weapon(self, weapon_data):
+        """
+        Equip a weapon and update combat stats.
+        
+        Args:
+            weapon_data: Weapon data from asset system or dict with stats
+            
+        Returns:
+            True if weapon was equipped successfully
+        """
+        if isinstance(weapon_data, dict) and weapon_data.get('type') == 'Weapons':
+            self.equipped_weapon = weapon_data
+            print(f"{self.name} equipped {weapon_data['name']}")
+            return True
+        return False
+    
+    def equip_armor(self, armor_data):
+        """
+        Equip armor and update defensive stats.
+        
+        Args:
+            armor_data: Armor data from asset system
+            
+        Returns:
+            True if armor was equipped successfully
+        """
+        if isinstance(armor_data, dict) and armor_data.get('type') == 'Armor':
+            self.equipped_armor = armor_data
+            print(f"{self.name} equipped {armor_data['name']}")
+            return True
+        return False
+    
+    def equip_accessory(self, accessory_data):
+        """
+        Equip an accessory and update stats.
+        
+        Args:
+            accessory_data: Accessory data from asset system
+            
+        Returns:
+            True if accessory was equipped successfully
+        """
+        if isinstance(accessory_data, dict) and accessory_data.get('type') == 'Accessories':
+            self.equipped_accessory = accessory_data
+            print(f"{self.name} equipped {accessory_data['name']}")
+            return True
+        return False
+    
+    def get_equipment_summary(self):
+        """Get summary of equipped items"""
+        return {
+            'weapon': self.equipped_weapon['name'] if self.equipped_weapon else 'None',
+            'armor': self.equipped_armor['name'] if self.equipped_armor else 'None',
+            'accessory': self.equipped_accessory['name'] if self.equipped_accessory else 'None'
+        }
 
 # Battle Grid System
 class BattleGrid:
@@ -336,12 +434,66 @@ class TacticalRPG:
         ]
         
         self.units = player_units + enemy_units
+        
+        # Equip weapons for demonstration
+        self.equip_demo_weapons()
+        
         for unit in self.units:
             self.grid.add_unit(unit)
             self.unit_entities.append(UnitEntity(unit))
             
         self.turn_manager = TurnManager(self.units)
         self.refresh_all_ap()
+    
+    def equip_demo_weapons(self):
+        """Equip demonstration weapons to show range/area effects"""
+        # Create spear weapon
+        spear_data = {
+            "id": "spear",
+            "name": "Spear",
+            "type": "Weapons",
+            "tier": "BASE",
+            "description": "A long-reach spear with extended attack range and area effect.",
+            "stats": {
+                "physical_attack": 14,
+                "attack_range": 2,
+                "effect_area": 2
+            }
+        }
+        
+        # Create bow weapon for comparison
+        bow_data = {
+            "id": "magic_bow",
+            "name": "Magic Bow",
+            "type": "Weapons", 
+            "tier": "ENCHANTED",
+            "description": "An enchanted bow with long range.",
+            "stats": {
+                "physical_attack": 22,
+                "magical_attack": 8,
+                "attack_range": 3,
+                "effect_area": 1
+            }
+        }
+        
+        # Equip weapons to units
+        if len(self.units) >= 4:
+            # Give Hero the spear (range 2, area 2)
+            self.units[0].equip_weapon(spear_data)
+            print(f"🔥 {self.units[0].name} equipped {spear_data['name']} - Range: {self.units[0].attack_range}, Area: {self.units[0].attack_effect_area}")
+            
+            # Give Sage the bow (range 3, area 1)
+            self.units[1].equip_weapon(bow_data)
+            print(f"🏹 {self.units[1].name} equipped {bow_data['name']} - Range: {self.units[1].attack_range}, Area: {self.units[1].attack_effect_area}")
+            
+            print("\n📋 Test Instructions:")
+            print("1. Click on Hero - notice spear gives Range 2, Area 2")
+            print("2. Click Attack - see red tiles show 2-tile attack range")
+            print("3. Click target - see yellow area effect covering 2-tile radius")
+            print("4. Try same with Sage - bow has Range 3, Area 1")
+            print("5. Compare the different weapon effects!")
+        
+        print("✅ Demo weapons equipped for testing")
         
     def end_current_turn(self):
         """End the current unit's turn and move to next unit"""
@@ -356,6 +508,9 @@ class TacticalRPG:
             # Update control panel with new current unit
             current_unit = self.turn_manager.current_unit()
             control_panel.update_unit_info(current_unit)
+            
+            # Update carousel to show new current turn
+            control_panel.update_carousel_highlighting()
             
             print(f"Turn ended. Now it's {current_unit.name}'s turn.")
         
@@ -848,6 +1003,11 @@ class ControlPanel:
         # Stats display text
         self.stats_display_text = Text('')
         
+        # Unit carousel variables
+        self.unit_carousel_icons = []
+        self.carousel_container = Entity(parent=camera.ui)
+        self.game_reference = None
+        
         # Create action buttons first
         self.end_turn_btn = Button(
             text='END TURN',
@@ -869,6 +1029,9 @@ class ControlPanel:
         self.attack_btn.on_click = self.attack_clicked
         self.defend_btn.on_click = self.defend_clicked
         
+        # Create unit carousel label
+        self.carousel_label = Text('Turn Order:', parent=camera.ui)
+        
         # Create main window panel with all content including buttons
         self.panel = WindowPanel(
             title='Tactical RPG Control Panel',
@@ -889,6 +1052,10 @@ class ControlPanel:
         self.panel.x = 0
         self.panel.y = -0.3
         
+        # Position carousel elements
+        self.carousel_label.position = (-0.45, -0.45, 0)
+        self.carousel_label.scale = 0.8
+        
         # Layout the content within the panel
         self.panel.layout()
     
@@ -908,17 +1075,184 @@ class ControlPanel:
     def set_game_reference(self, game):
         """Set reference to the main game object for button interactions"""
         self.game_reference = game
+        # Initialize carousel with game units
+        if game and hasattr(game, 'turn_manager') and game.turn_manager:
+            self.create_unit_carousel()
+    
+    def create_unit_carousel(self):
+        """Create carousel of unit icons in turn order"""
+        if not self.game_reference or not self.game_reference.turn_manager:
+            return
+        
+        # Clear existing carousel
+        self.clear_carousel()
+        
+        # Get units in turn order
+        units_in_order = self.game_reference.turn_manager.units
+        
+        # Create icon for each unit
+        for i, unit in enumerate(units_in_order):
+            unit_icon = self.create_unit_icon(unit, i)
+            self.unit_carousel_icons.append(unit_icon)
+        
+        print(f"Created unit carousel with {len(self.unit_carousel_icons)} units")
+    
+    def create_unit_icon(self, unit, index):
+        """Create a single unit icon for the carousel"""
+        # Calculate position (spacing icons horizontally)
+        icon_size = 0.06
+        icon_spacing = 0.07
+        start_x = -0.3  # Start position
+        icon_x = start_x + (index * icon_spacing)
+        icon_y = -0.45
+        
+        # Determine icon color based on unit type and status
+        icon_color = self.get_unit_icon_color(unit)
+        
+        # Create the icon as a clickable button
+        unit_icon = Button(
+            parent=self.carousel_container,
+            model='cube',
+            texture='white_cube',
+            color=icon_color,
+            scale=icon_size,
+            position=(icon_x, icon_y, 0)
+        )
+        
+        # Set up click callback
+        unit_icon.on_click = lambda u=unit: self.on_unit_icon_clicked(u)
+        
+        # Store unit reference
+        unit_icon.unit = unit
+        
+        # Add unit name text below icon
+        unit_name_text = Text(
+            text=unit.name[:4],  # Abbreviate long names
+            parent=self.carousel_container,
+            position=(icon_x, icon_y - 0.04, 0),
+            scale=0.5,
+            origin=(0, 0)
+        )
+        
+        # Store text reference for cleanup
+        unit_icon.name_text = unit_name_text
+        
+        return unit_icon
+    
+    def get_unit_icon_color(self, unit):
+        """Get color for unit icon based on unit type and status"""
+        # Current turn unit gets special highlighting
+        if (self.game_reference and 
+            self.game_reference.turn_manager and 
+            self.game_reference.turn_manager.current_unit() == unit):
+            return color.yellow
+        
+        # Color by unit type
+        type_colors = {
+            UnitType.HEROMANCER: color.blue,
+            UnitType.UBERMENSCH: color.red,
+            UnitType.SOUL_LINKED: color.magenta,
+            UnitType.REALM_WALKER: color.green,
+            UnitType.WARGI: color.orange,
+            UnitType.MAGI: color.cyan
+        }
+        
+        base_color = type_colors.get(unit.type, color.gray)
+        
+        # Dim color if unit is low on health
+        if unit.hp < unit.max_hp * 0.3:
+            return color.rgb(base_color.r * 0.5, base_color.g * 0.5, base_color.b * 0.5)
+        
+        return base_color
+    
+    def create_unit_tooltip(self, unit):
+        """Create tooltip text for unit icon"""
+        weapon_name = unit.equipped_weapon['name'] if unit.equipped_weapon else 'None'
+        tooltip_text = f"{unit.name} ({unit.type.value})\n"
+        tooltip_text += f"HP: {unit.hp}/{unit.max_hp}\n"
+        tooltip_text += f"MP: {unit.current_move_points}/{unit.move_points}\n"
+        tooltip_text += f"Weapon: {weapon_name}"
+        return tooltip_text
+    
+    def on_unit_icon_clicked(self, unit):
+        """Handle clicking on a unit icon"""
+        if self.game_reference:
+            print(f"Unit icon clicked: {unit.name}")
+            
+            # Select the unit in the game
+            self.game_reference.selected_unit = unit
+            
+            # Update UI to show selected unit
+            self.update_unit_info(unit)
+            
+            # Highlight the unit on the battlefield
+            self.game_reference.clear_highlights()
+            self.game_reference.highlight_selected_unit()
+            self.game_reference.highlight_movement_range()
+            
+            # Update carousel to reflect current selection
+            self.update_carousel_highlighting()
+    
+    def update_carousel_highlighting(self):
+        """Update carousel icon highlighting to show current turn and selection"""
+        if not self.unit_carousel_icons or not self.game_reference:
+            return
+        
+        current_turn_unit = None
+        if self.game_reference.turn_manager:
+            current_turn_unit = self.game_reference.turn_manager.current_unit()
+        
+        selected_unit = self.game_reference.selected_unit
+        
+        for icon in self.unit_carousel_icons:
+            unit = icon.unit
+            
+            # Determine icon color
+            if unit == current_turn_unit:
+                icon.color = color.yellow  # Current turn
+            elif unit == selected_unit:
+                icon.color = color.white   # Selected
+            else:
+                icon.color = self.get_unit_icon_color(unit)  # Default
+    
+    def clear_carousel(self):
+        """Clear all carousel icons"""
+        for icon in self.unit_carousel_icons:
+            if hasattr(icon, 'name_text'):
+                destroy(icon.name_text)
+            destroy(icon)
+        self.unit_carousel_icons.clear()
+    
+    def update_carousel(self):
+        """Update carousel when units or turn order changes"""
+        if self.game_reference and self.game_reference.turn_manager:
+            self.create_unit_carousel()
+    
+    def cleanup_carousel(self):
+        """Clean up carousel resources"""
+        self.clear_carousel()
+        if self.carousel_container:
+            destroy(self.carousel_container)
+        if self.carousel_label:
+            destroy(self.carousel_label)
     
     def update_unit_info(self, unit):
         if unit:
+            # Get weapon info
+            weapon_name = unit.equipped_weapon['name'] if unit.equipped_weapon else 'None'
+            range_info = f"Range: {unit.attack_range} | Area: {unit.attack_effect_area}"
+            
             self.unit_info_text.text = f"ACTIVE: {unit.name} ({unit.type.value}) | MP: {unit.current_move_points}/{unit.move_points} | HP: {unit.hp}/{unit.max_hp}"
-            self.stats_display_text.text = f"ATK - Physical: {unit.physical_attack} | Magical: {unit.magical_attack} | Spiritual: {unit.spiritual_attack}\nDEF - Physical: {unit.physical_defense} | Magical: {unit.magical_defense} | Spiritual: {unit.spiritual_defense}"
+            self.stats_display_text.text = f"WEAPON: {weapon_name} | {range_info}\nATK - Physical: {unit.physical_attack} | Magical: {unit.magical_attack} | Spiritual: {unit.spiritual_attack}\nDEF - Physical: {unit.physical_defense} | Magical: {unit.magical_defense} | Spiritual: {unit.spiritual_defense}"
         else:
             self.unit_info_text.text = "No unit selected"
             self.stats_display_text.text = ""
         
         # Re-layout after text changes
         self.panel.layout()
+        
+        # Update carousel highlighting
+        self.update_carousel_highlighting()
     
     def update_camera_mode(self, mode):
         mode_names = ["Orbit", "Free", "Top-down"]
