@@ -11,7 +11,7 @@ from .inventory_panel import InventoryPanel
 from .talent_panel import TalentPanel
 from .party_panel import PartyPanel
 from .upgrade_panel import UpgradePanel
-from .control_panel import ControlPanel
+from .control_panel import CharacterAttackInterface
 from .game_panel_manager import GamePanelManager, create_game_panels
 
 __all__ = [
@@ -26,7 +26,7 @@ __all__ = [
     'TalentPanel',
     'PartyPanel',
     'UpgradePanel',
-    'ControlPanel',
+    'CharacterAttackInterface',
     
     # Manager
     'GamePanelManager',

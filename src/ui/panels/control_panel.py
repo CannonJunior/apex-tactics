@@ -1,15 +1,15 @@
 """
-Control Panel for Tactical RPG Games
+Character Attack Interface
 
-Main UI panel showing unit info, camera controls, action buttons, and unit carousel.
-Extracted from apex-tactics.py for reusability across projects.
+Main UI interface showing unit info, camera controls, action buttons, and unit carousel.
+Non-draggable interface styled consistently with other game interfaces.
 """
 
 from typing import Optional, Any, List
 
 try:
     from ursina import *
-    from ursina.prefabs.window_panel import WindowPanel
+    from ursina import Panel, Entity, Text, Button, color, camera, destroy
     URSINA_AVAILABLE = True
 except ImportError:
     URSINA_AVAILABLE = False
@@ -19,9 +19,9 @@ from core.models.unit_types import UnitType
 from core.assets.unit_data_manager import get_unit_data_manager
 
 
-class ControlPanel:
+class CharacterAttackInterface:
     """
-    Advanced control panel for tactical RPG games.
+    Character Attack Interface for tactical RPG games.
     
     Features:
     - Current unit information and stats
@@ -30,17 +30,18 @@ class ControlPanel:
     - Action buttons (End Turn)
     - Unit carousel showing turn order
     - Interactive unit selection via carousel
+    - Fixed positioning like other interfaces
     """
     
     def __init__(self, game_reference: Optional[Any] = None):
         """
-        Initialize control panel.
+        Initialize character attack interface.
         
         Args:
             game_reference: Optional reference to main game object for button callbacks
         """
         if not URSINA_AVAILABLE:
-            raise ImportError("Ursina is required for ControlPanel")
+            raise ImportError("Ursina is required for CharacterAttackInterface")
             
         self.game_reference = game_reference
         
@@ -57,8 +58,8 @@ class ControlPanel:
         # Create carousel elements
         self._create_carousel_elements()
         
-        # Create main panel
-        self._create_main_panel()
+        # Create main interface
+        self._create_main_interface()
         
         # Position panel and carousel
         self._position_elements()
@@ -84,34 +85,46 @@ class ControlPanel:
         """Create unit carousel label."""
         self.carousel_label = Text('Turn Order:', parent=camera.ui)
     
-    def _create_main_panel(self):
-        """Create the main window panel with all content."""
-        self.panel = WindowPanel(
-            title='Tactical RPG Control Panel',
-            content=(
-                self.unit_info_text,
-                self.camera_controls_text,
-                self.game_controls_text,
-                self.stats_display_text,
-                Text('Actions:'),  # Label for buttons
-                self.end_turn_btn
-            ),
-            popup=False,
+    def _create_main_interface(self):
+        """Create the main interface with fixed positioning."""
+        # Main background panel
+        self.panel = Entity(
+            model='cube',
+            scale=(0.8, 0.25, 0.01),
+            color=color.Color(0.1, 0.1, 0.15, 0.9),
+            position=(0, -0.3, 0),
             parent=camera.ui
         )
+        
+        # Position text elements on the panel
+        self.unit_info_text.parent = self.panel
+        self.unit_info_text.position = (0, 0.08, 0.01)
+        self.unit_info_text.scale = 0.8
+        
+        self.camera_controls_text.parent = self.panel
+        self.camera_controls_text.position = (0, 0.04, 0.01)
+        self.camera_controls_text.scale = 0.6
+        
+        self.game_controls_text.parent = self.panel
+        self.game_controls_text.position = (0, 0.0, 0.01)
+        self.game_controls_text.scale = 0.6
+        
+        self.stats_display_text.parent = self.panel
+        self.stats_display_text.position = (0, -0.04, 0.01)
+        self.stats_display_text.scale = 0.6
+        
+        # Position end turn button
+        self.end_turn_btn.parent = self.panel
+        self.end_turn_btn.position = (0, -0.08, 0.01)
+        self.end_turn_btn.scale = 0.08
     
     def _position_elements(self):
-        """Position the panel and carousel elements."""
-        # Position the control panel at the bottom
-        self.panel.x = 0
-        self.panel.y = -0.3
+        """Position the interface and carousel elements."""
+        # Interface is positioned in _create_main_interface
         
         # Position carousel elements
         self.carousel_label.position = (-0.45, -0.45, 0)
         self.carousel_label.scale = 0.8
-        
-        # Layout the content within the panel
-        self.panel.layout()
     
     def end_turn_clicked(self):
         """Handle End Turn button click."""
@@ -322,18 +335,43 @@ class ControlPanel:
             unit: Unit object to display info for, or None to clear
         """
         if unit:
-            # Get weapon info
-            weapon_name = unit.equipped_weapon['name'] if unit.equipped_weapon else 'None'
-            range_info = f"Range: {unit.attack_range} | Area: {unit.attack_effect_area}"
+            # Get weapon info safely
+            weapon_name = 'None'
+            range_info = 'Range: 0 | Area: 0'
             
-            self.unit_info_text.text = f"ACTIVE: {unit.name} ({unit.type.value}) | MP: {unit.current_move_points}/{unit.move_points} | HP: {unit.hp}/{unit.max_hp}"
-            self.stats_display_text.text = f"WEAPON: {weapon_name} | {range_info}\nATK - Physical: {unit.physical_attack} | Magical: {unit.magical_attack} | Spiritual: {unit.spiritual_attack}\nDEF - Physical: {unit.physical_defense} | Magical: {unit.magical_defense} | Spiritual: {unit.spiritual_defense}"
+            if hasattr(unit, 'equipped_weapon') and unit.equipped_weapon:
+                weapon_name = unit.equipped_weapon.get('name', 'Unknown')
+            
+            if hasattr(unit, 'attack_range') and hasattr(unit, 'attack_effect_area'):
+                range_info = f"Range: {unit.attack_range} | Area: {unit.attack_effect_area}"
+            
+            # Build unit info text with safe attribute access
+            unit_name = getattr(unit, 'name', f'Unit {getattr(unit, "id", "Unknown")}')
+            unit_type = getattr(unit, 'type', type('obj', (object,), {'value': 'Unknown'})())
+            unit_type_name = getattr(unit_type, 'value', 'Unknown') if hasattr(unit_type, 'value') else str(unit_type)
+            
+            current_mp = getattr(unit, 'current_move_points', 0)
+            max_mp = getattr(unit, 'move_points', 0)
+            current_hp = getattr(unit, 'hp', 0)
+            max_hp = getattr(unit, 'max_hp', 0)
+            
+            self.unit_info_text.text = f"ACTIVE: {unit_name} ({unit_type_name}) | MP: {current_mp}/{max_mp} | HP: {current_hp}/{max_hp}"
+            
+            # Build stats display with safe attribute access
+            phys_atk = getattr(unit, 'physical_attack', 0)
+            mag_atk = getattr(unit, 'magical_attack', 0)
+            spir_atk = getattr(unit, 'spiritual_attack', 0)
+            phys_def = getattr(unit, 'physical_defense', 0)
+            mag_def = getattr(unit, 'magical_defense', 0)
+            spir_def = getattr(unit, 'spiritual_defense', 0)
+            
+            self.stats_display_text.text = f"WEAPON: {weapon_name} | {range_info}\nATK - Physical: {phys_atk} | Magical: {mag_atk} | Spiritual: {spir_atk}\nDEF - Physical: {phys_def} | Magical: {mag_def} | Spiritual: {spir_def}"
         else:
             self.unit_info_text.text = "No unit selected"
             self.stats_display_text.text = ""
         
         # Re-layout after text changes
-        self.panel.layout()
+        # No layout needed for fixed positioning
         
         # Update carousel highlighting
         self.update_carousel_highlighting()
@@ -351,7 +389,7 @@ class ControlPanel:
             self.camera_controls_text.text = f"CAMERA: [1] Orbit | [2] Free | [3] Top-down | ACTIVE: {mode_name}"
             
             # Re-layout after text changes
-            self.panel.layout()
+            # No layout needed for fixed positioning
     
     def set_controls_text(self, controls_text: str):
         """
@@ -361,33 +399,50 @@ class ControlPanel:
             controls_text: New controls text to display
         """
         self.game_controls_text.text = controls_text
-        self.panel.layout()
+        # No layout needed for fixed positioning
     
     def toggle_visibility(self):
         """Toggle the visibility of the control panel."""
         if hasattr(self, 'panel') and self.panel:
             self.panel.enabled = not self.panel.enabled
+            # Toggle carousel visibility too
+            self.carousel_label.enabled = self.panel.enabled
+            self.carousel_container.enabled = self.panel.enabled
             status = "shown" if self.panel.enabled else "hidden"
-            print(f"Control panel {status}")
+            print(f"Character Attack Interface {status}")
     
     def show(self):
-        """Show the control panel."""
+        """Show the character attack interface."""
         if hasattr(self, 'panel') and self.panel:
             self.panel.enabled = True
+            self.carousel_label.enabled = True
+            self.carousel_container.enabled = True
     
     def hide(self):
-        """Hide the control panel."""
+        """Hide the character attack interface."""
         if hasattr(self, 'panel') and self.panel:
             self.panel.enabled = False
+            self.carousel_label.enabled = False
+            self.carousel_container.enabled = False
     
     def is_visible(self) -> bool:
-        """Check if the control panel is currently visible."""
+        """Check if the character attack interface is currently visible."""
         if hasattr(self, 'panel') and self.panel:
             return self.panel.enabled
         return False
     
     def cleanup(self):
-        """Clean up all panel resources."""
+        """Clean up all interface resources."""
         self.cleanup_carousel()
         if hasattr(self, 'panel') and self.panel:
-            self.panel.enabled = False
+            destroy(self.panel)
+        if hasattr(self, 'unit_info_text') and self.unit_info_text:
+            destroy(self.unit_info_text)
+        if hasattr(self, 'camera_controls_text') and self.camera_controls_text:
+            destroy(self.camera_controls_text)
+        if hasattr(self, 'game_controls_text') and self.game_controls_text:
+            destroy(self.game_controls_text)
+        if hasattr(self, 'stats_display_text') and self.stats_display_text:
+            destroy(self.stats_display_text)
+        if hasattr(self, 'end_turn_btn') and self.end_turn_btn:
+            destroy(self.end_turn_btn)

@@ -35,7 +35,7 @@ from ui.visual.tile_highlighter import TileHighlighter
 from ui.visual.unit_renderer import UnitEntity
 from ui.battlefield.grid_tile import GridTile
 from ui.interaction.interaction_manager import InteractionManager
-from ui.panels.control_panel import ControlPanel
+from ui.panels.control_panel import CharacterAttackInterface
 
 
 class TacticalRPG:
@@ -50,7 +50,7 @@ class TacticalRPG:
     - User input and interaction
     """
     
-    def __init__(self, control_panel_callback: Optional[callable] = None, control_panel: Optional[ControlPanel] = None):
+    def __init__(self, control_panel_callback: Optional[callable] = None, control_panel: Optional[CharacterAttackInterface] = None):
         """
         Initialize the tactical RPG game controller.
         
@@ -150,7 +150,7 @@ class TacticalRPG:
                 self.control_panel.set_game_reference(self)
         else:
             # Fallback: create control panel if none provided
-            self.control_panel = ControlPanel(game_reference=self)
+            self.control_panel = CharacterAttackInterface(game_reference=self)
         
         # Setup initial battle
         self.setup_battle()

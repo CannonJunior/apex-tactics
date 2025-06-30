@@ -36,7 +36,7 @@ class TacticalRPG:
         self.attack_modal = None  # Reference to attack confirmation modal
         self.attack_target_tile = None  # Currently targeted attack tile
         self.camera_controller = CameraController(self.grid.width, self.grid.height)
-        self.control_panel = None  # Reference to control panel for UI updates
+        self.control_panel = None  # Reference to character attack interface for UI updates
         
         self.setup_battle()
         
@@ -137,7 +137,7 @@ class TacticalRPG:
             print(f"Turn ended. Now it's {current_unit.name}'s turn.")
     
     def set_control_panel(self, control_panel):
-        """Set reference to control panel for UI updates"""
+        """Set reference to character attack interface for UI updates"""
         self.control_panel = control_panel
         
     def handle_tile_click(self, x, y):

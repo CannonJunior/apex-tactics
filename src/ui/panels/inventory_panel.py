@@ -148,22 +148,30 @@ class InteractiveInventory(Entity):
         self.items: List[Dict[str, Any]] = []
     
     def find_free_spot(self):
-        """Find the first available spot in the inventory grid."""
-        for y in range(self.height):
-            for x in range(self.width):
-                grid_positions = [(int(e.x * self.texture_scale[0]), int(e.y * self.texture_scale[1])) 
-                                for e in self.children if isinstance(e, InventoryItem)]
-                
-                if (x, -y) not in grid_positions:
-                    return x, y
-        return None
+        """Find the first available spot in the inventory grid using a simple counter approach."""
+        # Count how many items we currently have
+        current_item_count = len([c for c in self.children if isinstance(c, InventoryItem)])
+        
+        # Convert count to grid position (row-major order)
+        if current_item_count >= self.width * self.height:
+            return None  # Inventory full
+        
+        # Calculate grid position based on item count
+        # Row-major order: items fill left to right, then top to bottom
+        x = current_item_count % self.width
+        y = current_item_count // self.width
+        
+        return x, y
     
     def add_item(self, item_data: Dict[str, Any], x=None, y=None):
         """Add an item to the inventory."""
-        if len([c for c in self.children if isinstance(c, InventoryItem)]) >= self.width * self.height:
+        # Check if inventory is full
+        current_items = len([c for c in self.children if isinstance(c, InventoryItem)])
+        if current_items >= self.width * self.height:
             print('Inventory full!')
             return False
         
+        # Find position for the item
         if x is None or y is None:
             free_spot = self.find_free_spot()
             if free_spot is None:
@@ -171,14 +179,19 @@ class InteractiveInventory(Entity):
                 return False
             x, y = free_spot
         
-        # Create inventory item
+        # Convert grid coordinates to normalized position within the inventory
+        # Grid (0,0) is top-left, so y needs to be negated
+        normalized_x = x / self.width
+        normalized_y = -y / self.height
+        
+        # Create inventory item with proper scaling
         item = InventoryItem(
             item_data=item_data,
             inventory_parent=self,
-            scale_x=1/self.texture_scale[0],
-            scale_y=1/self.texture_scale[1],
-            x=x * 1/self.texture_scale[0],
-            y=-y * 1/self.texture_scale[1],
+            scale_x=1/self.width,
+            scale_y=1/self.height,
+            x=normalized_x,
+            y=normalized_y,
         )
         
         self.items.append(item_data)
@@ -376,10 +389,19 @@ class InventoryPanel:
     
     def _sort_items(self):
         """Sort items in the inventory by type."""
-        # Clear current items
-        for child in self.interactive_inventory.children.copy():
+        # Clear current items completely
+        children_to_destroy = []
+        for child in self.interactive_inventory.children:
             if isinstance(child, InventoryItem):
-                destroy(child)
+                children_to_destroy.append(child)
+        
+        # Destroy all inventory items
+        for child in children_to_destroy:
+            destroy(child)
+        
+        # Clear the children list manually to ensure it's empty
+        self.interactive_inventory.children = [child for child in self.interactive_inventory.children 
+                                             if not isinstance(child, InventoryItem)]
         
         # Re-add items sorted by type
         sorted_items = sorted(self.sample_items, key=lambda x: (x['type'], x['name']))
