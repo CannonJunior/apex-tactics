@@ -16,21 +16,24 @@ except ImportError:
 # Core ECS imports
 from core.ecs.world import World
 from core.math.pathfinding import AStarPathfinder
+from core.math.vector import Vector2Int
+from core.math.grid import TacticalGrid
 
 # Component imports
-from components.gameplay.unit_type import UnitType
+from core.models.unit_types import UnitType
 from components.combat.damage import AttackType
 
-# Legacy wrapper imports
-from game.legacy.unit_wrapper import Unit
-from game.legacy.battle_grid_wrapper import BattleGrid
-from game.legacy.turn_manager_wrapper import TurnManager
+# Legacy model imports
+from core.models.unit import Unit
+from core.game.battle_grid import BattleGrid
+from core.game.turn_manager import TurnManager
 
 # UI system imports
 from ui.camera.camera_controller import CameraController
 from ui.visual.grid_visualizer import GridVisualizer
 from ui.visual.tile_highlighter import TileHighlighter
 from ui.visual.unit_renderer import UnitEntity
+from ui.battlefield.grid_tile import GridTile
 from ui.interaction.interaction_manager import InteractionManager
 from ui.panels.control_panel import ControlPanel
 
@@ -65,6 +68,7 @@ class TacticalRPG:
         self.grid = BattleGrid()
         self.units: List[Unit] = []
         self.unit_entities: List[UnitEntity] = []
+        self.tile_entities: List[Any] = []  # Grid tiles for mouse interaction
         self.turn_manager: Optional[TurnManager] = None
         self.selected_unit: Optional[Unit] = None
         self.current_path: List[Tuple[int, int]] = []  # Track the selected movement path
@@ -81,22 +85,24 @@ class TacticalRPG:
         # Initialize camera controller
         self.camera_controller = CameraController(
             self.grid.width, 
-            self.grid.height, 
-            mode_change_callback=self._on_camera_mode_change
+            self.grid.height
         )
         
         # Initialize pathfinder first (required by other systems)
         try:
-            self.pathfinder = AStarPathfinder(self.grid.grid)
+            # Create a TacticalGrid for pathfinding (BattleGrid is for legacy unit management)
+            self.tactical_grid = TacticalGrid(self.grid.width, self.grid.height)
+            self.pathfinder = AStarPathfinder(self.tactical_grid)
             print("✓ AStarPathfinder initialized successfully")
         except Exception as e:
             print(f"⚠ Could not initialize AStarPathfinder: {e}")
             self.pathfinder = None
+            self.tactical_grid = None
         
         # Initialize grid visualizer (requires pathfinder)
-        if self.pathfinder:
+        if self.pathfinder and self.tactical_grid:
             try:
-                self.grid_visualizer = GridVisualizer(self.grid.grid, self.pathfinder)
+                self.grid_visualizer = GridVisualizer(self.tactical_grid, self.pathfinder)
                 print("✓ GridVisualizer initialized successfully")
             except Exception as e:
                 print(f"⚠ Could not initialize GridVisualizer: {e}")
@@ -118,10 +124,10 @@ class TacticalRPG:
             self.tile_highlighter = None
         
         # Initialize interaction manager for enhanced UI (only if all dependencies available)
-        if self.grid_visualizer and self.pathfinder:
+        if self.grid_visualizer and self.pathfinder and self.tactical_grid:
             try:
                 self.interaction_manager = InteractionManager(
-                    self.grid.grid, 
+                    self.tactical_grid, 
                     self.pathfinder, 
                     self.grid_visualizer
                 )
@@ -149,16 +155,6 @@ class TacticalRPG:
         # Setup initial battle
         self.setup_battle()
     
-    def _on_camera_mode_change(self, mode: int):
-        """Handle camera mode changes."""
-        if self.control_panel_callback:
-            try:
-                control_panel = self.control_panel_callback()
-                if control_panel:
-                    control_panel.update_camera_mode(mode)
-            except Exception as e:
-                print(f"⚠ Error updating control panel camera mode: {e}")
-    
     def setup_battle(self):
         """Initialize the battle with units and systems."""
         # Initialize ECS systems
@@ -177,6 +173,13 @@ class TacticalRPG:
             print(f"⚠ Could not import all ECS systems: {e}")
             print("  Continuing with legacy components...")
         
+        # Create grid tiles for mouse interaction
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                self.tile_entities.append(GridTile(x, y, self))
+        
+        print(f"✓ Created {len(self.tile_entities)} grid tiles for mouse interaction")
+        
         # Create units with randomized attributes based on type
         player_units = [
             Unit("Hero", UnitType.HEROMANCER, 1, 1),
@@ -188,6 +191,9 @@ class TacticalRPG:
         ]
         
         self.units = player_units + enemy_units
+        
+        # Equip weapons for demonstration
+        self.equip_demo_weapons()
         
         # Add units to both legacy and ECS systems
         for unit in self.units:
@@ -204,7 +210,60 @@ class TacticalRPG:
         self.turn_manager = TurnManager(self.units)
         self.refresh_all_ap()
         
+        # Now that turn_manager exists, create the unit carousel
+        if hasattr(self.control_panel, 'create_unit_carousel'):
+            self.control_panel.create_unit_carousel()
+        
         print(f"✓ Battle setup complete: {len(self.units)} units, ECS World with {self.world.entity_count} entities")
+    
+    def equip_demo_weapons(self):
+        """Equip demonstration weapons to show range/area effects"""
+        # Create spear weapon
+        spear_data = {
+            "id": "spear",
+            "name": "Spear",
+            "type": "Weapons",
+            "tier": "BASE",
+            "description": "A long-reach spear with extended attack range and area effect.",
+            "stats": {
+                "physical_attack": 14,
+                "attack_range": 2,
+                "effect_area": 2
+            }
+        }
+        
+        # Create bow weapon for comparison
+        bow_data = {
+            "id": "magic_bow",
+            "name": "Magic Bow",
+            "type": "Weapons", 
+            "tier": "ENCHANTED",
+            "description": "An enchanted bow with long range.",
+            "stats": {
+                "physical_attack": 22,
+                "magical_attack": 8,
+                "attack_range": 3,
+                "effect_area": 1
+            }
+        }
+        
+        # Equip weapons to units
+        if len(self.units) >= 4:
+            # Give Hero the spear (range 2, area 2)
+            self.units[0].equip_weapon(spear_data)
+            print(f"🔥 {self.units[0].name} equipped {spear_data['name']} - Range: {self.units[0].attack_range}, Area: {self.units[0].attack_effect_area}")
+            
+            # Give Sage the bow (range 3, area 1)
+            self.units[1].equip_weapon(bow_data)
+            print(f"🏹 {self.units[1].name} equipped {bow_data['name']} - Range: {self.units[1].attack_range}, Area: {self.units[1].attack_effect_area}")
+            
+            print("\n📋 Test Instructions:")
+            print("1. Click on Hero - notice spear gives Range 2, Area 2")
+            print("2. Click Attack - see red tiles show 2-tile attack range")
+            print("3. Click target - see yellow area effect covering 2-tile radius")
+            print("4. Try same with Sage - bow has Range 3, Area 1")
+            print("5. Compare the different weapon effects!")
+            print("✅ Demo weapons equipped for testing")
     
     def end_current_turn(self):
         """End the current unit's turn and move to next unit."""
@@ -218,11 +277,9 @@ class TacticalRPG:
             
             # Update control panel with new current unit
             current_unit = self.turn_manager.current_unit()
-            if self.control_panel_callback:
+            if self.control_panel:
                 try:
-                    control_panel = self.control_panel_callback()
-                    if control_panel:
-                        control_panel.update_unit_info(current_unit)
+                    self.control_panel.update_unit_info(current_unit)
                 except Exception as e:
                     print(f"⚠ Error updating control panel: {e}")
             
@@ -250,11 +307,10 @@ class TacticalRPG:
             self.highlight_selected_unit()
             self.highlight_movement_range()
             
-            if self.control_panel_callback:
+            # Update control panel with selected unit info
+            if self.control_panel:
                 try:
-                    control_panel = self.control_panel_callback()
-                    if control_panel:
-                        control_panel.update_unit_info(clicked_unit)
+                    self.control_panel.update_unit_info(clicked_unit)
                 except Exception as e:
                     print(f"⚠ Error updating control panel: {e}")
             
@@ -271,11 +327,10 @@ class TacticalRPG:
                 self.current_path = []
                 self.path_cursor = None
                 self.current_mode = None
-                if self.control_panel_callback:
+                # Clear control panel unit info
+                if self.control_panel:
                     try:
-                        control_panel = self.control_panel_callback()
-                        if control_panel:
-                            control_panel.update_unit_info(None)
+                        self.control_panel.update_unit_info(None)
                     except Exception as e:
                         print(f"⚠ Error updating control panel: {e}")
     
@@ -398,6 +453,83 @@ class TacticalRPG:
             # Update highlights
             self.update_path_highlights()
     
+    def handle_mouse_movement(self, clicked_tile: Tuple[int, int]) -> bool:
+        """
+        Handle mouse click for movement path creation.
+        
+        Args:
+            clicked_tile: (x, y) coordinates of clicked tile
+            
+        Returns:
+            True if click was handled, False otherwise
+        """
+        if not self.selected_unit or self.current_mode != "move":
+            return False
+        
+        if not self.pathfinder:
+            print("⚠ Pathfinder not available - falling back to manual path building")
+            return False
+        
+        # Convert coordinates to Vector2Int for pathfinder
+        start_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+        end_pos = Vector2Int(clicked_tile[0], clicked_tile[1])
+        
+        # Check if clicking on same tile as unit (no movement needed)
+        if start_pos.x == end_pos.x and start_pos.y == end_pos.y:
+            return True
+        
+        # Calculate path using pathfinder
+        try:
+            calculated_path = self.pathfinder.calculate_movement_path(
+                start_pos, 
+                end_pos, 
+                float(self.selected_unit.current_move_points)
+            )
+            
+            if calculated_path and len(calculated_path) > 1:
+                # Convert Vector2Int path back to tuple format (excluding start position)
+                self.current_path = [(pos.x, pos.y) for pos in calculated_path[1:]]
+                self.path_cursor = (end_pos.x, end_pos.y)
+                
+                # Update visual highlights
+                self.update_path_highlights()
+                
+                print(f"Path calculated: {len(self.current_path)} steps to ({end_pos.x}, {end_pos.y})")
+                return True
+            else:
+                # No valid path found - try to get as close as possible
+                reachable_positions = self.pathfinder.find_reachable_positions(
+                    start_pos, 
+                    float(self.selected_unit.current_move_points)
+                )
+                
+                if reachable_positions:
+                    # Find closest reachable position to clicked tile
+                    closest_pos = min(reachable_positions, 
+                                    key=lambda pos: abs(pos.x - end_pos.x) + abs(pos.y - end_pos.y))
+                    
+                    # Calculate path to closest position
+                    closest_path = self.pathfinder.calculate_movement_path(
+                        start_pos,
+                        closest_pos,
+                        float(self.selected_unit.current_move_points)
+                    )
+                    
+                    if closest_path and len(closest_path) > 1:
+                        self.current_path = [(pos.x, pos.y) for pos in closest_path[1:]]
+                        self.path_cursor = (closest_pos.x, closest_pos.y)
+                        self.update_path_highlights()
+                        
+                        print(f"Target unreachable. Path to closest position: ({closest_pos.x}, {closest_pos.y})")
+                        return True
+                
+                print(f"No valid path to ({end_pos.x}, {end_pos.y}) within movement range")
+                return True
+                
+        except Exception as e:
+            print(f"⚠ Error calculating path: {e}")
+            return False
+    
     def show_action_modal(self, unit):
         """Show modal with available actions for the selected unit."""
         if not unit:
@@ -409,9 +541,11 @@ class TacticalRPG:
         def create_action_callback(action_name):
             def action_callback():
                 self.handle_action_selection(action_name, unit)
-                self.action_modal.enabled = False
-                destroy(self.action_modal)
-                self.action_modal = None
+                # Hide the modal after action selection
+                if self.action_modal:
+                    self.action_modal.enabled = False
+                    destroy(self.action_modal)
+                    self.action_modal = None
             return action_callback
         
         # Create buttons for each action option
@@ -423,9 +557,10 @@ class TacticalRPG:
         # Add cancel button
         cancel_btn = Button(text='Cancel', color=color.red)
         def cancel_action():
-            self.action_modal.enabled = False
-            destroy(self.action_modal)
-            self.action_modal = None
+            if self.action_modal:
+                self.action_modal.enabled = False
+                destroy(self.action_modal)
+                self.action_modal = None
             
         cancel_btn.on_click = cancel_action
         action_buttons.append(cancel_btn)
@@ -678,6 +813,29 @@ class TacticalRPG:
         """Calculate the movement cost of the current path."""
         if not self.path_cursor or not self.selected_unit:
             return 0
+        
+        # For mouse-generated paths, calculate actual path cost
+        if self.current_path and self.pathfinder:
+            try:
+                # Convert current path to Vector2Int format
+                start_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+                path_positions = [start_pos] + [Vector2Int(pos[0], pos[1]) for pos in self.current_path]
+                
+                # Calculate actual path cost using grid movement costs
+                total_cost = 0.0
+                for i in range(len(path_positions) - 1):
+                    cost = self.pathfinder.grid.get_movement_cost(path_positions[i], path_positions[i + 1])
+                    if cost == float('inf'):
+                        return 999  # Invalid path
+                    total_cost += cost
+                
+                return int(total_cost)
+            except Exception as e:
+                print(f"⚠ Error calculating path cost: {e}")
+                # Fallback to Manhattan distance
+                pass
+        
+        # Fallback: Manhattan distance for WASD paths or when pathfinder unavailable
         return abs(self.path_cursor[0] - self.selected_unit.x) + abs(self.path_cursor[1] - self.selected_unit.y)
     
     def execute_movement(self):

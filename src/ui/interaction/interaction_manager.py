@@ -80,8 +80,8 @@ class InteractionManager:
         # Input state
         self.input_enabled = True
         
-        # Initialize tiles
-        self._create_interactive_tiles()
+        # Initialize tiles - Skip for now since GridTile objects already exist
+        # self._create_interactive_tiles()
     
     def _create_interactive_tiles(self):
         """Create interactive tiles for the entire grid"""

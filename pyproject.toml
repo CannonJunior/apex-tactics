@@ -1,5 +1,5 @@
 [project]
-name = "alt-apex-tactics"
+name = "apex-tactics"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -9,6 +9,7 @@ dependencies = [
     "psutil>=6.1.0",
     "ursina>=7.0.0",
     "fastmcp>=2.9.0",
+    "ollama>=0.5.1",
 ]
 
 [tool.pytest.ini_options]

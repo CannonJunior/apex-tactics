@@ -140,14 +140,13 @@ class InputHandler:
         # Handle mouse click for movement path selection
         elif key == 'left mouse down':
             if self._handle_movement_mouse_click():
-                self.game.handle_path_movement('enter')
                 return True
         
         return False
     
     def _handle_movement_mouse_click(self) -> bool:
         """
-        Handle mouse clicks during movement mode using handle_path_movement.
+        Handle mouse clicks during movement mode for path creation and confirmation.
         
         Returns:
             True if mouse click was handled for movement, False otherwise
@@ -168,29 +167,32 @@ class InputHandler:
         if not (0 <= grid_x < 8 and 0 <= grid_z < 8):
             return False
         
+        clicked_tile = (grid_x, grid_z)
+        
         # Check if clicking on the tile at the end of the current movement path
         if (hasattr(self.game, 'current_path') and self.game.current_path and 
             len(self.game.current_path) > 0):
             # Get the last position in the current path (the end of the movement path)
             end_of_path = self.game.current_path[-1]
-            if end_of_path == (grid_x, grid_z):
-                # Clicking on end of movement path - treat as 'enter' key press
+            if end_of_path == clicked_tile:
+                # Clicking on end of movement path - confirm movement
                 if hasattr(self.game, 'handle_path_movement'):
                     self.game.handle_path_movement('enter')
                     return True
         
         # Check if clicking on current path cursor position (yellow highlighted tile)
-        elif (hasattr(self.game, 'path_cursor') and self.game.path_cursor and 
-              self.game.path_cursor == (grid_x, grid_z)):
+        if (hasattr(self.game, 'path_cursor') and self.game.path_cursor and 
+              self.game.path_cursor == clicked_tile):
             # Treat as 'enter' key press - confirm movement
             if hasattr(self.game, 'handle_path_movement'):
                 self.game.handle_path_movement('enter')
                 return True
         
-        # For any other valid movement destination, we can extend this later
-        # For now, we'll only handle the end-of-path case as requested
+        # Handle mouse-click path creation - delegate to game controller
+        if hasattr(self.game, 'handle_mouse_movement'):
+            return self.game.handle_mouse_movement(clicked_tile)
         
-        # If clicked tile is not the end of path, do nothing (but still handle the click)
+        # Fallback: treat as path generation attempt (for backward compatibility)
         return True
     
     def _handle_camera_controls(self, key: str) -> bool:

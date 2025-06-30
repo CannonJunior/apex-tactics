@@ -185,6 +185,37 @@ class AStarPathfinder:
         
         return result
     
+    def calculate_movement_path(self, start: Vector2Int, end: Vector2Int, max_movement: float) -> List[Vector2Int]:
+        """
+        Calculate optimal movement path from start to end position within movement limits.
+        
+        Args:
+            start: Starting position
+            end: Destination position
+            max_movement: Maximum movement points available
+            
+        Returns:
+            List of positions forming the path, empty if unreachable
+        """
+        # Use find_path with movement cost limit
+        result = self.find_path(start, end, max_cost=max_movement)
+        
+        if result.success and result.cost <= max_movement:
+            return result.path
+        
+        # If destination unreachable, try to find closest reachable position
+        reachable_positions = self.find_reachable_positions(start, max_movement)
+        if not reachable_positions:
+            return []
+        
+        # Find closest reachable position to the desired destination
+        closest_pos = min(reachable_positions, 
+                         key=lambda pos: pos.manhattan_distance_to(end))
+        
+        # Return path to closest reachable position
+        closest_result = self.find_path(start, closest_pos, max_cost=max_movement)
+        return closest_result.path if closest_result.success else []
+
     def find_reachable_positions(self, start: Vector2Int, max_movement: float) -> List[Vector2Int]:
         """
         Find all positions reachable within movement points.

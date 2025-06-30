@@ -36,6 +36,7 @@ class TacticalRPG:
         self.attack_modal = None  # Reference to attack confirmation modal
         self.attack_target_tile = None  # Currently targeted attack tile
         self.camera_controller = CameraController(self.grid.width, self.grid.height)
+        self.control_panel = None  # Reference to control panel for UI updates
         
         self.setup_battle()
         
@@ -130,9 +131,14 @@ class TacticalRPG:
             
             # Update control panel with new current unit
             current_unit = self.turn_manager.current_unit()
-            # Note: control_panel reference will need to be injected or passed
+            if self.control_panel:
+                self.control_panel.update_unit_info(current_unit)
             
             print(f"Turn ended. Now it's {current_unit.name}'s turn.")
+    
+    def set_control_panel(self, control_panel):
+        """Set reference to control panel for UI updates"""
+        self.control_panel = control_panel
         
     def handle_tile_click(self, x, y):
         """Handle clicks on grid tiles"""
@@ -156,6 +162,10 @@ class TacticalRPG:
             self.highlight_selected_unit()
             self.highlight_movement_range()
             
+            # Update control panel with selected unit info
+            if self.control_panel:
+                self.control_panel.update_unit_info(clicked_unit)
+            
             # Show action modal for the selected unit
             self.show_action_modal(clicked_unit)
         else:
@@ -164,6 +174,10 @@ class TacticalRPG:
             self.current_path = []
             self.path_cursor = None
             self.current_mode = None
+            
+            # Clear control panel unit info
+            if self.control_panel:
+                self.control_panel.update_unit_info(None)
                 
     def highlight_movement_range(self):
         """Highlight all tiles the selected unit can move to"""

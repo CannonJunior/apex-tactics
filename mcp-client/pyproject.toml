@@ -1,0 +1,39 @@
+[project]
+name = "blender-mcp-client"
+version = "0.1.0"
+description = "MCP client for Blender server with Claude Code and Ollama support"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Claude Code", email = "claude@anthropic.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "mcp[cli]>=1.3.0",
+    "httpx>=0.24.0",
+    "asyncio",
+    "rich>=13.0.0",
+    "click>=8.0.0",
+    "ollama>=0.1.0",
+    "websockets>=11.0",
+    "httpx-sse>=0.4.1",
+]
+
+[project.scripts]
+blender-mcp-client = "blender_mcp_client.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[project.urls]
+"Homepage" = "https://github.com/anthropics/claude-code"
+"Bug Tracker" = "https://github.com/anthropics/claude-code/issues"

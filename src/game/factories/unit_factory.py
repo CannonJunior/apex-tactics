@@ -10,11 +10,11 @@ from typing import Optional, Dict, Any
 
 from core.ecs.entity import Entity as ECSEntity
 from components.stats.attributes import AttributeStats
-from components.gameplay.unit_type import UnitType, UnitTypeComponent
+from core.models.unit_types import UnitType
 from components.movement.movement import MovementComponent
 from components.combat.attack import AttackComponent
 from components.combat.defense import DefenseComponent
-from components.combat.damage import AttackType
+from components.combat.damage import AttackType, DamageComponent
 
 
 class UnitFactory:
@@ -62,17 +62,9 @@ class UnitFactory:
         stats = AttributeStats(**base_attrs)
         entity.add_component(stats)
         
-        # Add unit type component
-        unit_type_comp = UnitTypeComponent(unit_type)
-        entity.add_component(unit_type_comp)
-        
-        # Apply type bonuses to stats
-        for attr, bonus in unit_type_comp.get_all_bonuses().items():
-            current_value = getattr(stats, attr, 0)
-            setattr(stats, attr, current_value + bonus)
-        
-        # Invalidate derived stats cache to force recalculation with bonuses
-        stats._invalidate_cache()
+        # TODO: Add unit type component when UnitTypeComponent is implemented
+        # For now, just store unit_type on entity for reference
+        entity.unit_type = unit_type
         
         # Add movement component
         movement_range = stats.speed // 2 + 2
@@ -90,6 +82,15 @@ class UnitFactory:
             spiritual_defense=stats.derived_stats.get('spiritual_defense', 0)
         )
         entity.add_component(defense)
+        
+        # Add damage component with calculated attack values
+        damage = DamageComponent(
+            physical_power=stats.derived_stats.get('physical_attack', 0),
+            magical_power=stats.derived_stats.get('magical_attack', 0),
+            spiritual_power=stats.derived_stats.get('spiritual_attack', 0),
+            critical_chance=stats.derived_stats.get('critical_chance', 5) / 100.0  # Convert to 0.0-1.0
+        )
+        entity.add_component(damage)
         
         return entity
 
