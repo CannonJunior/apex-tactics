@@ -20,6 +20,7 @@
       },
       "combat": {
         "primary_damage_type": "physical",
+        "resource_type": "rage",
         "resistances": {
           "physical": 0.0,
           "magical": 0.1,
@@ -51,6 +52,7 @@
       },
       "combat": {
         "primary_damage_type": "physical",
+        "resource_type": "rage",
         "resistances": {
           "physical": 0.2,
           "magical": 0.0,
@@ -82,6 +84,7 @@
       },
       "combat": {
         "primary_damage_type": "spiritual",
+        "resource_type": "kwan",
         "resistances": {
           "physical": -0.1,
           "magical": 0.1,
@@ -113,6 +116,7 @@
       },
       "combat": {
         "primary_damage_type": "spiritual",
+        "resource_type": "kwan",
         "resistances": {
           "physical": 0.0,
           "magical": 0.2,
@@ -144,6 +148,7 @@
       },
       "combat": {
         "primary_damage_type": "magical",
+        "resource_type": "mp",
         "resistances": {
           "physical": 0.1,
           "magical": 0.1,
@@ -175,6 +180,7 @@
       },
       "combat": {
         "primary_damage_type": "magical",
+        "resource_type": "mp",
         "resistances": {
           "physical": -0.2,
           "magical": 0.3,

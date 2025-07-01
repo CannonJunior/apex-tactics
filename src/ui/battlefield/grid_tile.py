@@ -17,6 +17,14 @@ class GridTile(Entity):
     def on_click(self):
         print(f"Tile clicked at: ({self.grid_x}, {self.grid_y})")
         if self.game_controller:
+            # Don't handle tile clicks if there's an active modal dialog
+            if (hasattr(self.game_controller, 'action_modal') and 
+                self.game_controller.action_modal and 
+                hasattr(self.game_controller.action_modal, 'enabled') and
+                self.game_controller.action_modal.enabled):
+                print("🚫 Ignoring tile click - action modal is open")
+                return
+                
             # Check if we're in movement mode and should handle mouse movement
             if (hasattr(self.game_controller, 'current_mode') and 
                 self.game_controller.current_mode == "move" and

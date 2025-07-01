@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "description": "UI styling configuration for Apex Tactics",
+  "ui_styles": {
+    "bars": {
+      "health_bar": {
+        "color": {
+          "r": 0.0,
+          "g": 0.8,
+          "b": 0.0,
+          "a": 1.0
+        },
+        "background_color": {
+          "r": 0.2,
+          "g": 0.2,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "scale": {
+          "width": 0.3,
+          "height": 0.03
+        },
+        "position": {
+          "x": -0.4,
+          "y": 0.45
+        }
+      },
+      "resource_bars": {
+        "rage": {
+          "color": {
+            "r": 1.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 1.0
+          },
+          "label": "RAGE"
+        },
+        "mp": {
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 1.0,
+            "a": 1.0
+          },
+          "label": "MP"
+        },
+        "kwan": {
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 0.0,
+            "a": 1.0
+          },
+          "label": "KWAN"
+        },
+        "background_color": {
+          "r": 0.2,
+          "g": 0.2,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "scale": {
+          "width": 0.3,
+          "height": 0.03
+        },
+        "position": {
+          "x": -0.4,
+          "y": 0.4
+        }
+      }
+    },
+    "labels": {
+      "bar_labels": {
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "scale": 1.0,
+        "offset_x": -0.07,
+        "origin": {
+          "x": -0.5,
+          "y": 0.0
+        }
+      }
+    },
+    "modals": {
+      "default": {
+        "background_color": {
+          "r": 0.1,
+          "g": 0.1,
+          "b": 0.1,
+          "a": 0.9
+        },
+        "border_color": {
+          "r": 0.5,
+          "g": 0.5,
+          "b": 0.5,
+          "a": 1.0
+        }
+      }
+    },
+    "highlights": {
+      "movement": {
+        "color": {
+          "r": 0.0,
+          "g": 1.0,
+          "b": 0.0,
+          "a": 0.6
+        }
+      },
+      "attack": {
+        "color": {
+          "r": 1.0,
+          "g": 0.0,
+          "b": 0.0,
+          "a": 0.7
+        }
+      },
+      "selection": {
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 0.8
+        }
+      },
+      "effect_area": {
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 0.0,
+          "a": 0.6
+        }
+      }
+    }
+  }
+}

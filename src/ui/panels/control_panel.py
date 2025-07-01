@@ -283,6 +283,12 @@ class CharacterAttackInterface:
             
             # Update carousel to reflect current selection
             self.update_carousel_highlighting()
+            
+            # Update health bar and resource bar for selected unit
+            if hasattr(self.game_reference, 'update_health_bar'):
+                self.game_reference.update_health_bar(unit)
+            if hasattr(self.game_reference, 'update_resource_bar'):
+                self.game_reference.update_resource_bar(unit)
     
     def update_carousel_highlighting(self):
         """Update carousel icon highlighting to show current turn and selection."""

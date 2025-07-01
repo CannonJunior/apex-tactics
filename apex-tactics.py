@@ -15,8 +15,8 @@ from ui.panels.character_panel import CharacterPanel
 
 app = Ursina()
 
-# Create a simple ground plane for better visibility
-ground = Entity(model='plane', texture='white_cube', color=color.dark_gray, scale=(20, 1, 20), position=(4, -0.1, 4))
+# Create a simple ground plane for better visibility (disabled - grid tiles provide the ground)
+# ground = Entity(model='plane', texture='white_cube', color=color.dark_gray, scale=(20, 1, 20), position=(4, -0.1, 4))
 
 # Create all panels
 control_panel = CharacterAttackInterface()

@@ -37,6 +37,7 @@ from ui.visual.unit_renderer import UnitEntity
 from ui.battlefield.grid_tile import GridTile
 from ui.interaction.interaction_manager import InteractionManager
 from ui.panels.control_panel import CharacterAttackInterface
+from ui.core.ui_style_manager import get_ui_style_manager
 
 
 class TacticalRPG:
@@ -80,6 +81,9 @@ class TacticalRPG:
         self.attack_modal: Optional[Any] = None  # Reference to attack confirmation modal
         self.attack_target_tile: Optional[Tuple[int, int]] = None  # Currently targeted attack tile
         self.health_bar: Optional[HealthBar] = None  # Health bar for selected unit
+        self.health_bar_label: Optional[Any] = None  # Health bar label
+        self.resource_bar: Optional[HealthBar] = None  # Resource bar for selected unit
+        self.resource_bar_label: Optional[Any] = None  # Resource bar label
         self.control_panel: Optional[Any] = None  # Reference to character attack interface for UI updates
         
         # Store control panel callback for camera updates
@@ -102,17 +106,17 @@ class TacticalRPG:
             self.pathfinder = None
             self.tactical_grid = None
         
-        # Initialize grid visualizer (requires pathfinder)
-        if self.pathfinder and self.tactical_grid:
-            try:
-                self.grid_visualizer = GridVisualizer(self.tactical_grid, self.pathfinder)
-                print("✓ GridVisualizer initialized successfully")
-            except Exception as e:
-                print(f"⚠ Could not initialize GridVisualizer: {e}")
-                self.grid_visualizer = None
-        else:
-            print("⚠ Skipping GridVisualizer - AStarPathfinder not available")
-            self.grid_visualizer = None
+        # Initialize grid visualizer (disabled to avoid conflicts with direct Entity highlighting)
+        # if self.pathfinder and self.tactical_grid:
+        #     try:
+        #         self.grid_visualizer = GridVisualizer(self.tactical_grid, self.pathfinder)
+        #         print("✓ GridVisualizer initialized successfully")
+        #     except Exception as e:
+        #         print(f"⚠ Could not initialize GridVisualizer: {e}")
+        #         self.grid_visualizer = None
+        # else:
+        #     print("⚠ Skipping GridVisualizer - AStarPathfinder not available")
+        self.grid_visualizer = None
         
         # Initialize tile highlighter (requires grid visualizer)
         if self.grid_visualizer:
@@ -320,8 +324,9 @@ class TacticalRPG:
                 except Exception as e:
                     print(f"⚠ Error updating control panel: {e}")
             
-            # Create/update health bar for selected unit
+            # Create/update health bar and resource bar for selected unit
             self.update_health_bar(clicked_unit)
+            self.update_resource_bar(clicked_unit)
             
             # Show action modal for the selected unit
             self.show_action_modal(clicked_unit)
@@ -337,6 +342,7 @@ class TacticalRPG:
                 self.path_cursor = None
                 self.current_mode = None
                 self.hide_health_bar()
+                self.hide_resource_bar()
                 # Clear control panel unit info
                 if self.control_panel:
                     try:
@@ -407,8 +413,8 @@ class TacticalRPG:
                         model='cube',
                         color=highlight_color,
                         scale=(0.9, 0.2, 0.9),
-                        position=(x + 0.5, 0, y + 0.5),  # Center on tile, same level as grid
-                        alpha=0.5  # Same transparency as grid
+                        position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                        alpha=1.0  # Same transparency as grid
                     )
                     # Store in a list for cleanup
                     if not hasattr(self, 'highlight_entities'):
@@ -675,8 +681,8 @@ class TacticalRPG:
                         model='cube',
                         color=highlight_color,
                         scale=(0.9, 0.2, 0.9),
-                        position=(x + 0.5, 0, y + 0.5),  # Center on tile, same level as grid
-                        alpha=0.5  # Same transparency as grid
+                        position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                        alpha=1.0  # Same transparency as grid
                     )
                     # Store in a list for cleanup
                     if not hasattr(self, 'highlight_entities'):
@@ -719,9 +725,10 @@ class TacticalRPG:
                             self.unit_entities.remove(entity)
                             break
             
-            self.attack_modal.enabled = False
-            destroy(self.attack_modal)
-            self.attack_modal = None
+            if self.attack_modal:
+                self.attack_modal.enabled = False
+                destroy(self.attack_modal)
+                self.attack_modal = None
             # Return to normal mode
             self.current_mode = None
             self.attack_target_tile = None
@@ -733,9 +740,10 @@ class TacticalRPG:
             self.clear_highlights()
             self.highlight_selected_unit()
             self.highlight_attack_range(self.selected_unit)
-            self.attack_modal.enabled = False
-            destroy(self.attack_modal)
-            self.attack_modal = None
+            if self.attack_modal:
+                self.attack_modal.enabled = False
+                destroy(self.attack_modal)
+                self.attack_modal = None
         
         confirm_btn.on_click = confirm_attack
         cancel_btn.on_click = cancel_attack
@@ -791,14 +799,16 @@ class TacticalRPG:
         # Set up button callbacks
         def confirm_move():
             self.execute_movement()
-            self.movement_modal.enabled = False
-            destroy(self.movement_modal)
-            self.movement_modal = None
+            if self.movement_modal:
+                self.movement_modal.enabled = False
+                destroy(self.movement_modal)
+                self.movement_modal = None
             
         def cancel_move():
-            self.movement_modal.enabled = False
-            destroy(self.movement_modal)
-            self.movement_modal = None
+            if self.movement_modal:
+                self.movement_modal.enabled = False
+                destroy(self.movement_modal)
+                self.movement_modal = None
         
         confirm_btn.on_click = confirm_move
         cancel_btn.on_click = cancel_move
@@ -906,7 +916,7 @@ class TacticalRPG:
                 color=color.blue,
                 scale=(0.9, 0.2, 0.9),
                 position=(pos[0] + 0.5, 0, pos[1] + 0.5),  # Center on tile, same level as grid
-                alpha=0.5  # Same transparency as grid
+                alpha=1.0  # Same transparency as grid
             )
             # Store in a list for cleanup
             if not hasattr(self, 'highlight_entities'):
@@ -920,7 +930,7 @@ class TacticalRPG:
                 color=color.yellow,
                 scale=(0.9, 0.2, 0.9),
                 position=(self.path_cursor[0] + 0.5, 0, self.path_cursor[1] + 0.5),  # Center on tile, same level as grid
-                alpha=0.5  # Same transparency as grid
+                alpha=1.0  # Same transparency as grid
             )
             if not hasattr(self, 'highlight_entities'):
                 self.highlight_entities = []
@@ -948,8 +958,8 @@ class TacticalRPG:
                             model='cube',
                             color=color.red,
                             scale=(0.9, 0.2, 0.9),
-                            position=(x + 0.5, 0, y + 0.5),  # Center on tile, same level as grid
-                            alpha=0.5  # Same transparency as grid
+                            position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                            alpha=1.0  # Same transparency as grid
                         )
                         # Store in a list for cleanup
                         if not hasattr(self, 'highlight_entities'):
@@ -995,15 +1005,32 @@ class TacticalRPG:
             self.health_bar.enabled = False
             self.health_bar = None
         
+        if self.health_bar_label:
+            self.health_bar_label.enabled = False
+            self.health_bar_label = None
+        
         if unit:
+            # Get UI style manager
+            style_manager = get_ui_style_manager()
+            
+            # Create health bar label
+            self.health_bar_label = Text(
+                text="HP",
+                parent=camera.ui,
+                position=(-0.47, 0.45),  # Position to the left of health bar
+                scale=1.0,
+                color=style_manager.get_bar_label_color(),
+                origin=(-0.5, 0)  # Right-align the text
+            )
+            
             self.health_bar = HealthBar(
                 max_value=unit.max_hp,
                 value=unit.hp,
                 position=(-0.4, 0.45),
                 parent=camera.ui,
                 scale=(0.3, 0.03),
-                color=color.red,
-                bg_color=color.dark_gray
+                color=style_manager.get_health_bar_color(),
+                bg_color=style_manager.get_health_bar_bg_color()
             )
     
     def hide_health_bar(self):
@@ -1011,6 +1038,10 @@ class TacticalRPG:
         if self.health_bar:
             self.health_bar.enabled = False
             self.health_bar = None
+        
+        if self.health_bar_label:
+            self.health_bar_label.enabled = False
+            self.health_bar_label = None
     
     def refresh_health_bar(self):
         """Refresh health bar to match selected unit's current HP"""
@@ -1021,3 +1052,66 @@ class TacticalRPG:
         """Called when a unit's HP changes to update health bar if it's the selected unit"""
         if self.selected_unit and self.selected_unit == unit:
             self.refresh_health_bar()
+    
+    def update_resource_bar(self, unit):
+        """Create or update resource bar for the selected unit"""
+        if self.resource_bar:
+            self.resource_bar.enabled = False
+            self.resource_bar = None
+        
+        if self.resource_bar_label:
+            self.resource_bar_label.enabled = False
+            self.resource_bar_label = None
+        
+        if unit:
+            # Get UI style manager
+            style_manager = get_ui_style_manager()
+            
+            # Get resource type and values based on unit type
+            resource_type = unit.primary_resource_type
+            resource_value = unit.get_primary_resource_value()
+            resource_max = unit.get_primary_resource_max()
+            
+            # Get color and label from style manager
+            bar_color = style_manager.get_resource_bar_color(resource_type)
+            label_text = style_manager.get_resource_bar_label(resource_type)
+            
+            # Create resource bar label
+            self.resource_bar_label = Text(
+                text=label_text,
+                parent=camera.ui,
+                position=(-0.47, 0.4),  # Position to the left of resource bar
+                scale=1.0,
+                color=style_manager.get_bar_label_color(),
+                origin=(-0.5, 0)  # Right-align the text
+            )
+            
+            self.resource_bar = HealthBar(
+                max_value=resource_max,
+                value=resource_value,
+                position=(-0.4, 0.4),  # Position just below health bar
+                parent=camera.ui,
+                scale=(0.3, 0.03),
+                color=bar_color,
+                bg_color=style_manager.get_resource_bar_bg_color()
+            )
+    
+    def hide_resource_bar(self):
+        """Hide the resource bar when no unit is selected"""
+        if self.resource_bar:
+            self.resource_bar.enabled = False
+            self.resource_bar = None
+        
+        if self.resource_bar_label:
+            self.resource_bar_label.enabled = False
+            self.resource_bar_label = None
+    
+    def refresh_resource_bar(self):
+        """Refresh resource bar to match selected unit's current resource value"""
+        if self.resource_bar and self.selected_unit:
+            self.resource_bar.value = self.selected_unit.get_primary_resource_value()
+    
+    def on_unit_resource_changed(self, unit):
+        """Called when a unit's resource changes to update resource bar if it's the selected unit"""
+        if self.selected_unit and self.selected_unit == unit:
+            self.refresh_resource_bar()

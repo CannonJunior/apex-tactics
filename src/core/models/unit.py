@@ -18,6 +18,10 @@ class Unit:
         self.current_move_points = self.move_points  # Current movement available this turn
         self.alive = True
         
+        # Additional Resources
+        self.max_rage = self.rage = (self.strength + self.fortitude) * 2  # Rage for physical units
+        self.max_kwan = self.kwan = (self.faith + self.worthy + self.spirit) * 2  # Kwan for spiritual units
+        
         # Combat attributes - base values
         self.base_attack_range = 1  # Default attack range
         self.base_attack_effect_area = 0  # Default single-target attack (0 means only target tile)
@@ -29,6 +33,9 @@ class Unit:
         
         # Default action options for all units
         self.action_options = ["Move", "Attack", "Spirit", "Magic", "Inventory"]
+        
+        # Set primary resource type based on unit type
+        self.primary_resource_type = self._get_primary_resource_type()
         
     def _randomize_attributes(self, wisdom, wonder, worthy, faith, finesse, fortitude, speed, spirit, strength):
         # Base random values (5-15)
@@ -124,7 +131,13 @@ class Unit:
         return (self.faith + self.fortitude + self.worthy) // 2
         
     def take_damage(self, damage, damage_type="physical"):
-        defense = {"physical": self.physical_defense, "magical": self.magical_defense, "spiritual": self.spiritual_defense}[damage_type]
+        # Handle both string and enum damage types
+        if hasattr(damage_type, 'value'):
+            damage_type_str = damage_type.value
+        else:
+            damage_type_str = damage_type
+        
+        defense = {"physical": self.physical_defense, "magical": self.magical_defense, "spiritual": self.spiritual_defense}[damage_type_str]
         old_hp = self.hp
         self.hp = max(0, self.hp - max(1, damage - defense))
         self.alive = self.hp > 0
@@ -192,3 +205,38 @@ class Unit:
             'armor': self.equipped_armor['name'] if self.equipped_armor else 'None',
             'accessory': self.equipped_accessory['name'] if self.equipped_accessory else 'None'
         }
+    
+    def _get_primary_resource_type(self):
+        """
+        Determine primary resource type based on unit type.
+        Physical units use Rage, Magical units use MP, Spiritual units use Kwan.
+        """
+        resource_mapping = {
+            UnitType.HEROMANCER: "rage",      # Physical damage
+            UnitType.UBERMENSCH: "rage",      # Physical damage  
+            UnitType.SOUL_LINKED: "kwan",     # Spiritual damage
+            UnitType.REALM_WALKER: "kwan",    # Spiritual damage
+            UnitType.WARGI: "mp",             # Magical damage
+            UnitType.MAGI: "mp"               # Magical damage
+        }
+        return resource_mapping.get(self.type, "mp")  # Default to MP
+    
+    def get_primary_resource_value(self):
+        """Get current value of primary resource"""
+        resource_type = self.primary_resource_type
+        if resource_type == "rage":
+            return self.rage
+        elif resource_type == "kwan":
+            return self.kwan
+        else:  # mp
+            return self.mp
+    
+    def get_primary_resource_max(self):
+        """Get maximum value of primary resource"""
+        resource_type = self.primary_resource_type
+        if resource_type == "rage":
+            return self.max_rage
+        elif resource_type == "kwan":
+            return self.max_kwan
+        else:  # mp
+            return self.max_mp
