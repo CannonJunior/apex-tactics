@@ -125,8 +125,13 @@ class Unit:
         
     def take_damage(self, damage, damage_type="physical"):
         defense = {"physical": self.physical_defense, "magical": self.magical_defense, "spiritual": self.spiritual_defense}[damage_type]
+        old_hp = self.hp
         self.hp = max(0, self.hp - max(1, damage - defense))
         self.alive = self.hp > 0
+        
+        # Notify game controller of HP change if unit HP changed
+        if hasattr(self, '_game_controller') and self._game_controller and old_hp != self.hp:
+            self._game_controller.on_unit_hp_changed(self)
 
     def can_move_to(self, x, y, grid):
         distance = abs(x - self.x) + abs(y - self.y)

@@ -5,7 +5,7 @@ This document outlines the comprehensive file system organization for the Tactic
 ## Root Directory Structure
 
 ```
-alt-apex-tactics/
+apex-tactics/
 ├── src/                           # Source code
 ├── assets/                        # Game content assets
 ├── data/                          # Game data and configuration

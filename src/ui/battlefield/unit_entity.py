@@ -13,7 +13,7 @@ class UnitEntity(Entity):
             model=visual_props['model'],
             color=visual_props['color'],
             scale=tuple(visual_props['scale']),
-            position=(unit.x, 1.0, unit.y)
+            position=(unit.x + 0.5, 1.0, unit.y + 0.5)
         )
         self.unit = unit
         self.original_color = visual_props['color']

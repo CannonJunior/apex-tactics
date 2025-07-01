@@ -2,11 +2,11 @@ from ursina import *
 import sys
 import os
 
-# Add the alt-apex-tactics src directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'alt-apex-tactics', 'src'))
+# Add the src directory to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from core.game.game_controller import TacticalRPG
-from ui.panels.control_panel import ControlPanel
+from ui.panels.control_panel import CharacterAttackInterface
 from ui.panels.talent_panel import TalentPanel
 from ui.panels.inventory_panel import InventoryPanel
 from ui.panels.party_panel import PartyPanel
@@ -19,7 +19,7 @@ app = Ursina()
 ground = Entity(model='plane', texture='white_cube', color=color.dark_gray, scale=(20, 1, 20), position=(4, -0.1, 4))
 
 # Create all panels
-control_panel = ControlPanel()
+control_panel = CharacterAttackInterface()
 talent_panel = TalentPanel()
 inventory_panel = InventoryPanel()
 party_panel = PartyPanel()

@@ -13,7 +13,7 @@ This plan details the complete replacement of the monolithic `apex-tactics.py` s
 - **Hard to test** individual components
 - **Limited extensibility** due to tight coupling
 
-### ECS Architecture (alt-apex-tactics)
+### ECS Architecture (apex-tactics)
 - **Component-based** entity management
 - **Event-driven** system communication
 - **Modular** systems with single responsibilities
@@ -26,7 +26,7 @@ This plan details the complete replacement of the monolithic `apex-tactics.py` s
 Replace monolithic classes with ECS entities:
 
 ```
-apex-tactics.py               → alt-apex-tactics ECS
+apex-tactics.py               → apex-tactics ECS
 ================               ===================
 Unit                          → Entity + Components:
   - UnitType enum            →   • UnitTypeComponent

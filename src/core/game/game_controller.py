@@ -7,6 +7,7 @@ import random
 import math
 from ursina import *
 from ursina.prefabs.window_panel import WindowPanel
+from ursina.prefabs.health_bar import HealthBar
 
 # Import core modules
 from core.models.unit_types import UnitType
@@ -37,6 +38,7 @@ class TacticalRPG:
         self.attack_target_tile = None  # Currently targeted attack tile
         self.camera_controller = CameraController(self.grid.width, self.grid.height)
         self.control_panel = None  # Reference to character attack interface for UI updates
+        self.health_bar = None  # Health bar for selected unit
         
         self.setup_battle()
         
@@ -63,6 +65,8 @@ class TacticalRPG:
         self.equip_demo_weapons()
         
         for unit in self.units:
+            # Set game controller reference for HP change notifications
+            unit._game_controller = self
             self.grid.add_unit(unit)
             self.unit_entities.append(UnitEntity(unit))
             
@@ -166,6 +170,9 @@ class TacticalRPG:
             if self.control_panel:
                 self.control_panel.update_unit_info(clicked_unit)
             
+            # Create/update health bar for selected unit
+            self.update_health_bar(clicked_unit)
+            
             # Show action modal for the selected unit
             self.show_action_modal(clicked_unit)
         else:
@@ -178,6 +185,9 @@ class TacticalRPG:
             # Clear control panel unit info
             if self.control_panel:
                 self.control_panel.update_unit_info(None)
+            
+            # Hide health bar when no unit selected
+            self.hide_health_bar()
                 
     def highlight_movement_range(self):
         """Highlight all tiles the selected unit can move to"""
@@ -625,4 +635,37 @@ class TacticalRPG:
     def update_unit_positions(self):
         """Update the 3D positions of unit entities to match their grid positions"""
         for entity in self.unit_entities:
-            entity.position = (entity.unit.x, 1.0, entity.unit.y)
+            entity.position = (entity.unit.x + 0.5, 1.0, entity.unit.y + 0.5)
+    
+    def update_health_bar(self, unit):
+        """Create or update health bar for the selected unit"""
+        if self.health_bar:
+            self.health_bar.enabled = False
+            self.health_bar = None
+        
+        if unit:
+            self.health_bar = HealthBar(
+                max_value=unit.max_hp,
+                value=unit.hp,
+                position=(-0.4, 0.45),
+                parent=camera.ui,
+                scale=(0.3, 0.03),
+                color=color.red,
+                bg_color=color.dark_gray
+            )
+    
+    def hide_health_bar(self):
+        """Hide the health bar when no unit is selected"""
+        if self.health_bar:
+            self.health_bar.enabled = False
+            self.health_bar = None
+    
+    def refresh_health_bar(self):
+        """Refresh health bar to match selected unit's current HP"""
+        if self.health_bar and self.selected_unit:
+            self.health_bar.value = self.selected_unit.hp
+    
+    def on_unit_hp_changed(self, unit):
+        """Called when a unit's HP changes to update health bar if it's the selected unit"""
+        if self.selected_unit and self.selected_unit == unit:
+            self.refresh_health_bar()
