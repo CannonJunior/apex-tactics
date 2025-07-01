@@ -71,7 +71,8 @@ class AStarPathfinder:
     
     def find_path(self, start: Vector2Int, goal: Vector2Int,
                   movement_cost_func: Optional[Callable[[Vector2Int, Vector2Int], float]] = None,
-                  max_cost: float = float('inf')) -> PathfindingResult:
+                  max_cost: float = float('inf'),
+                  ignore_occupants: bool = False) -> PathfindingResult:
         """
         Find path from start to goal using A* algorithm.
         
@@ -80,6 +81,7 @@ class AStarPathfinder:
             goal: Goal position
             movement_cost_func: Optional custom movement cost function
             max_cost: Maximum allowed path cost
+            ignore_occupants: If True, ignore occupied cells (for range checking)
             
         Returns:
             PathfindingResult with path and performance data
@@ -150,6 +152,12 @@ class AStarPathfinder:
                 if movement_cost == float('inf'):
                     continue  # Impassable
                 
+                # Check if neighbor cell is occupied (unless ignoring occupants or is the goal)
+                if not ignore_occupants and neighbor_pos != goal:
+                    neighbor_cell = self.grid.get_cell(neighbor_pos)
+                    if neighbor_cell and neighbor_cell.occupied:
+                        continue  # Skip occupied cells (units act as obstacles)
+                
                 tentative_g_cost = current_node.g_cost + movement_cost
                 
                 # Skip if cost exceeds maximum
@@ -185,7 +193,7 @@ class AStarPathfinder:
         
         return result
     
-    def calculate_movement_path(self, start: Vector2Int, end: Vector2Int, max_movement: float) -> List[Vector2Int]:
+    def calculate_movement_path(self, start: Vector2Int, end: Vector2Int, max_movement: float, ignore_occupants: bool = False) -> List[Vector2Int]:
         """
         Calculate optimal movement path from start to end position within movement limits.
         
@@ -193,18 +201,19 @@ class AStarPathfinder:
             start: Starting position
             end: Destination position
             max_movement: Maximum movement points available
+            ignore_occupants: If True, ignore occupied cells (for range checking)
             
         Returns:
             List of positions forming the path, empty if unreachable
         """
         # Use find_path with movement cost limit
-        result = self.find_path(start, end, max_cost=max_movement)
+        result = self.find_path(start, end, max_cost=max_movement, ignore_occupants=ignore_occupants)
         
         if result.success and result.cost <= max_movement:
             return result.path
         
         # If destination unreachable, try to find closest reachable position
-        reachable_positions = self.find_reachable_positions(start, max_movement)
+        reachable_positions = self.find_reachable_positions(start, max_movement, ignore_occupants)
         if not reachable_positions:
             return []
         
@@ -213,16 +222,17 @@ class AStarPathfinder:
                          key=lambda pos: pos.manhattan_distance_to(end))
         
         # Return path to closest reachable position
-        closest_result = self.find_path(start, closest_pos, max_cost=max_movement)
+        closest_result = self.find_path(start, closest_pos, max_cost=max_movement, ignore_occupants=ignore_occupants)
         return closest_result.path if closest_result.success else []
 
-    def find_reachable_positions(self, start: Vector2Int, max_movement: float) -> List[Vector2Int]:
+    def find_reachable_positions(self, start: Vector2Int, max_movement: float, ignore_occupants: bool = False) -> List[Vector2Int]:
         """
         Find all positions reachable within movement points.
         
         Args:
             start: Starting position
             max_movement: Maximum movement points available
+            ignore_occupants: If True, ignore occupied cells (for range checking)
             
         Returns:
             List of reachable positions
@@ -251,6 +261,12 @@ class AStarPathfinder:
                 movement_cost = self.grid.get_movement_cost(current_pos, neighbor_pos)
                 if movement_cost == float('inf'):
                     continue
+                
+                # Check if neighbor cell is occupied (unless ignoring occupants)
+                if not ignore_occupants:
+                    neighbor_cell = self.grid.get_cell(neighbor_pos)
+                    if neighbor_cell and neighbor_cell.occupied:
+                        continue  # Skip occupied cells
                 
                 total_cost = current_cost + movement_cost
                 if total_cost <= max_movement:

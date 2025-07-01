@@ -90,12 +90,13 @@ All colors use RGBA format with values from 0.0 to 1.0:
 
 ### Health Bar
 - **Fill Color**: Green (0.0, 0.8, 0.0, 1.0)
-- **Background**: Dark Gray (0.2, 0.2, 0.2, 1.0)
+- **Background**: Grey (0.5, 0.5, 0.5, 0.75) with transparency
 
 ### Resource Bars
 - **Rage**: Red (1.0, 0.0, 0.0, 1.0) - Used by Heromancer, Ubermensch
 - **MP**: Blue (0.0, 0.0, 1.0, 1.0) - Used by Wargi, Magi  
 - **Kwan**: Yellow (1.0, 1.0, 0.0, 1.0) - Used by Soul Linked, Realm Walker
+- **Background**: Grey (0.5, 0.5, 0.5, 0.75) with transparency
 
 ### Labels
 - **All Labels**: White (1.0, 1.0, 1.0, 1.0)
@@ -131,6 +132,28 @@ To customize the UI appearance:
   "color": {"r": 0.8, "g": 0.0, "b": 1.0, "a": 1.0},
   "label": "SPIRIT"
 }
+```
+
+## Technical Implementation
+
+### HealthBar Component Structure
+The Ursina HealthBar component has two parts:
+- **Background**: The container (set via `color` parameter)
+- **Foreground Bar**: The fill indicator (accessed via `self.bar.color` property)
+
+### Color Application Process
+1. **Background Color**: Set during HealthBar construction using `color` parameter
+2. **Foreground Color**: Set after creation by accessing `self.bar.color` property
+3. **Style Loading**: All colors loaded from `assets/ui_styles.json` via UIStyleManager
+
+```python
+# Example implementation
+health_bar = HealthBar(
+    max_value=100,
+    value=80,
+    color=grey_background_color  # Background
+)
+health_bar.bar.color = green_foreground_color  # Foreground fill
 ```
 
 ## Integration

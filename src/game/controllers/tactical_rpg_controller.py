@@ -209,10 +209,19 @@ class TacticalRPG:
             self.grid.add_unit(unit)
             self.unit_entities.append(UnitEntity(unit))
             
+            # Add unit to TacticalGrid for obstacle tracking
+            if self.tactical_grid:
+                unit_pos = Vector2Int(unit.x, unit.y)
+                # Use unit name and position as unique identifier
+                unit_id = f"{unit.name}_{unit.x}_{unit.y}"
+                self.tactical_grid.occupy_cell(unit_pos, unit_id)
+            
             # Register unit entity with ECS world entity manager
             try:
-                self.world.entity_manager._register_entity(unit.entity)
-                print(f"✓ Registered {unit.name} with ECS World")
+                # Skip ECS registration for now since Unit class doesn't have entity attribute
+                # TODO: Add proper ECS integration when Unit class is updated
+                # self.world.entity_manager._register_entity(unit.entity)
+                print(f"✓ Unit {unit.name} prepared for ECS (registration skipped)")
             except Exception as e:
                 print(f"⚠ Could not register {unit.name} with ECS World: {e}")
         
@@ -222,6 +231,27 @@ class TacticalRPG:
         # Now that turn_manager exists, create the unit carousel
         if hasattr(self.control_panel, 'create_unit_carousel'):
             self.control_panel.create_unit_carousel()
+        
+        # Auto-select the first unit in turn order
+        first_unit = self.turn_manager.current_unit()
+        if first_unit:
+            self.selected_unit = first_unit
+            self.current_path = []
+            self.path_cursor = (first_unit.x, first_unit.y)
+            self.current_mode = None
+            # Update all highlights and bars for the selected unit
+            self.update_path_highlights()
+            self.update_health_bar(first_unit)
+            self.update_resource_bar(first_unit)
+            
+            # Update control panel with first unit info
+            if self.control_panel:
+                try:
+                    self.control_panel.update_unit_info(first_unit)
+                except Exception as e:
+                    print(f"⚠ Error updating control panel with first unit: {e}")
+            
+            print(f"✓ Auto-selected first unit: {first_unit.name} (Speed: {first_unit.speed})")
         
         print(f"✓ Battle setup complete: {len(self.units)} units, ECS World with {self.world.entity_count} entities")
     
@@ -281,19 +311,31 @@ class TacticalRPG:
             self.clear_highlights()
             self.selected_unit = None
             self.hide_health_bar()
+            self.hide_resource_bar()
             
             # Move to next turn
             self.turn_manager.next_turn()
             
-            # Update control panel with new current unit
+            # Auto-select the new current unit
             current_unit = self.turn_manager.current_unit()
-            if self.control_panel:
-                try:
-                    self.control_panel.update_unit_info(current_unit)
-                except Exception as e:
-                    print(f"⚠ Error updating control panel: {e}")
-            
-            print(f"Turn ended. Now it's {current_unit.name}'s turn.")
+            if current_unit:
+                self.selected_unit = current_unit
+                self.current_path = []
+                self.path_cursor = (current_unit.x, current_unit.y)
+                self.current_mode = None
+                # Update all highlights and bars for the new current unit
+                self.update_path_highlights()
+                self.update_health_bar(current_unit)
+                self.update_resource_bar(current_unit)
+                
+                # Update control panel with new current unit
+                if self.control_panel:
+                    try:
+                        self.control_panel.update_unit_info(current_unit)
+                    except Exception as e:
+                        print(f"⚠ Error updating control panel: {e}")
+                
+                print(f"Turn ended. Now it's {current_unit.name}'s turn (Auto-selected).")
     
     def handle_tile_click(self, x: int, y: int):
         """Handle clicks on grid tiles."""
@@ -314,8 +356,8 @@ class TacticalRPG:
             self.current_path = []  # Reset path when selecting new unit
             self.path_cursor = (clicked_unit.x, clicked_unit.y)  # Start cursor at unit position
             self.current_mode = None  # Reset mode
-            self.highlight_selected_unit()
-            self.highlight_movement_range()
+            # Update all highlights including yellow cursor at unit's position
+            self.update_path_highlights()
             
             # Update control panel with selected unit info
             if self.control_panel:
@@ -457,14 +499,32 @@ class TacticalRPG:
             # Update path cursor
             self.path_cursor = new_pos
             
-            # Update current path
-            if new_pos not in self.current_path:
-                # Add to path if not already in it
-                self.current_path.append(new_pos)
+            # Calculate complete path from unit position to cursor using pathfinder (like mouse movement)
+            if self.pathfinder:
+                try:
+                    start_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+                    end_pos = Vector2Int(new_pos[0], new_pos[1])
+                    
+                    calculated_path = self.pathfinder.calculate_movement_path(
+                        start_pos, 
+                        end_pos, 
+                        float(self.selected_unit.current_move_points)
+                    )
+                    
+                    if calculated_path and len(calculated_path) > 1:
+                        # Convert Vector2Int path back to tuple format (excluding start position)
+                        self.current_path = [(pos.x, pos.y) for pos in calculated_path[1:]]
+                    else:
+                        # Fallback: direct path if pathfinder fails
+                        self.current_path = [new_pos]
+                        
+                except Exception as e:
+                    print(f"⚠ Pathfinding failed for keyboard movement: {e}")
+                    # Fallback: simple direct path
+                    self.current_path = [new_pos]
             else:
-                # If position is already in path, truncate path to that point
-                path_index = self.current_path.index(new_pos)
-                self.current_path = self.current_path[:path_index + 1]
+                # Fallback: simple direct path if no pathfinder
+                self.current_path = [new_pos]
             
             # Update highlights
             self.update_path_highlights()
@@ -493,6 +553,19 @@ class TacticalRPG:
         # Check if clicking on same tile as unit (no movement needed)
         if start_pos.x == end_pos.x and start_pos.y == end_pos.y:
             return True
+        
+        # Validate that clicked tile is within unit's movement range
+        distance = abs(end_pos.x - start_pos.x) + abs(end_pos.y - start_pos.y)
+        if distance > self.selected_unit.current_move_points:
+            print(f"Target tile ({end_pos.x}, {end_pos.y}) is too far. Distance: {distance}, Movement points: {self.selected_unit.current_move_points}")
+            return True  # Handle the click but don't move
+        
+        # Check if target tile is occupied (blocked by another unit)
+        if self.tactical_grid:
+            target_cell = self.tactical_grid.get_cell(end_pos)
+            if target_cell and target_cell.occupied:
+                print(f"Target tile ({end_pos.x}, {end_pos.y}) is occupied by another unit")
+                return True  # Handle the click but don't move
         
         # Calculate path using pathfinder
         try:
@@ -602,6 +675,8 @@ class TacticalRPG:
         if action_name == "Move":
             # Enter movement mode - user can now use WASD to plan movement
             self.current_mode = "move"
+            # Show movement range highlights now that movement mode is active
+            self.update_path_highlights()
             print("Movement mode activated. Use WASD to plan movement, Enter to confirm. Tactical")
         elif action_name == "Attack":
             # Enter attack mode
@@ -863,22 +938,41 @@ class TacticalRPG:
         if not self.path_cursor or not self.selected_unit:
             return
             
+        # Store old position for TacticalGrid update
+        old_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+        new_pos = Vector2Int(self.path_cursor[0], self.path_cursor[1])
+        
         # Move unit to cursor position
         if self.grid.move_unit(self.selected_unit, self.path_cursor[0], self.path_cursor[1]):
+            # Update TacticalGrid positions
+            if self.tactical_grid:
+                self.tactical_grid.free_cell(old_pos)
+                # Use unit name and new position as unique identifier
+                unit_id = f"{self.selected_unit.name}_{new_pos.x}_{new_pos.y}"
+                self.tactical_grid.occupy_cell(new_pos, unit_id)
+            
             self.update_unit_positions()
-            # Clear selection and path
-            self.selected_unit = None
+            # Keep unit selected after movement but clear path and mode
+            moved_unit = self.selected_unit  # Store reference before clearing path
             self.current_path = []
-            self.hide_health_bar()
             self.path_cursor = None
+            self.current_mode = None  # Exit movement mode
             self.clear_highlights()
-            if self.control_panel_callback:
-                try:
-                    control_panel = self.control_panel_callback()
-                    if control_panel:
-                        control_panel.update_unit_info(None)
-                except Exception as e:
-                    print(f"⚠ Error updating control panel: {e}")
+            
+            # Keep the unit selected and update its highlights
+            if moved_unit:
+                self.highlight_selected_unit()
+                # Don't show movement range - user needs to click Move again for that
+                
+                # Update control panel with moved unit info (keep it selected)
+                if self.control_panel_callback:
+                    try:
+                        control_panel = self.control_panel_callback()
+                        if control_panel:
+                            control_panel.update_unit_info(moved_unit)
+                    except Exception as e:
+                        print(f"⚠ Error updating control panel: {e}")
+                        
             print(f"Unit moved successfully. Press END TURN when ready.")
     
     def is_valid_move_destination(self, x: int, y: int) -> bool:
@@ -890,10 +984,23 @@ class TacticalRPG:
         total_distance = abs(x - self.selected_unit.x) + abs(y - self.selected_unit.y)
         
         # Check if within movement points and valid grid position
-        return (total_distance <= self.selected_unit.current_move_points and 
-                0 <= x < self.grid.width and 
-                0 <= y < self.grid.height and
-                (x, y) not in self.grid.units)
+        if total_distance > self.selected_unit.current_move_points:
+            return False
+        
+        if not (0 <= x < self.grid.width and 0 <= y < self.grid.height):
+            return False
+        
+        # Check if position is occupied using TacticalGrid if available
+        if self.tactical_grid:
+            cell = self.tactical_grid.get_cell(Vector2Int(x, y))
+            if cell and cell.occupied:
+                return False
+        else:
+            # Fallback to legacy BattleGrid
+            if (x, y) in self.grid.units:
+                return False
+                
+        return True
     
     def update_path_highlights(self):
         """Update tile highlights to show movement range and current path."""
@@ -906,11 +1013,16 @@ class TacticalRPG:
         # Highlight selected unit
         self.highlight_selected_unit()
         
-        # Highlight all valid movement tiles
-        self.highlight_movement_range()
+        # Only highlight movement range when in movement mode
+        if self.current_mode == "move":
+            self.highlight_movement_range()
         
-        # Highlight current path in blue (override green)
+        # Highlight current path in blue (but not the last tile - that will be yellow)
         for pos in self.current_path:
+            # Skip highlighting the last tile in path if it's the cursor (will be yellow)
+            if self.path_cursor and pos == self.path_cursor:
+                continue
+                
             highlight = Entity(
                 model='cube',
                 color=color.blue,
@@ -923,7 +1035,7 @@ class TacticalRPG:
                 self.highlight_entities = []
             self.highlight_entities.append(highlight)
         
-        # Highlight cursor position in yellow
+        # Highlight cursor position in yellow (always last, overrides blue)
         if self.path_cursor:
             highlight = Entity(
                 model='cube',
@@ -1029,9 +1141,12 @@ class TacticalRPG:
                 position=(-0.4, 0.45),
                 parent=camera.ui,
                 scale=(0.3, 0.03),
-                color=style_manager.get_health_bar_color(),
-                bg_color=style_manager.get_health_bar_bg_color()
+                color=style_manager.get_health_bar_bg_color()  # Background color
             )
+            
+            # Set the foreground bar color after creation
+            if hasattr(self.health_bar, 'bar'):
+                self.health_bar.bar.color = style_manager.get_health_bar_color()
     
     def hide_health_bar(self):
         """Hide the health bar when no unit is selected"""
@@ -1092,9 +1207,12 @@ class TacticalRPG:
                 position=(-0.4, 0.4),  # Position just below health bar
                 parent=camera.ui,
                 scale=(0.3, 0.03),
-                color=bar_color,
-                bg_color=style_manager.get_resource_bar_bg_color()
+                color=style_manager.get_resource_bar_bg_color()  # Background color
             )
+            
+            # Set the foreground bar color after creation
+            if hasattr(self.resource_bar, 'bar'):
+                self.resource_bar.bar.color = bar_color
     
     def hide_resource_bar(self):
         """Hide the resource bar when no unit is selected"""
