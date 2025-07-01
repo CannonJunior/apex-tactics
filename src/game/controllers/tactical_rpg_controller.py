@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple, Dict, Any
 
 try:
     from ursina import Entity, color, destroy, Button, Text, WindowPanel, camera
+    from ursina.prefabs.health_bar import HealthBar
     URSINA_AVAILABLE = True
 except ImportError:
     URSINA_AVAILABLE = False
@@ -78,6 +79,8 @@ class TacticalRPG:
         self.current_mode: Optional[str] = None  # Track current action mode: 'move', 'attack', etc.
         self.attack_modal: Optional[Any] = None  # Reference to attack confirmation modal
         self.attack_target_tile: Optional[Tuple[int, int]] = None  # Currently targeted attack tile
+        self.health_bar: Optional[HealthBar] = None  # Health bar for selected unit
+        self.control_panel: Optional[Any] = None  # Reference to character attack interface for UI updates
         
         # Store control panel callback for camera updates
         self.control_panel_callback = control_panel_callback
@@ -197,6 +200,8 @@ class TacticalRPG:
         
         # Add units to both legacy and ECS systems
         for unit in self.units:
+            # Set game controller reference for HP change notifications
+            unit._game_controller = self
             self.grid.add_unit(unit)
             self.unit_entities.append(UnitEntity(unit))
             
@@ -271,6 +276,7 @@ class TacticalRPG:
             # Clear current selection
             self.clear_highlights()
             self.selected_unit = None
+            self.hide_health_bar()
             
             # Move to next turn
             self.turn_manager.next_turn()
@@ -314,6 +320,9 @@ class TacticalRPG:
                 except Exception as e:
                     print(f"⚠ Error updating control panel: {e}")
             
+            # Create/update health bar for selected unit
+            self.update_health_bar(clicked_unit)
+            
             # Show action modal for the selected unit
             self.show_action_modal(clicked_unit)
         else:
@@ -327,6 +336,7 @@ class TacticalRPG:
                 self.current_path = []
                 self.path_cursor = None
                 self.current_mode = None
+                self.hide_health_bar()
                 # Clear control panel unit info
                 if self.control_panel:
                     try:
@@ -849,6 +859,7 @@ class TacticalRPG:
             # Clear selection and path
             self.selected_unit = None
             self.current_path = []
+            self.hide_health_bar()
             self.path_cursor = None
             self.clear_highlights()
             if self.control_panel_callback:
@@ -973,3 +984,40 @@ class TacticalRPG:
             self.camera_controller.handle_input(key)
         
         return False
+    
+    def set_control_panel(self, control_panel):
+        """Set reference to character attack interface for UI updates"""
+        self.control_panel = control_panel
+    
+    def update_health_bar(self, unit):
+        """Create or update health bar for the selected unit"""
+        if self.health_bar:
+            self.health_bar.enabled = False
+            self.health_bar = None
+        
+        if unit:
+            self.health_bar = HealthBar(
+                max_value=unit.max_hp,
+                value=unit.hp,
+                position=(-0.4, 0.45),
+                parent=camera.ui,
+                scale=(0.3, 0.03),
+                color=color.red,
+                bg_color=color.dark_gray
+            )
+    
+    def hide_health_bar(self):
+        """Hide the health bar when no unit is selected"""
+        if self.health_bar:
+            self.health_bar.enabled = False
+            self.health_bar = None
+    
+    def refresh_health_bar(self):
+        """Refresh health bar to match selected unit's current HP"""
+        if self.health_bar and self.selected_unit:
+            self.health_bar.value = self.selected_unit.hp
+    
+    def on_unit_hp_changed(self, unit):
+        """Called when a unit's HP changes to update health bar if it's the selected unit"""
+        if self.selected_unit and self.selected_unit == unit:
+            self.refresh_health_bar()

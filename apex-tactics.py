@@ -5,7 +5,7 @@ import os
 # Add the src directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from core.game.game_controller import TacticalRPG
+from game.controllers.tactical_rpg_controller import TacticalRPG
 from ui.panels.control_panel import CharacterAttackInterface
 from ui.panels.talent_panel import TalentPanel
 from ui.panels.inventory_panel import InventoryPanel
@@ -58,6 +58,7 @@ game = TacticalRPG()
 
 # Set game reference for all panels
 control_panel.set_game_reference(game)
+game.set_control_panel(control_panel)
 talent_panel.game_reference = game
 inventory_panel.game_reference = game
 party_panel.game_reference = game
