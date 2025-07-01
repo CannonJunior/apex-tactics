@@ -75,7 +75,7 @@ class ActionModal:
             'modal_bg': color.dark_gray,
             'modal_border': color.white,
             'button_normal': color.azure,
-            'button_hover': color.cyan,
+            'button_hover': color.blue,
             'button_disabled': color.gray,
             'text': color.white,
             'title': color.yellow

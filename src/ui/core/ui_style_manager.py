@@ -78,6 +78,19 @@ class UIStyleManager:
                     "mp": {"color": {"r": 0.0, "g": 0.0, "b": 1.0, "a": 1.0}, "label": "MP"},
                     "kwan": {"color": {"r": 1.0, "g": 1.0, "b": 0.0, "a": 1.0}, "label": "KWAN"}
                 }
+            },
+            "inventory": {
+                "item_type_colors": {
+                    "Weapons": {"r": 0.8, "g": 0.2, "b": 0.2, "a": 1.0},
+                    "Armor": {"r": 0.2, "g": 0.6, "b": 0.8, "a": 1.0},
+                    "Accessories": {"r": 0.9, "g": 0.7, "b": 0.2, "a": 1.0},
+                    "Consumables": {"r": 0.2, "g": 0.8, "b": 0.2, "a": 1.0},
+                    "Materials": {"r": 0.6, "g": 0.4, "b": 0.8, "a": 1.0}
+                },
+                "equipped_highlight": {
+                    "border_color": {"r": 1.0, "g": 1.0, "b": 0.0, "a": 1.0},
+                    "border_width": 0.02
+                }
             }
         }
         self.loaded = True
@@ -206,6 +219,38 @@ class UIStyleManager:
         """
         color_path = f'highlights.{highlight_type}.color'
         return self.get_color(color_path, (1.0, 1.0, 1.0, 0.5))
+    
+    def get_item_type_color(self, item_type: str) -> Any:
+        """
+        Get color for a specific item type.
+        
+        Args:
+            item_type: 'Weapons', 'Armor', 'Accessories', 'Consumables', 'Materials'
+            
+        Returns:
+            Ursina color for the item type
+        """
+        color_path = f'inventory.item_type_colors.{item_type}'
+        
+        # Default colors for each item type
+        defaults = {
+            'Weapons': (0.8, 0.2, 0.2, 1.0),      # Red
+            'Armor': (0.2, 0.6, 0.8, 1.0),        # Blue
+            'Accessories': (0.9, 0.7, 0.2, 1.0),  # Gold
+            'Consumables': (0.2, 0.8, 0.2, 1.0),  # Green
+            'Materials': (0.6, 0.4, 0.8, 1.0)     # Purple
+        }
+        
+        default_color = defaults.get(item_type, (1.0, 1.0, 1.0, 1.0))
+        return self.get_color(color_path, default_color)
+    
+    def get_equipped_highlight_color(self) -> Any:
+        """Get equipped item highlight border color from styles."""
+        return self.get_color('inventory.equipped_highlight.border_color', (1.0, 1.0, 0.0, 1.0))
+    
+    def get_equipped_highlight_width(self) -> float:
+        """Get equipped item highlight border width from styles."""
+        return self.get_style('inventory.equipped_highlight.border_width', 0.02)
     
     def reload_styles(self) -> bool:
         """

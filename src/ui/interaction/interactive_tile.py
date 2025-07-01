@@ -64,7 +64,7 @@ class InteractiveTile:
             TileState.ATTACK_RANGE: color.red,
             TileState.EFFECT_AREA: color.orange,
             TileState.INVALID: color.dark_gray,
-            TileState.HOVERED: color.cyan
+            TileState.HOVERED: color.blue
         }
         
         # Create Ursina entity

@@ -265,9 +265,9 @@ class TileHighlighter:
         self.highlight_entities.clear()
         self.grid_visualizer.clear_all_highlights()
     
-    def set_selected_unit(self, unit):
+    def set_active_unit(self, unit):
         """Set selected unit and update highlights"""
-        self.grid_visualizer.set_selected_unit(unit)
+        self.grid_visualizer.set_active_unit(unit)
     
     def set_hovered_tile(self, tile_pos: Optional[Vector2Int]):
         """Set hovered tile and update highlights"""

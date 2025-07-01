@@ -268,7 +268,7 @@ class CharacterAttackInterface:
             print(f"Unit icon clicked: {unit.name}")
             
             # Select the unit in the game
-            self.game_reference.selected_unit = unit
+            self.game_reference.active_unit = unit
             
             # Update UI to show selected unit
             self.update_unit_info(unit)
@@ -276,8 +276,8 @@ class CharacterAttackInterface:
             # Highlight the unit on the battlefield
             if hasattr(self.game_reference, 'clear_highlights'):
                 self.game_reference.clear_highlights()
-            if hasattr(self.game_reference, 'highlight_selected_unit'):
-                self.game_reference.highlight_selected_unit()
+            if hasattr(self.game_reference, 'highlight_active_unit'):
+                self.game_reference.highlight_active_unit()
             if hasattr(self.game_reference, 'highlight_movement_range'):
                 self.game_reference.highlight_movement_range()
             
@@ -299,7 +299,7 @@ class CharacterAttackInterface:
         if self.game_reference.turn_manager:
             current_turn_unit = self.game_reference.turn_manager.current_unit()
         
-        selected_unit = self.game_reference.selected_unit
+        active_unit = self.game_reference.active_unit
         
         for icon in self.unit_carousel_icons:
             unit = icon.unit
@@ -307,7 +307,7 @@ class CharacterAttackInterface:
             # Determine icon color
             if unit == current_turn_unit:
                 icon.color = color.yellow  # Current turn
-            elif unit == selected_unit:
+            elif unit == active_unit:
                 icon.color = color.white   # Selected
             else:
                 icon.color = self.get_unit_icon_color(unit)  # Default

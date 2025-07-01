@@ -66,7 +66,7 @@ class GridVisualizer:
         self.update_frequency = 0.016  # 60 FPS
         
         # Selection state
-        self.selected_unit: Optional[Entity] = None
+        self.active_unit: Optional[Entity] = None
         self.hovered_tile: Optional[Vector2Int] = None
         
     def _create_default_styles(self) -> Dict[HighlightType, HighlightStyle]:
@@ -137,16 +137,16 @@ class GridVisualizer:
         if self.dirty_tiles:
             self._refresh_dirty_tiles()
     
-    def set_selected_unit(self, unit: Optional[Entity]):
+    def set_active_unit(self, unit: Optional[Entity]):
         """Set the currently selected unit and update tactical overlays"""
-        if self.selected_unit == unit:
+        if self.active_unit == unit:
             return
         
         # Clear previous selection
-        if self.selected_unit:
+        if self.active_unit:
             self.clear_all_highlights()
         
-        self.selected_unit = unit
+        self.active_unit = unit
         
         if unit:
             self._update_tactical_overlays(unit)

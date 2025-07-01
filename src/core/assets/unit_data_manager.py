@@ -92,7 +92,7 @@ class UnitDataManager:
             "soul_linked": {"visual": {"color": "light_gray"}},
             "realm_walker": {"visual": {"color": [128, 0, 128]}},
             "wargi": {"visual": {"color": "blue"}},
-            "magi": {"visual": {"color": "cyan"}}
+            "magi": {"visual": {"color": "blue"}}
         }
     
     def get_unit_color(self, unit_type: UnitType):

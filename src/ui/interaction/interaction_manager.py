@@ -53,7 +53,7 @@ class InteractionManager:
         
         # Interaction state
         self.current_mode = InteractionMode.NORMAL
-        self.selected_unit: Optional[GameEntity] = None
+        self.active_unit: Optional[GameEntity] = None
         self.selected_tile: Optional[InteractiveTile] = None
         self.hovered_tile: Optional[InteractiveTile] = None
         
@@ -142,7 +142,7 @@ class InteractionManager:
         """Handle tile clicks when a unit is selected"""
         unit = self._get_unit_at_tile(tile)
         
-        if unit and unit != self.selected_unit:
+        if unit and unit != self.active_unit:
             # Select different unit
             self._select_unit(unit, tile)
         elif not unit:
@@ -150,7 +150,7 @@ class InteractionManager:
             self._start_movement_planning(tile)
         else:
             # Clicked same unit - show action modal
-            self._show_unit_action_modal(self.selected_unit)
+            self._show_unit_action_modal(self.active_unit)
     
     def _handle_movement_planning_click(self, tile: InteractiveTile):
         """Handle tile clicks during movement planning"""
@@ -179,7 +179,7 @@ class InteractionManager:
         # Clear previous selection
         self._clear_selection()
         
-        self.selected_unit = unit
+        self.active_unit = unit
         self.selected_tile = tile
         
         # Update tile state
@@ -201,7 +201,7 @@ class InteractionManager:
         if self.selected_tile:
             self.selected_tile.set_state(TileState.NORMAL)
         
-        self.selected_unit = None
+        self.active_unit = None
         self.selected_tile = None
         self.current_path.clear()
         self.path_cursor = None
@@ -268,10 +268,10 @@ class InteractionManager:
     
     def _start_movement_planning(self, target_tile: InteractiveTile):
         """Start planning movement to a target tile"""
-        if not self.selected_unit:
+        if not self.active_unit:
             return
         
-        unit_pos = self._get_unit_position(self.selected_unit)
+        unit_pos = self._get_unit_position(self.active_unit)
         if not unit_pos:
             return
         
@@ -290,10 +290,10 @@ class InteractionManager:
     
     def _plan_movement_to_tile(self, target_tile: InteractiveTile):
         """Plan and confirm movement to a specific tile during movement planning mode"""
-        if not self.selected_unit:
+        if not self.active_unit:
             return
         
-        unit_pos = self._get_unit_position(self.selected_unit)
+        unit_pos = self._get_unit_position(self.active_unit)
         if not unit_pos:
             return
         
@@ -378,21 +378,21 @@ class InteractionManager:
     
     def _execute_movement(self, path: List[Vector2Int]):
         """Execute unit movement along path"""
-        if not self.selected_unit or not path:
+        if not self.active_unit or not path:
             return
         
         print(f"Executing movement along path: {path}")
         
         # Move unit to destination
         destination = path[-1]
-        old_pos = self._get_unit_position(self.selected_unit)
+        old_pos = self._get_unit_position(self.active_unit)
         
         # Update unit position
-        self._set_unit_position(self.selected_unit, destination)
+        self._set_unit_position(self.active_unit, destination)
         
         # Fire movement event
         self._fire_event('unit_moved', {
-            'unit': self.selected_unit,
+            'unit': self.active_unit,
             'from': old_pos,
             'to': destination,
             'path': path
@@ -496,7 +496,7 @@ class InteractionManager:
         print(f"Attacking {target.id}")
         self._fire_event('action_executed', {
             'action': 'attack',
-            'unit': self.selected_unit,
+            'unit': self.active_unit,
             'target': target
         })
         self._clear_selection()
@@ -506,7 +506,7 @@ class InteractionManager:
         print(f"Using ability on {tile.grid_pos}")
         self._fire_event('action_executed', {
             'action': 'ability',
-            'unit': self.selected_unit,
+            'unit': self.active_unit,
             'target_tile': tile
         })
         self._clear_selection()
@@ -540,7 +540,7 @@ class InteractionManager:
         if unit in self.unit_positions:
             del self.unit_positions[unit]
         
-        if self.selected_unit == unit:
+        if self.active_unit == unit:
             self._clear_selection()
     
     def update(self, delta_time: float):

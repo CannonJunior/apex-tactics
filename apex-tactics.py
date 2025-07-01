@@ -27,6 +27,10 @@ upgrade_panel = UpgradePanel()
 character_panel = CharacterPanel()
 
 def input(key):
+    # Handle game input first (modals, etc.) - highest priority
+    if game.handle_input(key):
+        return  # Input was handled by game controller
+    
     # Handle panel toggles
     if key == 't':
         talent_panel.toggle_visibility()
@@ -45,7 +49,7 @@ def input(key):
         return
     
     # Handle path movement for selected unit ONLY if in move mode
-    if (game.selected_unit and game.current_mode == "move" and 
+    if (game.active_unit and game.current_mode == "move" and 
         key in ['w', 'a', 's', 'd', 'enter']):
         game.handle_path_movement(key)
         return  # Don't process camera controls if unit is selected and WASD/Enter is pressed
@@ -71,7 +75,7 @@ def update():
     game.camera_controller.update_camera()
     
     # Update control panel with current unit info
-    if game.turn_manager and game.turn_manager.current_unit() and not game.selected_unit:
+    if game.turn_manager and game.turn_manager.current_unit() and not game.active_unit:
         control_panel.update_unit_info(game.turn_manager.current_unit())
 
 # Set initial camera position

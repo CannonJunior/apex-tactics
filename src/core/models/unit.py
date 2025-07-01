@@ -26,6 +26,12 @@ class Unit:
         self.base_attack_range = 1  # Default attack range
         self.base_attack_effect_area = 0  # Default single-target attack (0 means only target tile)
         
+        # Magic attributes - base values
+        self.base_magic_range = 2  # Default magic range (longer than physical)
+        self.base_magic_effect_area = 1  # Default magic area effect (small area)
+        self.base_magic_mp_cost = 10  # Default MP cost for magic
+        self.magic_spell_name = "Arcane Bolt"  # Default magic spell name
+        
         # Equipment slots
         self.equipped_weapon = None
         self.equipped_armor = None
@@ -36,6 +42,9 @@ class Unit:
         
         # Set primary resource type based on unit type
         self.primary_resource_type = self._get_primary_resource_type()
+        
+        # Set default magic spell name based on unit type
+        self._set_default_magic_spell()
         
     def _randomize_attributes(self, wisdom, wonder, worthy, faith, finesse, fortitude, speed, spirit, strength):
         # Base random values (5-15)
@@ -129,6 +138,42 @@ class Unit:
     @property
     def spiritual_attack(self):
         return (self.faith + self.fortitude + self.worthy) // 2
+    
+    @property
+    def magic_range(self):
+        """Get current magic range including equipment bonuses"""
+        base_range = self.base_magic_range
+        
+        # Add equipment magic range bonus (could be from accessories or magic weapons)
+        if self.equipped_accessory and isinstance(self.equipped_accessory, dict) and 'stats' in self.equipped_accessory:
+            accessory_range = self.equipped_accessory['stats'].get('magic_range', 0)
+            base_range += accessory_range
+        
+        return base_range
+    
+    @property
+    def magic_effect_area(self):
+        """Get current magic effect area including equipment bonuses"""
+        base_area = self.base_magic_effect_area
+        
+        # Add equipment magic area bonus
+        if self.equipped_accessory and isinstance(self.equipped_accessory, dict) and 'stats' in self.equipped_accessory:
+            accessory_area = self.equipped_accessory['stats'].get('magic_effect_area', 0)
+            base_area += accessory_area
+        
+        return base_area
+    
+    @property
+    def magic_mp_cost(self):
+        """Get current magic MP cost including equipment bonuses"""
+        base_cost = self.base_magic_mp_cost
+        
+        # Equipment could reduce MP cost
+        if self.equipped_accessory and isinstance(self.equipped_accessory, dict) and 'stats' in self.equipped_accessory:
+            cost_reduction = self.equipped_accessory['stats'].get('mp_cost_reduction', 0)
+            base_cost = max(1, base_cost - cost_reduction)  # Minimum cost is 1
+        
+        return base_cost
         
     def take_damage(self, damage, damage_type="physical"):
         # Handle both string and enum damage types
@@ -220,6 +265,21 @@ class Unit:
             UnitType.MAGI: "mp"               # Magical damage
         }
         return resource_mapping.get(self.type, "mp")  # Default to MP
+    
+    def _set_default_magic_spell(self):
+        """
+        Set default magic spell name based on unit type.
+        Each unit type has a different magic attack with unique names.
+        """
+        spell_mapping = {
+            UnitType.HEROMANCER: "Heroic Blast",         # Physical-focused but with magic
+            UnitType.UBERMENSCH: "Power Surge",          # Raw energy attack
+            UnitType.SOUL_LINKED: "Soul Fire",           # Spiritual flame attack
+            UnitType.REALM_WALKER: "Dimensional Rift",   # Space-bending attack
+            UnitType.WARGI: "Mystic Bolt",               # Pure magic missile
+            UnitType.MAGI: "Arcane Explosion"            # Area effect magic
+        }
+        self.magic_spell_name = spell_mapping.get(self.type, "Magic Missile")
     
     def get_primary_resource_value(self):
         """Get current value of primary resource"""

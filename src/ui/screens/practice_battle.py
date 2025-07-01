@@ -293,7 +293,7 @@ class UnitEntity(Entity):
         unit_colors = {
             UnitType.HEROMANCER: color.red,
             UnitType.UBERMENSCH: color.orange,
-            UnitType.SOUL_LINKED: color.cyan,
+            UnitType.SOUL_LINKED: color.blue,
             UnitType.REALM_WALKER: color.magenta,
             UnitType.WARGI: color.green,
             UnitType.MAGI: color.blue
@@ -409,7 +409,7 @@ class PracticeBattle:
             content=(
                 Text('Practice Battle Tutorial', color=color.white, scale=1.2),
                 Text(''),
-                Text('Player 1 Turn', color=color.cyan),
+                Text('Player 1 Turn', color=color.blue),
                 Text('Select a unit to see its stats'),
                 Text(''),
                 Text('Controls:', color=color.yellow),
@@ -460,7 +460,7 @@ class PracticeBattle:
         
         # Highlight unit's tile
         tile = self.grid_tiles[unit.x][unit.y]
-        tile.highlight(color.cyan)
+        tile.highlight(color.blue)
         
         # Highlight movement range
         self._highlight_movement_range(unit)
@@ -512,7 +512,7 @@ class PracticeBattle:
             
         unit = self.selected_unit
         content = [
-            Text(f'Turn {self.turn_count} - Player {self.current_player}', color=color.cyan, scale=1.2),
+            Text(f'Turn {self.turn_count} - Player {self.current_player}', color=color.blue, scale=1.2),
             Text(''),
             Text(f'Selected: {unit.name}', color=color.white, scale=1.1),
             Text(f'Type: {unit.type.value.title()}', color=color.light_gray),

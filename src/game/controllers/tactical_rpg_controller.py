@@ -72,7 +72,8 @@ class TacticalRPG:
         self.unit_entities: List[UnitEntity] = []
         self.tile_entities: List[Any] = []  # Grid tiles for mouse interaction
         self.turn_manager: Optional[TurnManager] = None
-        self.selected_unit: Optional[Unit] = None
+        self.active_unit: Optional[Unit] = None
+        self.targeted_units: List[Unit] = []  # List of units targeted for effects
         self.current_path: List[Tuple[int, int]] = []  # Track the selected movement path
         self.path_cursor: Optional[Tuple[int, int]] = None  # Current position in path selection
         self.movement_modal: Optional[Any] = None  # Reference to movement confirmation modal
@@ -80,10 +81,20 @@ class TacticalRPG:
         self.current_mode: Optional[str] = None  # Track current action mode: 'move', 'attack', etc.
         self.attack_modal: Optional[Any] = None  # Reference to attack confirmation modal
         self.attack_target_tile: Optional[Tuple[int, int]] = None  # Currently targeted attack tile
-        self.health_bar: Optional[HealthBar] = None  # Health bar for selected unit
+        self.attack_modal_from_double_click: bool = False  # Track if attack modal was triggered by double-click
+        self.magic_modal: Optional[Any] = None  # Reference to magic confirmation modal
+        self.magic_target_tile: Optional[Tuple[int, int]] = None  # Currently targeted magic tile
+        self.magic_modal_from_double_click: bool = False  # Track if magic modal was triggered by double-click
+        self.health_bar: Optional[HealthBar] = None  # Health bar for active unit
         self.health_bar_label: Optional[Any] = None  # Health bar label
-        self.resource_bar: Optional[HealthBar] = None  # Resource bar for selected unit
+        self.resource_bar: Optional[HealthBar] = None  # Resource bar for active unit
         self.resource_bar_label: Optional[Any] = None  # Resource bar label
+        
+        # Targeted unit bars (can be multiple units for area effects)
+        self.targeted_health_bars: List[HealthBar] = []  # Health bars for targeted units
+        self.targeted_health_bar_labels: List[Any] = []  # Labels for targeted health bars
+        self.targeted_resource_bars: List[HealthBar] = []  # Resource bars for targeted units
+        self.targeted_resource_bar_labels: List[Any] = []  # Labels for targeted resource bars
         self.control_panel: Optional[Any] = None  # Reference to character attack interface for UI updates
         
         # Store control panel callback for camera updates
@@ -232,10 +243,10 @@ class TacticalRPG:
         if hasattr(self.control_panel, 'create_unit_carousel'):
             self.control_panel.create_unit_carousel()
         
-        # Auto-select the first unit in turn order
+        # Auto-activate the first unit in turn order
         first_unit = self.turn_manager.current_unit()
         if first_unit:
-            self.selected_unit = first_unit
+            self.active_unit = first_unit
             self.current_path = []
             self.path_cursor = (first_unit.x, first_unit.y)
             self.current_mode = None
@@ -309,7 +320,7 @@ class TacticalRPG:
         if self.turn_manager:
             # Clear current selection
             self.clear_highlights()
-            self.selected_unit = None
+            self.active_unit = None
             self.hide_health_bar()
             self.hide_resource_bar()
             
@@ -319,7 +330,7 @@ class TacticalRPG:
             # Auto-select the new current unit
             current_unit = self.turn_manager.current_unit()
             if current_unit:
-                self.selected_unit = current_unit
+                self.active_unit = current_unit
                 self.current_path = []
                 self.path_cursor = (current_unit.x, current_unit.y)
                 self.current_mode = None
@@ -340,8 +351,13 @@ class TacticalRPG:
     def handle_tile_click(self, x: int, y: int):
         """Handle clicks on grid tiles."""
         # Handle attack targeting if in attack mode
-        if self.current_mode == "attack" and self.selected_unit:
+        if self.current_mode == "attack" and self.active_unit:
             self.handle_attack_target_selection(x, y)
+            return
+        
+        # Handle magic targeting if in magic mode
+        if self.current_mode == "magic" and self.active_unit:
+            self.handle_magic_target_selection(x, y)
             return
             
         # Clear any existing highlights
@@ -352,7 +368,7 @@ class TacticalRPG:
             clicked_unit = self.grid.units[(x, y)]
             
             # Select the clicked unit and show action modal
-            self.selected_unit = clicked_unit
+            self.active_unit = clicked_unit
             self.current_path = []  # Reset path when selecting new unit
             self.path_cursor = (clicked_unit.x, clicked_unit.y)  # Start cursor at unit position
             self.current_mode = None  # Reset mode
@@ -379,7 +395,7 @@ class TacticalRPG:
                 return
             else:
                 # Not in movement mode - clear selection
-                self.selected_unit = None
+                self.active_unit = None
                 self.current_path = []
                 self.path_cursor = None
                 self.current_mode = None
@@ -421,17 +437,17 @@ class TacticalRPG:
         if self.tile_highlighter:
             self.tile_highlighter.clear_all_highlights()
     
-    def highlight_selected_unit(self):
-        """Highlight the currently selected unit."""
-        if self.selected_unit:
+    def highlight_active_unit(self):
+        """Highlight the currently active unit."""
+        if self.active_unit:
             for entity in self.unit_entities:
-                if entity.unit == self.selected_unit:
+                if entity.unit == self.active_unit:
                     entity.highlight_selected()
                     break
     
     def highlight_movement_range(self):
         """Highlight all tiles the selected unit can move to."""
-        if not self.selected_unit:
+        if not self.active_unit:
             return
         
         # Clear existing highlight entities
@@ -441,8 +457,8 @@ class TacticalRPG:
         # Create highlight entities for movement range
         for x in range(self.grid.width):
             for y in range(self.grid.height):
-                distance = abs(x - self.selected_unit.x) + abs(y - self.selected_unit.y)
-                if distance <= self.selected_unit.current_move_points and self.grid.is_valid(x, y):
+                distance = abs(x - self.active_unit.x) + abs(y - self.active_unit.y)
+                if distance <= self.active_unit.current_move_points and self.grid.is_valid(x, y):
                     if distance == 0:
                         # Current position - different color
                         highlight_color = color.white
@@ -466,7 +482,7 @@ class TacticalRPG:
     
     def handle_path_movement(self, direction: str):
         """Handle path movement and confirmation."""
-        if not self.selected_unit or not self.path_cursor:
+        if not self.active_unit or not self.path_cursor:
             return
             
         if direction == 'enter':
@@ -490,10 +506,10 @@ class TacticalRPG:
         # Check if new position is valid (within movement range)
         if self.is_valid_move_destination(new_pos[0], new_pos[1]):
             # Calculate the distance from unit's starting position to the new position
-            total_distance = abs(new_pos[0] - self.selected_unit.x) + abs(new_pos[1] - self.selected_unit.y)
+            total_distance = abs(new_pos[0] - self.active_unit.x) + abs(new_pos[1] - self.active_unit.y)
             
             # Don't allow path to exceed movement points
-            if total_distance > self.selected_unit.current_move_points:
+            if total_distance > self.active_unit.current_move_points:
                 return
             
             # Update path cursor
@@ -502,13 +518,13 @@ class TacticalRPG:
             # Calculate complete path from unit position to cursor using pathfinder (like mouse movement)
             if self.pathfinder:
                 try:
-                    start_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+                    start_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
                     end_pos = Vector2Int(new_pos[0], new_pos[1])
                     
                     calculated_path = self.pathfinder.calculate_movement_path(
                         start_pos, 
                         end_pos, 
-                        float(self.selected_unit.current_move_points)
+                        float(self.active_unit.current_move_points)
                     )
                     
                     if calculated_path and len(calculated_path) > 1:
@@ -539,7 +555,7 @@ class TacticalRPG:
         Returns:
             True if click was handled, False otherwise
         """
-        if not self.selected_unit or self.current_mode != "move":
+        if not self.active_unit or self.current_mode != "move":
             return False
         
         if not self.pathfinder:
@@ -547,7 +563,7 @@ class TacticalRPG:
             return False
         
         # Convert coordinates to Vector2Int for pathfinder
-        start_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+        start_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
         end_pos = Vector2Int(clicked_tile[0], clicked_tile[1])
         
         # Check if clicking on same tile as unit (no movement needed)
@@ -556,8 +572,8 @@ class TacticalRPG:
         
         # Validate that clicked tile is within unit's movement range
         distance = abs(end_pos.x - start_pos.x) + abs(end_pos.y - start_pos.y)
-        if distance > self.selected_unit.current_move_points:
-            print(f"Target tile ({end_pos.x}, {end_pos.y}) is too far. Distance: {distance}, Movement points: {self.selected_unit.current_move_points}")
+        if distance > self.active_unit.current_move_points:
+            print(f"Target tile ({end_pos.x}, {end_pos.y}) is too far. Distance: {distance}, Movement points: {self.active_unit.current_move_points}")
             return True  # Handle the click but don't move
         
         # Check if target tile is occupied (blocked by another unit)
@@ -572,7 +588,7 @@ class TacticalRPG:
             calculated_path = self.pathfinder.calculate_movement_path(
                 start_pos, 
                 end_pos, 
-                float(self.selected_unit.current_move_points)
+                float(self.active_unit.current_move_points)
             )
             
             if calculated_path and len(calculated_path) > 1:
@@ -589,7 +605,7 @@ class TacticalRPG:
                 # No valid path found - try to get as close as possible
                 reachable_positions = self.pathfinder.find_reachable_positions(
                     start_pos, 
-                    float(self.selected_unit.current_move_points)
+                    float(self.active_unit.current_move_points)
                 )
                 
                 if reachable_positions:
@@ -601,7 +617,7 @@ class TacticalRPG:
                     closest_path = self.pathfinder.calculate_movement_path(
                         start_pos,
                         closest_pos,
-                        float(self.selected_unit.current_move_points)
+                        float(self.active_unit.current_move_points)
                     )
                     
                     if closest_path and len(closest_path) > 1:
@@ -686,8 +702,9 @@ class TacticalRPG:
             print("Spirit action selected - functionality to be implemented")
             # TODO: Implement spirit abilities
         elif action_name == "Magic":
-            print("Magic action selected - functionality to be implemented")
-            # TODO: Implement magic spells
+            # Enter magic mode
+            self.current_mode = "magic"
+            self.handle_magic(unit)
         elif action_name == "Inventory":
             print("Inventory action selected - functionality to be implemented")
             # TODO: Implement inventory management
@@ -703,26 +720,35 @@ class TacticalRPG:
         
         # Clear existing highlights and show attack range
         self.clear_highlights()
-        self.highlight_selected_unit()
+        self.highlight_active_unit()
         self.highlight_attack_range(unit)
         
         print("Click on a target within red highlighted tiles to attack.")
     
-    def handle_attack_target_selection(self, x: int, y: int):
+    def handle_attack_target_selection(self, x: int, y: int, from_double_click: bool = False):
         """Handle tile clicks when in attack mode."""
-        if not self.selected_unit:
+        if not self.active_unit:
+            return
+            
+        # Check if this is a double-click on the same tile while attack modal is open
+        if (from_double_click and self.attack_modal and self.attack_modal.enabled and 
+            self.attack_target_tile == (x, y)):
+            # Auto-confirm the attack on double-click
+            print(f"🖱️  Double-click confirming attack on ({x}, {y})")
+            self._confirm_current_attack()
             return
             
         # Check if clicked tile is within attack range
-        distance = abs(x - self.selected_unit.x) + abs(y - self.selected_unit.y)
-        if distance <= self.selected_unit.attack_range and distance > 0:
+        distance = abs(x - self.active_unit.x) + abs(y - self.active_unit.y)
+        if distance <= self.active_unit.attack_range and distance > 0:
             # Valid attack target tile
             self.attack_target_tile = (x, y)
+            self.attack_modal_from_double_click = from_double_click
             
             # Clear highlights and show attack effect area
             self.clear_highlights()
-            self.highlight_selected_unit()
-            self.highlight_attack_range(self.selected_unit)
+            self.highlight_active_unit()
+            self.highlight_attack_range(self.active_unit)
             self.highlight_attack_effect_area(x, y)
             
             # Show attack confirmation modal
@@ -732,10 +758,10 @@ class TacticalRPG:
     
     def highlight_attack_effect_area(self, target_x: int, target_y: int):
         """Highlight the attack effect area around the target tile."""
-        if not self.selected_unit:
+        if not self.active_unit:
             return
         
-        effect_radius = self.selected_unit.attack_effect_area
+        effect_radius = self.active_unit.attack_effect_area
         
         for x in range(self.grid.width):
             for y in range(self.grid.height):
@@ -766,59 +792,33 @@ class TacticalRPG:
     
     def show_attack_confirmation(self, target_x: int, target_y: int):
         """Show modal to confirm attack on target tile."""
-        if not self.selected_unit or not self.attack_target_tile:
+        if not self.active_unit or not self.attack_target_tile:
             return
             
         # Find units that would be affected by the attack
         affected_units = self.get_units_in_effect_area(target_x, target_y)
         unit_list = affected_units  # Move unit_list declaration here
         
+        # Set the targeted units for UI display
+        self.set_targeted_units(unit_list)
+        
         # Create confirmation buttons
         confirm_btn = Button(text='Confirm Attack', color=color.red)
         cancel_btn = Button(text='Cancel', color=color.gray)
         
+        # Store attack data for keyboard handling
+        self._current_attack_data = {
+            'target_x': target_x,
+            'target_y': target_y,
+            'affected_units': unit_list
+        }
+        
         # Set up button callbacks
         def confirm_attack():
-            print(f"{self.selected_unit.name} attacks tile ({target_x}, {target_y})!")
-            
-            # Apply damage to each unit in unit_list
-            attack_damage = self.selected_unit.physical_attack
-            for target_unit in unit_list:
-                print(f"  {target_unit.name} takes {attack_damage} physical damage!")
-                target_unit.take_damage(attack_damage, AttackType.PHYSICAL)
-                
-                if not target_unit.alive:
-                    print(f"  {target_unit.name} has been defeated!")
-                    # Remove dead unit from grid
-                    if (target_unit.x, target_unit.y) in self.grid.units:
-                        del self.grid.units[(target_unit.x, target_unit.y)]
-                    
-                    # Remove unit entity from scene
-                    for entity in self.unit_entities:
-                        if entity.unit == target_unit:
-                            destroy(entity)
-                            self.unit_entities.remove(entity)
-                            break
-            
-            if self.attack_modal:
-                self.attack_modal.enabled = False
-                destroy(self.attack_modal)
-                self.attack_modal = None
-            # Return to normal mode
-            self.current_mode = None
-            self.attack_target_tile = None
-            self.clear_highlights()
-            self.highlight_selected_unit()
+            self._confirm_current_attack()
             
         def cancel_attack():
-            # Return to attack mode without attacking
-            self.clear_highlights()
-            self.highlight_selected_unit()
-            self.highlight_attack_range(self.selected_unit)
-            if self.attack_modal:
-                self.attack_modal.enabled = False
-                destroy(self.attack_modal)
-                self.attack_modal = None
+            self._cancel_current_attack()
         
         confirm_btn.on_click = confirm_attack
         cancel_btn.on_click = cancel_attack
@@ -830,8 +830,8 @@ class TacticalRPG:
         self.attack_modal = WindowPanel(
             title='Confirm Attack',
             content=(
-                Text(f'{self.selected_unit.name} attacks tile ({target_x}, {target_y})'),
-                Text(f'Attack damage: {self.selected_unit.physical_attack}'),
+                Text(f'{self.active_unit.name} attacks tile ({target_x}, {target_y})'),
+                Text(f'Attack damage: {self.active_unit.physical_attack}'),
                 Text(f'Units in effect area: {unit_names}'),
                 confirm_btn,
                 cancel_btn
@@ -846,7 +846,7 @@ class TacticalRPG:
     def get_units_in_effect_area(self, target_x: int, target_y: int) -> List[Any]:
         """Get all units within the attack effect area."""
         affected_units = []
-        effect_radius = self.selected_unit.attack_effect_area
+        effect_radius = self.active_unit.attack_effect_area
         
         for x in range(self.grid.width):
             for y in range(self.grid.height):
@@ -857,15 +857,172 @@ class TacticalRPG:
                 if distance <= effect_radius and (x, y) in self.grid.units:
                     unit = self.grid.units[(x, y)]
                     # Don't include the attacking unit itself
-                    if unit != self.selected_unit:
+                    if unit != self.active_unit:
+                        affected_units.append(unit)
+        
+        return affected_units
+    
+    # Magic System Methods (Copy of Attack System with modifications)
+    
+    def handle_magic(self, unit):
+        """Handle magic action - highlight magic range."""
+        if not unit:
+            return
+            
+        print(f"{unit.name} entering magic mode. Magic range: {unit.magic_range}")
+        
+        # Clear existing highlights and show magic range
+        self.clear_highlights()
+        self.highlight_active_unit()
+        self.highlight_magic_range(unit)
+        
+        print("Click on a target within blue highlighted tiles to cast magic.")
+    
+    def handle_magic_target_selection(self, x: int, y: int, from_double_click: bool = False):
+        """Handle tile clicks when in magic mode."""
+        if not self.active_unit:
+            return
+            
+        # Check if this is a double-click on the same tile while magic modal is open
+        if (from_double_click and self.magic_modal and self.magic_modal.enabled and 
+            self.magic_target_tile == (x, y)):
+            # Auto-confirm the magic on double-click
+            print(f"🖱️  Double-click confirming magic on ({x}, {y})")
+            self._confirm_current_magic()
+            return
+            
+        # Check if clicked tile is within magic range
+        distance = abs(x - self.active_unit.x) + abs(y - self.active_unit.y)
+        if distance <= self.active_unit.magic_range and distance > 0:
+            # Valid magic target tile
+            self.magic_target_tile = (x, y)
+            self.magic_modal_from_double_click = from_double_click
+            
+            # Clear highlights and show magic effect area
+            self.clear_highlights()
+            self.highlight_active_unit()
+            self.highlight_magic_range(self.active_unit)
+            self.highlight_magic_effect_area(x, y)
+            
+            # Show magic confirmation modal
+            self.show_magic_confirmation(x, y)
+        else:
+            print(f"Target at ({x}, {y}) is out of magic range!")
+    
+    def highlight_magic_effect_area(self, target_x: int, target_y: int):
+        """Highlight the magic effect area around the target tile."""
+        if not self.active_unit:
+            return
+        
+        effect_radius = self.active_unit.magic_effect_area
+        
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                # Calculate Manhattan distance from target tile to this tile
+                distance = abs(x - target_x) + abs(y - target_y)
+                
+                # Highlight tiles within effect area
+                if distance <= effect_radius:
+                    if (x, y) == (target_x, target_y):
+                        # Target tile gets special color (bright blue for target)
+                        highlight_color = color.blue
+                    else:
+                        # Effect area tiles (lighter blue for area)
+                        highlight_color = color.Color(0.5, 0.7, 1.0, 1.0)  # Light blue RGB
+                    
+                    # Create highlight overlay entity
+                    highlight = Entity(
+                        model='cube',
+                        color=highlight_color,
+                        scale=(0.9, 0.2, 0.9),
+                        position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                        alpha=1.0  # Same transparency as grid
+                    )
+                    # Store in a list for cleanup
+                    if not hasattr(self, 'highlight_entities'):
+                        self.highlight_entities = []
+                    self.highlight_entities.append(highlight)
+    
+    def show_magic_confirmation(self, target_x: int, target_y: int):
+        """Show modal to confirm magic on target tile."""
+        if not self.active_unit or not self.magic_target_tile:
+            return
+            
+        # Find units that would be affected by the magic
+        affected_units = self.get_units_in_magic_effect_area(target_x, target_y)
+        unit_list = affected_units
+        
+        # Set the targeted units for UI display
+        self.set_targeted_units(unit_list)
+        
+        # Create confirmation buttons
+        confirm_btn = Button(text='Confirm Magic', color=color.blue)
+        cancel_btn = Button(text='Cancel', color=color.gray)
+        
+        # Store magic data for keyboard handling
+        self._current_magic_data = {
+            'target_x': target_x,
+            'target_y': target_y,
+            'affected_units': unit_list
+        }
+        
+        # Set up button callbacks
+        def confirm_magic():
+            self._confirm_current_magic()
+            
+        def cancel_magic():
+            self._cancel_current_magic()
+        
+        confirm_btn.on_click = confirm_magic
+        cancel_btn.on_click = cancel_magic
+        
+        # Create modal content
+        unit_names = ", ".join([unit.name for unit in unit_list]) if unit_list else "No units"
+        magic_spell_name = self.active_unit.magic_spell_name if hasattr(self.active_unit, 'magic_spell_name') else "Magic Spell"
+        
+        # Create modal window
+        self.magic_modal = WindowPanel(
+            title='Confirm Magic',
+            content=(
+                Text(f'{self.active_unit.name} casts {magic_spell_name} on tile ({target_x}, {target_y})'),
+                Text(f'Magic damage: {self.active_unit.magical_attack}'),
+                Text(f'MP cost: {self.active_unit.magic_mp_cost}'),
+                Text(f'Units in effect area: {unit_names}'),
+                confirm_btn,
+                cancel_btn
+            ),
+            popup=True
+        )
+        
+        # Center the window panel
+        self.magic_modal.y = self.magic_modal.panel.scale_y / 2 * self.magic_modal.scale_y
+        self.magic_modal.layout()
+    
+    def get_units_in_magic_effect_area(self, target_x: int, target_y: int) -> List[Any]:
+        """Get all units within the magic effect area."""
+        affected_units = []
+        effect_radius = self.active_unit.magic_effect_area
+        
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                # Calculate distance from target tile
+                distance = abs(x - target_x) + abs(y - target_y)
+                
+                # Check if tile is within effect area and has a unit
+                if distance <= effect_radius and (x, y) in self.grid.units:
+                    unit = self.grid.units[(x, y)]
+                    # Don't include the casting unit itself
+                    if unit != self.active_unit:
                         affected_units.append(unit)
         
         return affected_units
             
     def show_movement_confirmation(self):
         """Show modal to confirm unit movement."""
-        if not self.path_cursor or not self.selected_unit:
+        if not self.path_cursor or not self.active_unit:
             return
+        
+        
             
         # Create confirmation buttons
         confirm_btn = Button(text='Confirm Move', color=color.green)
@@ -892,7 +1049,7 @@ class TacticalRPG:
         self.movement_modal = WindowPanel(
             title='Confirm Movement',
             content=(
-                Text(f'Move {self.selected_unit.name} to position ({self.path_cursor[0]}, {self.path_cursor[1]})?'),
+                Text(f'Move {self.active_unit.name} to position ({self.path_cursor[0]}, {self.path_cursor[1]})?'),
                 Text(f'This will use {self.calculate_path_cost()} movement points.'),
                 confirm_btn,
                 cancel_btn
@@ -906,14 +1063,14 @@ class TacticalRPG:
     
     def calculate_path_cost(self) -> int:
         """Calculate the movement cost of the current path."""
-        if not self.path_cursor or not self.selected_unit:
+        if not self.path_cursor or not self.active_unit:
             return 0
         
         # For mouse-generated paths, calculate actual path cost
         if self.current_path and self.pathfinder:
             try:
                 # Convert current path to Vector2Int format
-                start_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+                start_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
                 path_positions = [start_pos] + [Vector2Int(pos[0], pos[1]) for pos in self.current_path]
                 
                 # Calculate actual path cost using grid movement costs
@@ -931,29 +1088,29 @@ class TacticalRPG:
                 pass
         
         # Fallback: Manhattan distance for WASD paths or when pathfinder unavailable
-        return abs(self.path_cursor[0] - self.selected_unit.x) + abs(self.path_cursor[1] - self.selected_unit.y)
+        return abs(self.path_cursor[0] - self.active_unit.x) + abs(self.path_cursor[1] - self.active_unit.y)
     
     def execute_movement(self):
         """Execute the planned movement."""
-        if not self.path_cursor or not self.selected_unit:
+        if not self.path_cursor or not self.active_unit:
             return
             
         # Store old position for TacticalGrid update
-        old_pos = Vector2Int(self.selected_unit.x, self.selected_unit.y)
+        old_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
         new_pos = Vector2Int(self.path_cursor[0], self.path_cursor[1])
         
         # Move unit to cursor position
-        if self.grid.move_unit(self.selected_unit, self.path_cursor[0], self.path_cursor[1]):
+        if self.grid.move_unit(self.active_unit, self.path_cursor[0], self.path_cursor[1]):
             # Update TacticalGrid positions
             if self.tactical_grid:
                 self.tactical_grid.free_cell(old_pos)
                 # Use unit name and new position as unique identifier
-                unit_id = f"{self.selected_unit.name}_{new_pos.x}_{new_pos.y}"
+                unit_id = f"{self.active_unit.name}_{new_pos.x}_{new_pos.y}"
                 self.tactical_grid.occupy_cell(new_pos, unit_id)
             
             self.update_unit_positions()
             # Keep unit selected after movement but clear path and mode
-            moved_unit = self.selected_unit  # Store reference before clearing path
+            moved_unit = self.active_unit  # Store reference before clearing path
             self.current_path = []
             self.path_cursor = None
             self.current_mode = None  # Exit movement mode
@@ -961,7 +1118,7 @@ class TacticalRPG:
             
             # Keep the unit selected and update its highlights
             if moved_unit:
-                self.highlight_selected_unit()
+                self.highlight_active_unit()
                 # Don't show movement range - user needs to click Move again for that
                 
                 # Update control panel with moved unit info (keep it selected)
@@ -977,14 +1134,14 @@ class TacticalRPG:
     
     def is_valid_move_destination(self, x: int, y: int) -> bool:
         """Check if a position is within the unit's movement range."""
-        if not self.selected_unit:
+        if not self.active_unit:
             return False
             
         # Calculate total distance from unit's starting position
-        total_distance = abs(x - self.selected_unit.x) + abs(y - self.selected_unit.y)
+        total_distance = abs(x - self.active_unit.x) + abs(y - self.active_unit.y)
         
         # Check if within movement points and valid grid position
-        if total_distance > self.selected_unit.current_move_points:
+        if total_distance > self.active_unit.current_move_points:
             return False
         
         if not (0 <= x < self.grid.width and 0 <= y < self.grid.height):
@@ -1007,11 +1164,11 @@ class TacticalRPG:
         # Clear existing highlights
         self.clear_highlights()
         
-        if not self.selected_unit:
+        if not self.active_unit:
             return
             
         # Highlight selected unit
-        self.highlight_selected_unit()
+        self.highlight_active_unit()
         
         # Only highlight movement range when in movement mode
         if self.current_mode == "move":
@@ -1078,6 +1235,36 @@ class TacticalRPG:
                             self.highlight_entities = []
                         self.highlight_entities.append(highlight)
     
+    def highlight_magic_range(self, unit):
+        """Highlight all tiles within the unit's magic range in blue."""
+        if not unit:
+            return
+        
+        # Clear existing highlights first
+        self.clear_highlights()
+        
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                # Calculate Manhattan distance from unit to tile
+                distance = abs(x - unit.x) + abs(y - unit.y)
+                
+                # Highlight tiles within magic range (excluding unit's own tile)
+                if distance <= unit.magic_range and distance > 0:
+                    # Check if tile is within grid bounds
+                    if 0 <= x < self.grid.width and 0 <= y < self.grid.height:
+                        # Create highlight overlay entity
+                        highlight = Entity(
+                            model='cube',
+                            color=color.blue,
+                            scale=(0.9, 0.2, 0.9),
+                            position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                            alpha=1.0  # Same transparency as grid
+                        )
+                        # Store in a list for cleanup
+                        if not hasattr(self, 'highlight_entities'):
+                            self.highlight_entities = []
+                        self.highlight_entities.append(highlight)
+    
     def get_tile_at(self, x: int, y: int):
         """Get tile at position (legacy compatibility)."""
         # Using modular grid system - no individual tile entities
@@ -1095,6 +1282,59 @@ class TacticalRPG:
         Args:
             key: The key that was pressed
         """
+        # Handle modal keyboard shortcuts first (highest priority)
+        if self.movement_modal and self.movement_modal.enabled:
+            if key == 'enter':
+                # Confirm movement
+                self.execute_movement()
+                if self.movement_modal:
+                    self.movement_modal.enabled = False
+                    destroy(self.movement_modal)
+                    self.movement_modal = None
+                return True
+            elif key == 'escape':
+                # Cancel movement
+                if self.movement_modal:
+                    self.movement_modal.enabled = False
+                    destroy(self.movement_modal)
+                    self.movement_modal = None
+                return True
+        
+        if self.attack_modal and self.attack_modal.enabled:
+            if key == 'enter':
+                # Confirm attack - need to execute the attack
+                self._confirm_current_attack()
+                return True
+            elif key == 'escape':
+                # Cancel attack - need to return to attack mode
+                self._cancel_current_attack()
+                return True
+        
+        if self.magic_modal and self.magic_modal.enabled:
+            if key == 'enter':
+                # Confirm magic - need to execute the magic
+                self._confirm_current_magic()
+                return True
+            elif key == 'escape':
+                # Cancel magic - need to return to magic mode
+                self._cancel_current_magic()
+                return True
+        
+        # Handle Escape key for movement and attack modes (before modals)
+        if key == 'escape':
+            if self.current_mode == "move":
+                # Cancel movement mode and return to normal
+                self._cancel_movement_mode()
+                return True
+            elif self.current_mode == "attack":
+                # Cancel attack mode and return to normal
+                self._cancel_attack_mode()
+                return True
+            elif self.current_mode == "magic":
+                # Cancel magic mode and return to normal
+                self._cancel_magic_mode()
+                return True
+        
         # Handle 'r' key to toggle control panel visibility
         if key == 'r':
             if hasattr(self, 'control_panel') and self.control_panel:
@@ -1106,6 +1346,210 @@ class TacticalRPG:
             self.camera_controller.handle_input(key)
         
         return False
+    
+    def _confirm_current_attack(self):
+        """Execute the current attack and clean up modal."""
+        if not hasattr(self, '_current_attack_data') or not self._current_attack_data:
+            return
+            
+        attack_data = self._current_attack_data
+        target_x = attack_data['target_x']
+        target_y = attack_data['target_y'] 
+        unit_list = attack_data['affected_units']
+        
+        print(f"{self.active_unit.name} attacks tile ({target_x}, {target_y})!")
+        
+        # Apply damage to each unit in unit_list
+        attack_damage = self.active_unit.physical_attack
+        for target_unit in unit_list:
+            print(f"  {target_unit.name} takes {attack_damage} physical damage!")
+            target_unit.take_damage(attack_damage, AttackType.PHYSICAL)
+            
+            if not target_unit.alive:
+                print(f"  {target_unit.name} has been defeated!")
+                # Remove dead unit from grid
+                if (target_unit.x, target_unit.y) in self.grid.units:
+                    del self.grid.units[(target_unit.x, target_unit.y)]
+                
+                # Remove unit entity from scene
+                for entity in self.unit_entities:
+                    if entity.unit == target_unit:
+                        destroy(entity)
+                        self.unit_entities.remove(entity)
+                        break
+        
+        # Clean up modal and reset state
+        if self.attack_modal:
+            self.attack_modal.enabled = False
+            destroy(self.attack_modal)
+            self.attack_modal = None
+        
+        # Clear targeted units
+        self.clear_targeted_units()
+        
+        # Return to normal mode
+        self.current_mode = None
+        self.attack_target_tile = None
+        self.attack_modal_from_double_click = False
+        self._current_attack_data = None
+        self.clear_highlights()
+        self.highlight_active_unit()
+    
+    def _cancel_current_attack(self):
+        """Cancel the current attack and return to attack mode."""
+        # Return to attack mode without attacking
+        self.clear_highlights()
+        self.highlight_active_unit()
+        self.highlight_attack_range(self.active_unit)
+        
+        # Clean up modal
+        if self.attack_modal:
+            self.attack_modal.enabled = False
+            destroy(self.attack_modal)
+            self.attack_modal = None
+        
+        # Clear targeted units
+        self.clear_targeted_units()
+        
+        # Clear attack data
+        self.attack_modal_from_double_click = False
+        self._current_attack_data = None
+    
+    def _confirm_current_magic(self):
+        """Execute the current magic and clean up modal."""
+        if not hasattr(self, '_current_magic_data') or not self._current_magic_data:
+            return
+            
+        magic_data = self._current_magic_data
+        target_x = magic_data['target_x']
+        target_y = magic_data['target_y'] 
+        unit_list = magic_data['affected_units']
+        
+        # Check if unit has enough MP
+        mp_cost = self.active_unit.magic_mp_cost if hasattr(self.active_unit, 'magic_mp_cost') else 10
+        if self.active_unit.mp < mp_cost:
+            print(f"{self.active_unit.name} doesn't have enough MP to cast magic! (Need {mp_cost}, have {self.active_unit.mp})")
+            self._cancel_current_magic()
+            return
+        
+        # Consume MP
+        self.active_unit.mp -= mp_cost
+        print(f"{self.active_unit.name} consumes {mp_cost} MP (remaining: {self.active_unit.mp})")
+        
+        # Get magic spell name
+        magic_spell_name = self.active_unit.magic_spell_name if hasattr(self.active_unit, 'magic_spell_name') else "Magic Spell"
+        print(f"{self.active_unit.name} casts {magic_spell_name} on tile ({target_x}, {target_y})!")
+        
+        # Apply magic damage to each unit in unit_list
+        magic_damage = self.active_unit.magical_attack
+        for target_unit in unit_list:
+            print(f"  {target_unit.name} takes {magic_damage} magical damage!")
+            target_unit.take_damage(magic_damage, AttackType.MAGICAL)
+            
+            if not target_unit.alive:
+                print(f"  {target_unit.name} has been defeated!")
+                # Remove dead unit from grid
+                if (target_unit.x, target_unit.y) in self.grid.units:
+                    del self.grid.units[(target_unit.x, target_unit.y)]
+                
+                # Remove unit entity from scene
+                for entity in self.unit_entities:
+                    if entity.unit == target_unit:
+                        destroy(entity)
+                        self.unit_entities.remove(entity)
+                        break
+        
+        # Clean up modal and reset state
+        if self.magic_modal:
+            self.magic_modal.enabled = False
+            destroy(self.magic_modal)
+            self.magic_modal = None
+        
+        # Clear targeted units
+        self.clear_targeted_units()
+        
+        # Return to normal mode
+        self.current_mode = None
+        self.magic_target_tile = None
+        self.magic_modal_from_double_click = False
+        self._current_magic_data = None
+        self.clear_highlights()
+        self.highlight_active_unit()
+    
+    def _cancel_current_magic(self):
+        """Cancel the current magic and return to magic mode."""
+        # Return to magic mode without casting
+        self.clear_highlights()
+        self.highlight_active_unit()
+        self.highlight_magic_range(self.active_unit)
+        
+        # Clean up modal
+        if self.magic_modal:
+            self.magic_modal.enabled = False
+            destroy(self.magic_modal)
+            self.magic_modal = None
+        
+        # Clear targeted units
+        self.clear_targeted_units()
+        
+        # Clear magic data
+        self.magic_modal_from_double_click = False
+        self._current_magic_data = None
+    
+    def _cancel_movement_mode(self):
+        """Cancel movement mode and return to normal unit selection."""
+        
+        # Clear movement state
+        self.current_path = []
+        self.path_cursor = None if not self.active_unit else (self.active_unit.x, self.active_unit.y)
+        
+        # Return to normal mode while keeping unit selected
+        self.current_mode = None
+        
+        # Clear movement highlights and show only unit selection
+        self.clear_highlights()
+        if self.active_unit:
+            self.highlight_active_unit()
+    
+    def _cancel_attack_mode(self):
+        """Cancel attack mode and return to normal unit selection."""
+        
+        # Clear attack state
+        self.attack_target_tile = None
+        self.attack_modal_from_double_click = False
+        if hasattr(self, '_current_attack_data'):
+            self._current_attack_data = None
+        
+        # Clear targeted units
+        self.clear_targeted_units()
+        
+        # Return to normal mode while keeping unit selected
+        self.current_mode = None
+        
+        # Clear attack highlights and show only unit selection
+        self.clear_highlights()
+        if self.active_unit:
+            self.highlight_active_unit()
+    
+    def _cancel_magic_mode(self):
+        """Cancel magic mode and return to normal unit selection."""
+        
+        # Clear magic state
+        self.magic_target_tile = None
+        self.magic_modal_from_double_click = False
+        if hasattr(self, '_current_magic_data'):
+            self._current_magic_data = None
+        
+        # Clear targeted units
+        self.clear_targeted_units()
+        
+        # Return to normal mode while keeping unit selected
+        self.current_mode = None
+        
+        # Clear magic highlights and show only unit selection
+        self.clear_highlights()
+        if self.active_unit:
+            self.highlight_active_unit()
     
     def set_control_panel(self, control_panel):
         """Set reference to character attack interface for UI updates"""
@@ -1160,12 +1604,12 @@ class TacticalRPG:
     
     def refresh_health_bar(self):
         """Refresh health bar to match selected unit's current HP"""
-        if self.health_bar and self.selected_unit:
-            self.health_bar.value = self.selected_unit.hp
+        if self.health_bar and self.active_unit:
+            self.health_bar.value = self.active_unit.hp
     
     def on_unit_hp_changed(self, unit):
         """Called when a unit's HP changes to update health bar if it's the selected unit"""
-        if self.selected_unit and self.selected_unit == unit:
+        if self.active_unit and self.active_unit == unit:
             self.refresh_health_bar()
     
     def update_resource_bar(self, unit):
@@ -1226,10 +1670,147 @@ class TacticalRPG:
     
     def refresh_resource_bar(self):
         """Refresh resource bar to match selected unit's current resource value"""
-        if self.resource_bar and self.selected_unit:
-            self.resource_bar.value = self.selected_unit.get_primary_resource_value()
+        if self.resource_bar and self.active_unit:
+            self.resource_bar.value = self.active_unit.get_primary_resource_value()
     
     def on_unit_resource_changed(self, unit):
         """Called when a unit's resource changes to update resource bar if it's the selected unit"""
-        if self.selected_unit and self.selected_unit == unit:
+        if self.active_unit and self.active_unit == unit:
             self.refresh_resource_bar()
+    
+    # Targeted Unit Management Methods
+    
+    def add_targeted_unit(self, unit):
+        """Add a unit to the targeted units list"""
+        if unit not in self.targeted_units:
+            self.targeted_units.append(unit)
+            self.update_targeted_unit_bars()
+    
+    def remove_targeted_unit(self, unit):
+        """Remove a unit from the targeted units list"""
+        if unit in self.targeted_units:
+            self.targeted_units.remove(unit)
+            self.update_targeted_unit_bars()
+    
+    def clear_targeted_units(self):
+        """Clear all targeted units"""
+        self.targeted_units.clear()
+        self.update_targeted_unit_bars()
+    
+    def set_targeted_units(self, units):
+        """Set the targeted units list (replaces existing)"""
+        self.targeted_units = list(units)
+        self.update_targeted_unit_bars()
+    
+    def update_targeted_unit_bars(self):
+        """Update health and resource bars for all targeted units"""
+        # Clear existing targeted unit bars
+        self.hide_targeted_unit_bars()
+        
+        # Create bars for each targeted unit
+        if self.targeted_units:
+            style_manager = get_ui_style_manager()
+            
+            for i, unit in enumerate(self.targeted_units):
+                # Calculate position for multiple units (stack vertically)
+                base_x = 0.4  # Right side of screen
+                base_y = 0.45 - (i * 0.15)  # Stack downward
+                
+                # Create health bar label
+                health_label = Text(
+                    text=f"{unit.name} HP:",
+                    parent=camera.ui,
+                    position=(base_x - 0.07, base_y),
+                    scale=0.8,
+                    color=style_manager.get_bar_label_color(),
+                    origin=(-0.5, 0)
+                )
+                self.targeted_health_bar_labels.append(health_label)
+                
+                # Create health bar
+                health_bar = HealthBar(
+                    max_value=unit.max_hp,
+                    value=unit.hp,
+                    position=(base_x, base_y),
+                    parent=camera.ui,
+                    scale=(0.25, 0.025),
+                    color=style_manager.get_health_bar_bg_color()
+                )
+                
+                # Set health bar color
+                if hasattr(health_bar, 'bar'):
+                    health_bar.bar.color = style_manager.get_health_bar_color()
+                
+                self.targeted_health_bars.append(health_bar)
+                
+                # Create resource bar label
+                resource_type = unit.primary_resource_type
+                resource_value = unit.get_primary_resource_value()
+                resource_max = unit.get_primary_resource_max()
+                resource_label_text = style_manager.get_resource_bar_label(resource_type)
+                
+                resource_label = Text(
+                    text=f"{unit.name} {resource_label_text}:",
+                    parent=camera.ui,
+                    position=(base_x - 0.07, base_y - 0.05),
+                    scale=0.8,
+                    color=style_manager.get_bar_label_color(),
+                    origin=(-0.5, 0)
+                )
+                self.targeted_resource_bar_labels.append(resource_label)
+                
+                # Create resource bar
+                resource_bar = HealthBar(
+                    max_value=resource_max,
+                    value=resource_value,
+                    position=(base_x, base_y - 0.05),
+                    parent=camera.ui,
+                    scale=(0.25, 0.025),
+                    color=style_manager.get_resource_bar_bg_color()
+                )
+                
+                # Set resource bar color
+                bar_color = style_manager.get_resource_bar_color(resource_type)
+                if hasattr(resource_bar, 'bar'):
+                    resource_bar.bar.color = bar_color
+                
+                self.targeted_resource_bars.append(resource_bar)
+    
+    def hide_targeted_unit_bars(self):
+        """Hide all targeted unit health and resource bars"""
+        # Hide and clear health bars
+        for bar in self.targeted_health_bars:
+            if bar:
+                bar.enabled = False
+        self.targeted_health_bars.clear()
+        
+        # Hide and clear health bar labels
+        for label in self.targeted_health_bar_labels:
+            if label:
+                label.enabled = False
+        self.targeted_health_bar_labels.clear()
+        
+        # Hide and clear resource bars
+        for bar in self.targeted_resource_bars:
+            if bar:
+                bar.enabled = False
+        self.targeted_resource_bars.clear()
+        
+        # Hide and clear resource bar labels
+        for label in self.targeted_resource_bar_labels:
+            if label:
+                label.enabled = False
+        self.targeted_resource_bar_labels.clear()
+    
+    def refresh_targeted_unit_bars(self):
+        """Refresh all targeted unit bars to match current HP/resource values"""
+        for i, unit in enumerate(self.targeted_units):
+            if i < len(self.targeted_health_bars):
+                health_bar = self.targeted_health_bars[i]
+                if health_bar:
+                    health_bar.value = unit.hp
+            
+            if i < len(self.targeted_resource_bars):
+                resource_bar = self.targeted_resource_bars[i]
+                if resource_bar:
+                    resource_bar.value = unit.get_primary_resource_value()

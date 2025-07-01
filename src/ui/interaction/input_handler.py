@@ -126,7 +126,7 @@ class InputHandler:
             return False
         
         # Check if we're in movement mode with a selected unit
-        if not (hasattr(self.game, 'selected_unit') and self.game.selected_unit and 
+        if not (hasattr(self.game, 'active_unit') and self.game.active_unit and 
                 hasattr(self.game, 'current_mode') and self.game.current_mode == "move"):
             return False
         

@@ -3,7 +3,7 @@ class BattleGrid:
         self.width, self.height = width, height
         self.tiles = {}
         self.units = {}
-        self.selected_unit = None
+        self.active_unit = None
         
     def is_valid(self, x, y):
         return 0 <= x < self.width and 0 <= y < self.height and (x, y) not in self.units

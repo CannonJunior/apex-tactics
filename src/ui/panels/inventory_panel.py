@@ -17,6 +17,13 @@ try:
 except ImportError:
     URSINA_AVAILABLE = False
 
+# Import UI style manager for colors
+try:
+    from ...ui.core.ui_style_manager import get_ui_style_manager
+    UI_STYLES_AVAILABLE = True
+except ImportError:
+    UI_STYLES_AVAILABLE = False
+
 # Import asset management system
 try:
     from ...core.assets.data_manager import get_data_manager, create_sample_inventory
@@ -35,19 +42,25 @@ class InventoryItem(Draggable):
         self.inventory_parent = inventory_parent
         self.is_equipped = item_data.get('equipped_by') is not None
         
-        # Load item texture
+        # Load item texture and color
         item_texture = self._load_item_texture()
+        item_color = self._get_item_color()
         
         # Create draggable item
         super().__init__(
             parent=inventory_parent,
             model='quad',
             texture=item_texture,
-            color=color.gray if self.is_equipped else color.white,
+            color=item_color,
             origin=(-.5, .5),
             z=-.1,
             **kwargs
         )
+        
+        # Create equipped highlight border if item is equipped
+        self.equipped_border = None
+        if self.is_equipped:
+            self._create_equipped_border()
         
         # Create tooltip
         item_name = item_data.get('name', 'Unknown Item')
@@ -87,10 +100,64 @@ class InventoryItem(Draggable):
         
         return load_texture(fallback_path, fallback='white_cube')
     
+    def _get_item_color(self):
+        """Get the appropriate color for this item based on its type."""
+        if not UI_STYLES_AVAILABLE:
+            return color.white  # Fallback color
+        
+        style_manager = get_ui_style_manager()
+        item_type = self.item_data.get('type', 'Materials')
+        
+        return style_manager.get_item_type_color(item_type)
+    
+    def _create_equipped_border(self):
+        """Create a highlight border for equipped items."""
+        if not UI_STYLES_AVAILABLE:
+            return
+        
+        style_manager = get_ui_style_manager()
+        border_color = style_manager.get_equipped_highlight_color()
+        border_width = style_manager.get_equipped_highlight_width()
+        
+        # Create border as a larger entity behind the item
+        self.equipped_border = Entity(
+            parent=self,
+            model='quad',
+            color=border_color,
+            scale=(1 + border_width * 2, 1 + border_width * 2),
+            z=0.01,  # Behind the item
+            origin=(-.5, .5)
+        )
+    
+    def _remove_equipped_border(self):
+        """Remove the equipped border."""
+        if self.equipped_border:
+            destroy(self.equipped_border)
+            self.equipped_border = None
+    
+    def set_equipped_status(self, is_equipped: bool):
+        """Update the equipped status and visual representation."""
+        self.is_equipped = is_equipped
+        
+        if is_equipped and not self.equipped_border:
+            self._create_equipped_border()
+        elif not is_equipped and self.equipped_border:
+            self._remove_equipped_border()
+    
+    def destroy(self):
+        """Override destroy to clean up equipped border."""
+        self._remove_equipped_border()
+        super().destroy()
+    
     def drag(self):
         """Called when item starts being dragged."""
         self.org_pos = (self.x, self.y)
         self.z -= .01  # Move item forward visually
+        
+        # Move equipped border with the item
+        if self.equipped_border:
+            self.equipped_border.z -= .01
+        
         print(f"Dragging {self.item_data['name']}")
     
     def drop(self):
@@ -98,6 +165,10 @@ class InventoryItem(Draggable):
         self.x = round(self.x, 3)
         self.y = round(self.y, 3)
         self.z += .01  # Move item back
+        
+        # Move equipped border back with the item
+        if self.equipped_border:
+            self.equipped_border.z += .01
         
         # Get inventory dimensions
         inv_width = self.inventory_parent.width
@@ -241,15 +312,6 @@ class InventoryPanel:
         self.tab_buttons = []
         self.info_panel = None
         
-        # Sample item textures (would be loaded from assets in real game)
-        self.item_textures = {
-            "Weapon": "white_cube",
-            "Armor": "white_cube", 
-            "Accessory": "white_cube",
-            "Consumable": "white_cube",
-            "Material": "white_cube"
-        }
-        
         # Load sample data
         self._load_sample_data()
         
@@ -279,7 +341,7 @@ class InventoryPanel:
         info_text = [
             "Interactive Inventory",
             "Drag items to rearrange",
-            "Equipped items shown in gray",
+            "Equipped items have highlight border",
             f"Tab: {self.current_tab}",
             f"Items: {len(self.sample_items)}"
         ]

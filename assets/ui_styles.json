@@ -69,6 +69,49 @@
         }
       }
     },
+    "inventory": {
+      "item_type_colors": {
+        "Weapons": {
+          "r": 0.8,
+          "g": 0.2,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "Armor": {
+          "r": 0.2,
+          "g": 0.6,
+          "b": 0.8,
+          "a": 1.0
+        },
+        "Accessories": {
+          "r": 0.9,
+          "g": 0.7,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "Consumables": {
+          "r": 0.2,
+          "g": 0.8,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "Materials": {
+          "r": 0.6,
+          "g": 0.4,
+          "b": 0.8,
+          "a": 1.0
+        }
+      },
+      "equipped_highlight": {
+        "border_color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 0.0,
+          "a": 1.0
+        },
+        "border_width": 0.02
+      }
+    },
     "labels": {
       "bar_labels": {
         "color": {
