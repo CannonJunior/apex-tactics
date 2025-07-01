@@ -1,0 +1,259 @@
+{
+  "version": "1.0",
+  "description": "Base items for Apex Tactics game",
+  "items": [
+    {
+      "id": "iron_sword",
+      "name": "Iron Sword",
+      "type": "Weapons",
+      "tier": "BASE",
+      "description": "A basic iron sword with decent sharpness.",
+      "stats": {
+        "physical_attack": 12,
+        "durability": 100,
+        "weight": 2.5
+      },
+      "requirements": {
+        "level": 1,
+        "strength": 8
+      },
+      "icon": "items/weapons/iron_sword.png",
+      "rarity": "common",
+      "value": 50,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "steel_axe",
+      "name": "Steel Axe",
+      "type": "Weapons",
+      "tier": "ENHANCED",
+      "description": "A well-crafted steel axe with superior cutting power.",
+      "stats": {
+        "physical_attack": 18,
+        "durability": 120,
+        "weight": 3.2
+      },
+      "requirements": {
+        "level": 3,
+        "strength": 12
+      },
+      "icon": "items/weapons/steel_axe.png",
+      "rarity": "uncommon",
+      "value": 150,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "magic_bow",
+      "name": "Magic Bow",
+      "type": "Weapons",
+      "tier": "ENCHANTED",
+      "description": "An enchanted bow that never misses its mark.",
+      "stats": {
+        "physical_attack": 22,
+        "magical_attack": 8,
+        "durability": 90,
+        "weight": 1.8
+      },
+      "requirements": {
+        "level": 5,
+        "finesse": 15,
+        "wonder": 10
+      },
+      "icon": "items/weapons/magic_bow.png",
+      "rarity": "rare",
+      "value": 400,
+      "stackable": false,
+      "max_stack": 1,
+      "enchantments": ["never_miss", "magical_arrows"]
+    },
+    {
+      "id": "spear",
+      "name": "Spear",
+      "type": "Weapons",
+      "tier": "BASE",
+      "description": "A long-reach spear with extended attack range and area effect.",
+      "stats": {
+        "physical_attack": 14,
+        "durability": 110,
+        "weight": 2.8,
+        "attack_range": 2,
+        "effect_area": 2
+      },
+      "requirements": {
+        "level": 2,
+        "strength": 10
+      },
+      "icon": "items/weapons/spear.png",
+      "rarity": "common",
+      "value": 75,
+      "stackable": false,
+      "max_stack": 1,
+      "weapon_properties": {
+        "reach": true,
+        "area_attack": true
+      }
+    },
+    {
+      "id": "leather_armor",
+      "name": "Leather Armor",
+      "type": "Armor",
+      "tier": "BASE",
+      "description": "Basic leather armor providing modest protection.",
+      "stats": {
+        "physical_defense": 8,
+        "durability": 80,
+        "weight": 3.0
+      },
+      "requirements": {
+        "level": 1
+      },
+      "icon": "items/armor/leather_armor.png",
+      "rarity": "common",
+      "value": 75,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "chain_mail",
+      "name": "Chain Mail",
+      "type": "Armor",
+      "tier": "ENHANCED",
+      "description": "Interlocking metal rings providing excellent protection.",
+      "stats": {
+        "physical_defense": 15,
+        "magical_defense": 3,
+        "durability": 150,
+        "weight": 8.5
+      },
+      "requirements": {
+        "level": 4,
+        "fortitude": 12
+      },
+      "icon": "items/armor/chain_mail.png",
+      "rarity": "uncommon",
+      "value": 250,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "power_ring",
+      "name": "Power Ring",
+      "type": "Accessories",
+      "tier": "ENHANCED",
+      "description": "A mystical ring that enhances the wearer's magical abilities.",
+      "stats": {
+        "magical_attack": 10,
+        "wonder": 5,
+        "durability": 200,
+        "weight": 0.1
+      },
+      "requirements": {
+        "level": 3,
+        "wonder": 8
+      },
+      "icon": "items/accessories/power_ring.png",
+      "rarity": "uncommon",
+      "value": 300,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "health_potion",
+      "name": "Health Potion",
+      "type": "Consumables",
+      "tier": "BASE",
+      "description": "A red potion that restores health when consumed.",
+      "stats": {
+        "heal_amount": 50,
+        "weight": 0.3
+      },
+      "requirements": {},
+      "icon": "items/consumables/health_potion.png",
+      "rarity": "common",
+      "value": 25,
+      "stackable": true,
+      "max_stack": 10,
+      "consumable": {
+        "effect": "heal",
+        "amount": 50,
+        "duration": 0
+      }
+    },
+    {
+      "id": "mana_potion",
+      "name": "Mana Potion",
+      "type": "Consumables",
+      "tier": "BASE",
+      "description": "A blue potion that restores magical energy.",
+      "stats": {
+        "mana_restore": 30,
+        "weight": 0.3
+      },
+      "requirements": {},
+      "icon": "items/consumables/mana_potion.png",
+      "rarity": "common",
+      "value": 20,
+      "stackable": true,
+      "max_stack": 10,
+      "consumable": {
+        "effect": "restore_mana",
+        "amount": 30,
+        "duration": 0
+      }
+    },
+    {
+      "id": "iron_ore",
+      "name": "Iron Ore",
+      "type": "Materials",
+      "tier": "BASE",
+      "description": "Raw iron ore used for crafting weapons and armor.",
+      "stats": {
+        "weight": 1.0
+      },
+      "requirements": {},
+      "icon": "items/materials/iron_ore.png",
+      "rarity": "common",
+      "value": 5,
+      "stackable": true,
+      "max_stack": 50,
+      "crafting_material": true
+    },
+    {
+      "id": "magic_crystal",
+      "name": "Magic Crystal",
+      "type": "Materials",
+      "tier": "ENHANCED",
+      "description": "A crystallized form of magical energy used in enchantments.",
+      "stats": {
+        "weight": 0.5
+      },
+      "requirements": {},
+      "icon": "items/materials/magic_crystal.png",
+      "rarity": "uncommon",
+      "value": 75,
+      "stackable": true,
+      "max_stack": 20,
+      "crafting_material": true
+    },
+    {
+      "id": "dragon_scale",
+      "name": "Dragon Scale",
+      "type": "Materials",
+      "tier": "ENCHANTED",
+      "description": "A rare scale from an ancient dragon, incredibly durable.",
+      "stats": {
+        "weight": 0.8
+      },
+      "requirements": {},
+      "icon": "items/materials/dragon_scale.png",
+      "rarity": "epic",
+      "value": 500,
+      "stackable": true,
+      "max_stack": 5,
+      "crafting_material": true,
+      "legendary": true
+    }
+  ]
+}

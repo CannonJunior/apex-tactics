@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+src/blender_mcp_client/__init__.py
+src/blender_mcp_client/claude_code_interface.py
+src/blender_mcp_client/claude_integration.py
+src/blender_mcp_client/cli.py
+src/blender_mcp_client/mcp_client.py
+src/blender_mcp_client/ollama_integration.py
+src/blender_mcp_client.egg-info/PKG-INFO
+src/blender_mcp_client.egg-info/SOURCES.txt
+src/blender_mcp_client.egg-info/dependency_links.txt
+src/blender_mcp_client.egg-info/entry_points.txt
+src/blender_mcp_client.egg-info/requires.txt
+src/blender_mcp_client.egg-info/top_level.txt
