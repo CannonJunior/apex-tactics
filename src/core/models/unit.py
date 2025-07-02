@@ -1,5 +1,6 @@
 import random
 from .unit_types import UnitType
+from ..assets.config_manager import get_config_manager
 
 class Unit:
     def __init__(self, name, unit_type, x, y, wisdom=None, wonder=None, worthy=None, faith=None, finesse=None, fortitude=None, speed=None, spirit=None, strength=None):
@@ -10,35 +11,51 @@ class Unit:
         # Randomize attributes based on unit type
         self._randomize_attributes(wisdom, wonder, worthy, faith, finesse, fortitude, speed, spirit, strength)
         
-        # Derived Stats
-        self.max_hp = self.hp = (self.strength + self.fortitude + self.faith + self.worthy) * 5
-        self.max_mp = self.mp = (self.wisdom + self.wonder + self.spirit + self.finesse) * 3
+        # Get configuration manager for stat calculations
+        config = get_config_manager()
+        
+        # Derived Stats using configuration formulas
+        hp_multiplier = config.get_value('combat.combat_values.stat_calculations.hp_formula.base_multiplier', 5)
+        self.max_hp = self.hp = (self.strength + self.fortitude + self.faith + self.worthy) * hp_multiplier
+        
+        mp_multiplier = config.get_value('combat.combat_values.stat_calculations.mp_formula.base_multiplier', 3)
+        self.max_mp = self.mp = (self.wisdom + self.wonder + self.spirit + self.finesse) * mp_multiplier
+        
         self.max_ap = self.ap = self.speed
-        self.move_points = self.speed // 2 + 2  # Movement based on speed attribute
+        
+        # Movement points using configuration
+        move_divisor = config.get_value('movement.movement_values.movement_calculations.movement_points.speed_divisor', 2)
+        move_base = config.get_value('movement.movement_values.movement_calculations.movement_points.base_addition', 2)
+        self.move_points = self.speed // move_divisor + move_base
         self.current_move_points = self.move_points  # Current movement available this turn
         self.alive = True
         
-        # Additional Resources
-        self.max_rage = self.rage = (self.strength + self.fortitude) * 2  # Rage for physical units
-        self.max_kwan = self.kwan = (self.faith + self.worthy + self.spirit) * 2  # Kwan for spiritual units
+        # Additional Resources using configuration
+        rage_multiplier = config.get_value('combat.combat_values.stat_calculations.rage_formula.base_multiplier', 2)
+        self.max_rage = self.rage = (self.strength + self.fortitude) * rage_multiplier
         
-        # Combat attributes - base values
-        self.base_attack_range = 1  # Default attack range
-        self.base_attack_effect_area = 0  # Default single-target attack (0 means only target tile)
+        kwan_multiplier = config.get_value('combat.combat_values.stat_calculations.kwan_formula.base_multiplier', 2)
+        self.max_kwan = self.kwan = (self.faith + self.worthy + self.spirit) * kwan_multiplier
         
-        # Magic attributes - base values
-        self.base_magic_range = 2  # Default magic range (longer than physical)
-        self.base_magic_effect_area = 1  # Default magic area effect (small area)
-        self.base_magic_mp_cost = 10  # Default MP cost for magic
-        self.magic_spell_name = "Arcane Bolt"  # Default magic spell name
+        # Combat attributes using configuration
+        self.base_attack_range = config.get_value('combat.combat_values.base_combat_values.attack_range.default', 1)
+        self.base_attack_effect_area = config.get_value('combat.combat_values.base_combat_values.attack_effect_area.default', 0)
+        
+        # Magic attributes using configuration
+        self.base_magic_range = config.get_value('combat.combat_values.base_combat_values.magic_range.default', 2)
+        self.base_magic_effect_area = config.get_value('combat.combat_values.base_combat_values.magic_effect_area.default', 1)
+        self.base_magic_mp_cost = config.get_value('combat.combat_values.base_combat_values.magic_mp_cost.default', 10)
+        
+        # Default magic spell name (will be overridden by unit type)
+        self.magic_spell_name = config.get_value('units.unit_generation.unit_types.MAGI.magic_spell', "Arcane Bolt")
         
         # Equipment slots
         self.equipped_weapon = None
         self.equipped_armor = None
         self.equipped_accessory = None
         
-        # Default action options for all units
-        self.action_options = ["Move", "Attack", "Spirit", "Magic", "Inventory"]
+        # Default action options using configuration
+        self.action_options = config.get_value('units.unit_generation.default_action_options', ["Move", "Attack", "Spirit", "Magic", "Inventory"])
         
         # Set primary resource type based on unit type
         self.primary_resource_type = self._get_primary_resource_type()
@@ -47,31 +64,35 @@ class Unit:
         self._set_default_magic_spell()
         
     def _randomize_attributes(self, wisdom, wonder, worthy, faith, finesse, fortitude, speed, spirit, strength):
-        # Base random values (5-15)
+        # Get configuration for attribute generation
+        config = get_config_manager()
+        min_val = config.get_value('units.unit_generation.attribute_generation.base_ranges.min_value', 5)
+        max_val = config.get_value('units.unit_generation.attribute_generation.base_ranges.max_value', 15)
+        
+        # Base random values using configuration
         base_attrs = {
-            'wisdom': wisdom or random.randint(5, 15),
-            'wonder': wonder or random.randint(5, 15),
-            'worthy': worthy or random.randint(5, 15),
-            'faith': faith or random.randint(5, 15),
-            'finesse': finesse or random.randint(5, 15),
-            'fortitude': fortitude or random.randint(5, 15),
-            'speed': speed or random.randint(5, 15),
-            'spirit': spirit or random.randint(5, 15),
-            'strength': strength or random.randint(5, 15)
+            'wisdom': wisdom or random.randint(min_val, max_val),
+            'wonder': wonder or random.randint(min_val, max_val),
+            'worthy': worthy or random.randint(min_val, max_val),
+            'faith': faith or random.randint(min_val, max_val),
+            'finesse': finesse or random.randint(min_val, max_val),
+            'fortitude': fortitude or random.randint(min_val, max_val),
+            'speed': speed or random.randint(min_val, max_val),
+            'spirit': spirit or random.randint(min_val, max_val),
+            'strength': strength or random.randint(min_val, max_val)
         }
         
-        # Type-specific bonuses (+3-8)
-        type_bonuses = {
-            UnitType.HEROMANCER: ['speed', 'strength', 'finesse'],
-            UnitType.UBERMENSCH: ['speed', 'strength', 'fortitude'],
-            UnitType.SOUL_LINKED: ['faith', 'fortitude', 'worthy'],
-            UnitType.REALM_WALKER: ['spirit', 'faith', 'worthy'],
-            UnitType.WARGI: ['wisdom', 'wonder', 'spirit'],
-            UnitType.MAGI: ['wisdom', 'wonder', 'finesse']
-        }
+        # Type-specific bonuses using configuration
+        min_bonus = config.get_value('units.unit_generation.attribute_generation.type_bonuses.min_bonus', 3)
+        max_bonus = config.get_value('units.unit_generation.attribute_generation.type_bonuses.max_bonus', 8)
         
-        for attr in type_bonuses[self.type]:
-            base_attrs[attr] += random.randint(3, 8)
+        # Get type-specific bonus attributes from configuration
+        unit_type_name = self.type.name
+        bonus_attrs = config.get_value(f'units.unit_generation.unit_types.{unit_type_name}.bonus_attributes', [])
+        
+        # Apply bonuses to the configured attributes
+        for attr in bonus_attrs:
+            base_attrs[attr] += random.randint(min_bonus, max_bonus)
             
         # Assign to self
         for attr, value in base_attrs.items():
@@ -79,15 +100,24 @@ class Unit:
         
     @property
     def physical_defense(self):
-        return (self.speed + self.strength + self.fortitude) // 3
+        # Use configuration formula for physical defense
+        config = get_config_manager()
+        divisor = config.get_value('combat.combat_values.defense_calculations.physical_defense.divisor', 3)
+        return (self.speed + self.strength + self.fortitude) // divisor
         
     @property
     def magical_defense(self):
-        return (self.wisdom + self.wonder + self.finesse) // 3
+        # Use configuration formula for magical defense
+        config = get_config_manager()
+        divisor = config.get_value('combat.combat_values.defense_calculations.magical_defense.divisor', 3)
+        return (self.wisdom + self.wonder + self.finesse) // divisor
         
     @property
     def spiritual_defense(self):
-        return (self.spirit + self.faith + self.worthy) // 3
+        # Use configuration formula for spiritual defense
+        config = get_config_manager()
+        divisor = config.get_value('combat.combat_values.defense_calculations.spiritual_defense.divisor', 3)
+        return (self.spirit + self.faith + self.worthy) // divisor
         
     @property
     def attack_range(self):
@@ -115,7 +145,10 @@ class Unit:
     
     @property
     def physical_attack(self):
-        base_attack = (self.speed + self.strength + self.finesse) // 2
+        # Use configuration formula for physical attack
+        config = get_config_manager()
+        divisor = config.get_value('combat.combat_values.attack_calculations.physical_attack.divisor', 2)
+        base_attack = (self.speed + self.strength + self.finesse) // divisor
         
         # Add weapon attack bonus
         if self.equipped_weapon and isinstance(self.equipped_weapon, dict) and 'stats' in self.equipped_weapon:
@@ -126,7 +159,10 @@ class Unit:
         
     @property
     def magical_attack(self):
-        base_attack = (self.wisdom + self.wonder + self.spirit) // 2
+        # Use configuration formula for magical attack
+        config = get_config_manager()
+        divisor = config.get_value('combat.combat_values.attack_calculations.magical_attack.divisor', 2)
+        base_attack = (self.wisdom + self.wonder + self.spirit) // divisor
         
         # Add weapon magical attack bonus
         if self.equipped_weapon and isinstance(self.equipped_weapon, dict) and 'stats' in self.equipped_weapon:
@@ -137,7 +173,10 @@ class Unit:
         
     @property
     def spiritual_attack(self):
-        return (self.faith + self.fortitude + self.worthy) // 2
+        # Use configuration formula for spiritual attack
+        config = get_config_manager()
+        divisor = config.get_value('combat.combat_values.attack_calculations.spiritual_attack.divisor', 2)
+        return (self.faith + self.fortitude + self.worthy) // divisor
     
     @property
     def magic_range(self):

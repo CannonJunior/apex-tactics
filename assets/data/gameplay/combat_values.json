@@ -1,0 +1,119 @@
+{
+  "combat_values": {
+    "version": "1.0.0",
+    "description": "Core combat mechanics and formulas for Apex Tactics",
+    
+    "stat_calculations": {
+      "hp_formula": {
+        "base_multiplier": 5,
+        "attributes": ["strength", "fortitude", "faith", "worthy"],
+        "description": "HP = (strength + fortitude + faith + worthy) * base_multiplier"
+      },
+      "mp_formula": {
+        "base_multiplier": 3,
+        "attributes": ["wisdom", "wonder", "spirit", "finesse"],
+        "description": "MP = (wisdom + wonder + spirit + finesse) * base_multiplier"
+      },
+      "rage_formula": {
+        "base_multiplier": 2,
+        "attributes": ["strength", "fortitude"],
+        "description": "Rage = (strength + fortitude) * base_multiplier"
+      },
+      "kwan_formula": {
+        "base_multiplier": 2,
+        "attributes": ["faith", "worthy", "spirit"],
+        "description": "Kwan = (faith + worthy + spirit) * base_multiplier"
+      }
+    },
+    
+    "attack_calculations": {
+      "physical_attack": {
+        "divisor": 2,
+        "attributes": ["speed", "strength", "finesse"],
+        "description": "Physical Attack = (speed + strength + finesse) / divisor"
+      },
+      "magical_attack": {
+        "divisor": 2,
+        "attributes": ["wisdom", "wonder", "spirit"],
+        "description": "Magical Attack = (wisdom + wonder + spirit) / divisor"
+      },
+      "spiritual_attack": {
+        "divisor": 2,
+        "attributes": ["faith", "fortitude", "worthy"],
+        "description": "Spiritual Attack = (faith + fortitude + worthy) / divisor"
+      }
+    },
+    
+    "defense_calculations": {
+      "physical_defense": {
+        "divisor": 3,
+        "attributes": ["speed", "strength", "fortitude"],
+        "description": "Physical Defense = (speed + strength + fortitude) / divisor"
+      },
+      "magical_defense": {
+        "divisor": 3,
+        "attributes": ["wisdom", "wonder", "finesse"],
+        "description": "Magical Defense = (wisdom + wonder + finesse) / divisor"
+      },
+      "spiritual_defense": {
+        "divisor": 3,
+        "attributes": ["spirit", "faith", "worthy"],
+        "description": "Spiritual Defense = (spirit + faith + worthy) / divisor"
+      }
+    },
+    
+    "base_combat_values": {
+      "attack_range": {
+        "default": 1,
+        "min": 1,
+        "max": 10,
+        "modifiable": true,
+        "description": "Default melee attack range"
+      },
+      "attack_effect_area": {
+        "default": 0,
+        "min": 0,
+        "max": 5,
+        "modifiable": true,
+        "description": "Area of effect for attacks (0 = single target)"
+      },
+      "magic_range": {
+        "default": 2,
+        "min": 1,
+        "max": 15,
+        "modifiable": true,
+        "description": "Default magic spell range"
+      },
+      "magic_effect_area": {
+        "default": 1,
+        "min": 0,
+        "max": 8,
+        "modifiable": true,
+        "description": "Area of effect for magic spells"
+      },
+      "magic_mp_cost": {
+        "default": 10,
+        "min": 1,
+        "max": 100,
+        "modifiable": true,
+        "description": "Default MP cost for magic spells"
+      }
+    },
+    
+    "damage_formulas": {
+      "damage_calculation": {
+        "min_damage": 1,
+        "damage_reduction_formula": "max(min_damage, damage - defense)",
+        "description": "Prevents zero damage while maintaining tactical depth"
+      }
+    },
+    
+    "equipment_bonuses": {
+      "weapon_stats": ["physical_attack", "magical_attack", "attack_range", "effect_area"],
+      "armor_stats": ["physical_defense", "magical_defense", "spiritual_defense"],
+      "accessory_stats": ["magic_range", "magic_effect_area", "mp_cost_reduction"],
+      "stat_application": "additive",
+      "description": "How equipment bonuses modify base stats"
+    }
+  }
+}

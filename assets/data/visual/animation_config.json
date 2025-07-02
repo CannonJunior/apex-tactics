@@ -1,0 +1,150 @@
+{
+  "animation_config": {
+    "version": "1.0.0",
+    "description": "Visual effects, animations, and timing configuration",
+    
+    "highlight_effects": {
+      "tile_highlights": {
+        "movement_range": {
+          "color": {"r": 1.0, "g": 1.0, "b": 1.0, "a": 0.5},
+          "pulse_speed": 1.0,
+          "height": 0.02,
+          "scale": {"x": 0.9, "y": 0.2, "z": 0.9}
+        },
+        "attack_range": {
+          "color": {"r": 1.0, "g": 0.0, "b": 0.0, "a": 0.5},
+          "pulse_speed": 1.5,
+          "height": 0.02,
+          "scale": {"x": 0.9, "y": 0.2, "z": 0.9}
+        },
+        "magic_range": {
+          "color": {"r": 0.0, "g": 0.0, "b": 1.0, "a": 0.5},
+          "pulse_speed": 1.2,
+          "height": 0.02,
+          "scale": {"x": 0.9, "y": 0.2, "z": 0.9}
+        },
+        "effect_area": {
+          "color": {"r": 1.0, "g": 1.0, "b": 0.0, "a": 0.6},
+          "pulse_speed": 2.0,
+          "height": 0.05,
+          "scale": {"x": 0.9, "y": 0.2, "z": 0.9}
+        },
+        "selection": {
+          "color": {"r": 1.0, "g": 1.0, "b": 1.0, "a": 0.8},
+          "pulse_speed": 0.8,
+          "height": 0.02,
+          "scale": {"x": 0.9, "y": 0.2, "z": 0.9}
+        },
+        "path_preview": {
+          "color": {"r": 0.0, "g": 1.0, "b": 0.0, "a": 0.4},
+          "pulse_speed": 1.5,
+          "height": 0.02,
+          "scale": {"x": 0.9, "y": 0.2, "z": 0.9}
+        }
+      },
+      
+      "special_effects": {
+        "target_tile": {
+          "color": {"r": 0.5, "g": 0.7, "b": 1.0, "a": 1.0},
+          "pulse_speed": 3.0,
+          "duration": 2.0,
+          "float_height": 1.0
+        },
+        "damage_indicator": {
+          "duration": 1.5,
+          "fade_speed": 2.0,
+          "rise_speed": 0.5,
+          "color_critical": {"r": 1.0, "g": 0.0, "b": 0.0, "a": 1.0},
+          "color_normal": {"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0}
+        }
+      }
+    },
+    
+    "camera_animations": {
+      "movement": {
+        "speed": 0.5,
+        "smoothing": "ease_in_out",
+        "max_distance_per_frame": 0.1
+      },
+      "rotation": {
+        "speed": 50.0,
+        "smoothing": "linear",
+        "max_angle_per_frame": 5.0
+      },
+      "zoom": {
+        "speed": 2.0,
+        "min_distance": 3.0,
+        "max_distance": 15.0,
+        "default_distance": 8.0
+      },
+      "presets": {
+        "top_down": {
+          "height": 12.0,
+          "angle": {"x": 90, "y": 0, "z": 0}
+        },
+        "isometric": {
+          "height": 8.0,
+          "angle": {"x": 30, "y": 0, "z": 0}
+        }
+      }
+    },
+    
+    "ui_animations": {
+      "panel_transitions": {
+        "fade_in_duration": 0.3,
+        "fade_out_duration": 0.2,
+        "slide_speed": 400.0,
+        "easing": "ease_out"
+      },
+      "button_feedback": {
+        "hover_scale": 1.05,
+        "press_scale": 0.95,
+        "transition_duration": 0.1
+      },
+      "modal_dialogs": {
+        "backdrop_fade": 0.25,
+        "dialog_scale_in": 0.3,
+        "dialog_scale_out": 0.2
+      }
+    },
+    
+    "game_animations": {
+      "unit_movement": {
+        "speed": 2.0,
+        "path_smoothing": true,
+        "rotation_speed": 180.0,
+        "bob_amplitude": 0.1,
+        "bob_frequency": 2.0
+      },
+      "combat_effects": {
+        "attack_flash_duration": 0.2,
+        "damage_shake_intensity": 0.05,
+        "damage_shake_duration": 0.3,
+        "healing_glow_duration": 1.0
+      }
+    },
+    
+    "performance": {
+      "target_framerate": 60,
+      "update_frequency": 0.016,
+      "effect_culling": {
+        "max_simultaneous_effects": 20,
+        "distance_culling": 15.0
+      },
+      "animation_quality": {
+        "low": {
+          "effect_count_multiplier": 0.5,
+          "animation_steps": 8
+        },
+        "medium": {
+          "effect_count_multiplier": 0.75,
+          "animation_steps": 16
+        },
+        "high": {
+          "effect_count_multiplier": 1.0,
+          "animation_steps": 32
+        }
+      }
+    }
+  }
+}

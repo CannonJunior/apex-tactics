@@ -17,6 +17,7 @@ except ImportError:
 # Import UnitType enum and data manager
 from core.models.unit_types import UnitType
 from core.assets.unit_data_manager import get_unit_data_manager
+from core.assets.config_manager import get_config_manager
 
 
 class CharacterAttackInterface:
@@ -82,49 +83,71 @@ class CharacterAttackInterface:
         self.end_turn_btn.on_click = self.end_turn_clicked
     
     def _create_carousel_elements(self):
-        """Create unit carousel label."""
-        self.carousel_label = Text('Turn Order:', parent=camera.ui)
+        """Create unit carousel label using configuration."""
+        config = get_config_manager()
+        carousel_text = config.get_value('ui_layout.ui_layout.control_panel.carousel.label.text', 'Turn Order:')
+        self.carousel_label = Text(carousel_text, parent=camera.ui)
     
     def _create_main_interface(self):
-        """Create the main interface with fixed positioning."""
+        """Create the main interface using configuration values."""
+        config = get_config_manager()
+        
+        # Get panel configuration
+        panel_scale = config.get_scale('ui_layout.ui_layout.control_panel.main_panel.scale', (0.8, 0.25, 0.01))
+        panel_position = config.get_scale('ui_layout.ui_layout.control_panel.main_panel.position', (0, -0.3, 0))
+        panel_color = config.get_color('ui_layout.ui_layout.control_panel.main_panel.color', (0.1, 0.1, 0.15, 0.9))
+        
         # Main background panel
         self.panel = Entity(
             model='cube',
-            scale=(0.8, 0.25, 0.01),
-            color=color.Color(0.1, 0.1, 0.15, 0.9),
-            position=(0, -0.3, 0),
+            scale=panel_scale,
+            color=panel_color,
+            position=panel_position,
             parent=camera.ui
         )
         
-        # Position text elements on the panel
+        # Position text elements on the panel using configuration
         self.unit_info_text.parent = self.panel
-        self.unit_info_text.position = (0, 0.08, 0.01)
-        self.unit_info_text.scale = 0.8
+        unit_info_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.unit_info.position', (0, 0.08, 0.01))
+        unit_info_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.unit_info.scale', 0.8)
+        self.unit_info_text.position = unit_info_pos
+        self.unit_info_text.scale = unit_info_scale
         
         self.camera_controls_text.parent = self.panel
-        self.camera_controls_text.position = (0, 0.04, 0.01)
-        self.camera_controls_text.scale = 0.6
+        camera_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.camera_controls.position', (0, 0.04, 0.01))
+        camera_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.camera_controls.scale', 0.6)
+        self.camera_controls_text.position = camera_pos
+        self.camera_controls_text.scale = camera_scale
         
         self.game_controls_text.parent = self.panel
-        self.game_controls_text.position = (0, 0.0, 0.01)
-        self.game_controls_text.scale = 0.6
+        game_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.game_controls.position', (0, 0.0, 0.01))
+        game_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.game_controls.scale', 0.6)
+        self.game_controls_text.position = game_pos
+        self.game_controls_text.scale = game_scale
         
         self.stats_display_text.parent = self.panel
-        self.stats_display_text.position = (0, -0.04, 0.01)
-        self.stats_display_text.scale = 0.6
+        stats_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.stats_display.position', (0, -0.04, 0.01))
+        stats_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.stats_display.scale', 0.6)
+        self.stats_display_text.position = stats_pos
+        self.stats_display_text.scale = stats_scale
         
-        # Position end turn button
+        # Position end turn button using configuration
         self.end_turn_btn.parent = self.panel
-        self.end_turn_btn.position = (0, -0.08, 0.01)
-        self.end_turn_btn.scale = 0.08
+        btn_pos = config.get_scale('ui_layout.ui_layout.control_panel.end_turn_button.position', (0, -0.08, 0.01))
+        btn_scale = config.get_value('ui_layout.ui_layout.control_panel.end_turn_button.scale', 0.08)
+        self.end_turn_btn.position = btn_pos
+        self.end_turn_btn.scale = btn_scale
     
     def _position_elements(self):
-        """Position the interface and carousel elements."""
+        """Position the interface and carousel elements using configuration."""
         # Interface is positioned in _create_main_interface
         
-        # Position carousel elements
-        self.carousel_label.position = (-0.45, -0.45, 0)
-        self.carousel_label.scale = 0.8
+        # Position carousel elements using configuration
+        config = get_config_manager()
+        carousel_pos = config.get_scale('ui_layout.ui_layout.control_panel.carousel.label.position', (-0.45, -0.45, 0))
+        carousel_scale = config.get_value('ui_layout.ui_layout.control_panel.carousel.label.scale', 0.8)
+        self.carousel_label.position = carousel_pos
+        self.carousel_label.scale = carousel_scale
     
     def end_turn_clicked(self):
         """Handle End Turn button click."""

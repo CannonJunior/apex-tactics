@@ -1,27 +1,121 @@
 {
   "unit_generation": {
-    "base_attributes": {
-      "min_value": 5,
-      "max_value": 15,
-      "random_bonus_min": 3,
-      "random_bonus_max": 8
+    "version": "2.0.0",
+    "description": "Unit creation, attribute generation, and type configuration",
+    
+    "attribute_generation": {
+      "base_ranges": {
+        "min_value": 5,
+        "max_value": 15,
+        "attributes": [
+          "wisdom", "wonder", "worthy", "faith", 
+          "finesse", "fortitude", "speed", "spirit", "strength"
+        ]
+      },
+      "type_bonuses": {
+        "min_bonus": 3,
+        "max_bonus": 8,
+        "bonus_attributes_per_type": 3
+      }
     },
+    
+    "unit_types": {
+      "HEROMANCER": {
+        "bonus_attributes": ["speed", "strength", "finesse"],
+        "primary_resource": "rage",
+        "magic_spell": "Heroic Blast",
+        "description": "Physical-focused but with magic abilities"
+      },
+      "UBERMENSCH": {
+        "bonus_attributes": ["speed", "strength", "fortitude"],
+        "primary_resource": "rage", 
+        "magic_spell": "Power Surge",
+        "description": "Raw physical power and energy"
+      },
+      "SOUL_LINKED": {
+        "bonus_attributes": ["faith", "fortitude", "worthy"],
+        "primary_resource": "kwan",
+        "magic_spell": "Soul Fire",
+        "description": "Spiritual flame and divine connection"
+      },
+      "REALM_WALKER": {
+        "bonus_attributes": ["spirit", "faith", "worthy"],
+        "primary_resource": "kwan",
+        "magic_spell": "Dimensional Rift",
+        "description": "Space-bending and reality manipulation"
+      },
+      "WARGI": {
+        "bonus_attributes": ["wisdom", "wonder", "spirit"],
+        "primary_resource": "mp",
+        "magic_spell": "Mystic Bolt",
+        "description": "Pure magical energy and mysticism"
+      },
+      "MAGI": {
+        "bonus_attributes": ["wisdom", "wonder", "finesse"],
+        "primary_resource": "mp",
+        "magic_spell": "Arcane Explosion",
+        "description": "Area effect magic and arcane mastery"
+      }
+    },
+    
     "derived_stats": {
-      "health_multiplier": 10,
-      "mana_multiplier": 5,
-      "movement_base": 3,
-      "movement_bonus_per_speed": 0.2,
-      "attack_range_base": 1,
-      "effect_area_base": 1
+      "health_multiplier": 5,
+      "mana_multiplier": 3,
+      "rage_multiplier": 2,
+      "kwan_multiplier": 2,
+      "movement_formula": "speed // 2 + 2",
+      "movement_divisor": 2,
+      "movement_base": 2,
+      "action_points_formula": "speed"
     },
+    
     "combat_formulas": {
-      "physical_attack": "strength + (finesse * 0.5)",
-      "magical_attack": "wisdom + (wonder * 0.5)",
-      "spiritual_attack": "faith + (spirit * 0.5)",
-      "physical_defense": "fortitude + (strength * 0.3)",
-      "magical_defense": "wonder + (wisdom * 0.3)",
-      "spiritual_defense": "worthy + (faith * 0.3)"
+      "physical_attack": "(speed + strength + finesse) // 2",
+      "magical_attack": "(wisdom + wonder + spirit) // 2",
+      "spiritual_attack": "(faith + fortitude + worthy) // 2",
+      "physical_defense": "(speed + strength + fortitude) // 3",
+      "magical_defense": "(wisdom + wonder + finesse) // 3",
+      "spiritual_defense": "(spirit + faith + worthy) // 3"
     },
+    
+    "default_action_options": [
+      "Move", "Attack", "Spirit", "Magic", "Inventory"
+    ],
+    
+    "visual_properties": {
+      "unit_colors": {
+        "HEROMANCER": {"r": 1.0, "g": 0.5, "b": 0.0, "a": 1.0},
+        "UBERMENSCH": {"r": 1.0, "g": 0.0, "b": 0.0, "a": 1.0},
+        "SOUL_LINKED": {"r": 1.0, "g": 1.0, "b": 0.0, "a": 1.0},
+        "REALM_WALKER": {"r": 0.5, "g": 0.0, "b": 1.0, "a": 1.0},
+        "WARGI": {"r": 0.0, "g": 1.0, "b": 1.0, "a": 1.0},
+        "MAGI": {"r": 0.0, "g": 0.0, "b": 1.0, "a": 1.0}
+      },
+      "unit_scales": {
+        "default": {"x": 1.0, "y": 1.0, "z": 1.0},
+        "large_units": {"x": 1.2, "y": 1.2, "z": 1.2},
+        "small_units": {"x": 0.8, "y": 0.8, "z": 0.8}
+      }
+    },
+    
+    "equipment_slots": {
+      "weapon": {
+        "required": false,
+        "default": null,
+        "compatible_types": ["Weapons"]
+      },
+      "armor": {
+        "required": false, 
+        "default": null,
+        "compatible_types": ["Armor"]
+      },
+      "accessory": {
+        "required": false,
+        "default": null,
+        "compatible_types": ["Accessories"]
+      }
+    },
+    
     "level_scaling": {
       "base_level": 1,
       "attribute_per_level": 2,

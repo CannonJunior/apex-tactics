@@ -1,0 +1,88 @@
+{
+  "movement_values": {
+    "version": "1.0.0",
+    "description": "Movement mechanics and pathfinding configuration",
+    
+    "movement_calculations": {
+      "movement_points": {
+        "base_formula": "speed // 2 + 2",
+        "speed_divisor": 2,
+        "base_addition": 2,
+        "min_movement": 1,
+        "max_movement": 20,
+        "description": "Movement points based on speed attribute"
+      },
+      "action_points": {
+        "base_formula": "speed",
+        "equals_speed": true,
+        "min_ap": 1,
+        "max_ap": 30,
+        "description": "Action points equal to speed attribute"
+      }
+    },
+    
+    "pathfinding_config": {
+      "algorithms": {
+        "default": "a_star",
+        "fallback": "dijkstra"
+      },
+      "performance_limits": {
+        "max_search_nodes": 500,
+        "cache_size": 1000,
+        "cache_timeout_seconds": 0.1,
+        "max_calculation_time_ms": 10
+      },
+      "cost_calculations": {
+        "diagonal_movement": {
+          "enabled": false,
+          "cost_multiplier": 1.4
+        },
+        "terrain_costs": {
+          "normal": 1,
+          "difficult": 2,
+          "impassable": -1
+        }
+      }
+    },
+    
+    "grid_configuration": {
+      "default_dimensions": {
+        "width": 8,
+        "height": 8,
+        "min_size": 4,
+        "max_size": 20
+      },
+      "tile_properties": {
+        "tile_size": 1.0,
+        "tile_spacing": 0.0,
+        "height_variation": 0.0
+      }
+    },
+    
+    "movement_validation": {
+      "range_checking": {
+        "use_manhattan_distance": true,
+        "allow_diagonal": false,
+        "check_obstacles": true
+      },
+      "obstacle_detection": {
+        "check_units": true,
+        "check_terrain": true,
+        "check_boundaries": true
+      }
+    },
+    
+    "visual_feedback": {
+      "path_highlighting": {
+        "show_valid_moves": true,
+        "show_path_preview": true,
+        "highlight_final_position": true
+      },
+      "movement_animation": {
+        "movement_speed": 2.0,
+        "animation_curve": "smooth",
+        "show_movement_trail": false
+      }
+    }
+  }
+}

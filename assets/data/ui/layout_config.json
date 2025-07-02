@@ -1,0 +1,152 @@
+{
+  "ui_layout": {
+    "version": "1.0.0",
+    "description": "UI positioning, sizing, and layout configuration",
+    
+    "control_panel": {
+      "main_panel": {
+        "scale": {"x": 0.8, "y": 0.25, "z": 0.01},
+        "position": {"x": 0, "y": -0.3, "z": 0},
+        "color": {"r": 0.1, "g": 0.1, "b": 0.15, "a": 0.9},
+        "anchor": "bottom_center"
+      },
+      "text_elements": {
+        "unit_info": {
+          "position": {"x": 0, "y": 0.08, "z": 0.01},
+          "scale": 0.8
+        },
+        "camera_controls": {
+          "position": {"x": 0, "y": 0.04, "z": 0.01},
+          "scale": 0.6
+        },
+        "game_controls": {
+          "position": {"x": 0, "y": 0.0, "z": 0.01},
+          "scale": 0.6
+        },
+        "stats_display": {
+          "position": {"x": 0, "y": -0.04, "z": 0.01},
+          "scale": 0.6
+        }
+      },
+      "end_turn_button": {
+        "position": {"x": 0, "y": -0.08, "z": 0.01},
+        "scale": 0.08
+      },
+      "carousel": {
+        "label": {
+          "position": {"x": -0.45, "y": -0.45, "z": 0},
+          "scale": 0.8,
+          "text": "Turn Order:"
+        }
+      },
+      "action_buttons": {
+        "icon_size": 0.06,
+        "icon_spacing": 0.07,
+        "start_position": -0.3,
+        "grid_layout": {
+          "columns": 5,
+          "rows": 1
+        }
+      }
+    },
+    
+    "health_bars": {
+      "active_unit": {
+        "position": {"x": -0.4, "y": 0.45},
+        "scale": {"x": 0.3, "y": 0.03},
+        "label": {
+          "text": "HP",
+          "position": {"x": -0.47, "y": 0.45},
+          "scale": 1.0,
+          "origin": {"x": -0.5, "y": 0}
+        }
+      },
+      "resource_bar": {
+        "position": {"x": -0.4, "y": 0.4},
+        "scale": {"x": 0.3, "y": 0.03},
+        "label": {
+          "position": {"x": -0.47, "y": 0.4},
+          "scale": 1.0,
+          "origin": {"x": -0.5, "y": 0}
+        }
+      },
+      "targeted_units": {
+        "max_displayed": 3,
+        "vertical_spacing": 0.05,
+        "start_position": {"x": 0.3, "y": 0.45}
+      }
+    },
+    
+    "inventory_panel": {
+      "grid": {
+        "width": 6,
+        "height": 8,
+        "position": {"x": -0.2, "y": 0.2},
+        "item_scale": {"x": 0.08, "y": 0.08}
+      },
+      "info_panel": {
+        "scale": {"x": 0.3, "y": 0.4},
+        "position": {"x": 0.3, "y": 0.2}
+      },
+      "tabs": {
+        "button_scale": {"x": 0.08, "y": 0.03},
+        "start_position": {"x": -0.4, "y": 0.45},
+        "spacing": 0.09
+      },
+      "action_buttons": {
+        "scale": {"x": 0.08, "y": 0.04},
+        "spacing": 0.1,
+        "base_position": {"x": 0.3, "y": 0.0}
+      }
+    },
+    
+    "modal_dialogs": {
+      "movement_confirmation": {
+        "size": {"width": 300, "height": 150},
+        "position": "center",
+        "button_spacing": 20
+      },
+      "attack_confirmation": {
+        "size": {"width": 350, "height": 200},
+        "position": "center",
+        "button_spacing": 20
+      },
+      "magic_confirmation": {
+        "size": {"width": 350, "height": 200},
+        "position": "center",
+        "button_spacing": 20
+      },
+      "action_selection": {
+        "size": {"width": 250, "height": 300},
+        "position": "center",
+        "button_spacing": 15
+      }
+    },
+    
+    "camera_ui": {
+      "parent": "camera.ui",
+      "coordinate_system": "normalized",
+      "responsive_scaling": {
+        "enabled": true,
+        "base_resolution": {"width": 1920, "height": 1080},
+        "scale_factor": "min"
+      }
+    },
+    
+    "accessibility": {
+      "font_scaling": {
+        "min_scale": 0.5,
+        "max_scale": 2.0,
+        "default_scale": 1.0
+      },
+      "contrast": {
+        "high_contrast_mode": false,
+        "background_opacity_boost": 0.2
+      },
+      "keyboard_navigation": {
+        "highlight_focused_elements": true,
+        "tab_order_priority": "logical"
+      }
+    }
+  }
+}
