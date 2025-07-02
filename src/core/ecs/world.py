@@ -11,12 +11,7 @@ import time
 from .entity import Entity, EntityManager
 from .system import BaseSystem, SystemManager
 from .component import BaseComponent
-from core.events.event_bus import EventBus
-from core.events.event_types import (
-    EntityCreatedEvent, EntityDestroyedEvent,
-    ComponentAddedEvent, ComponentRemovedEvent,
-    GameStartedEvent, GamePausedEvent, GameResumedEvent, GameEndedEvent
-)
+from ..events import EventBus, GameEvent, EventType
 
 class World:
     """

@@ -8,7 +8,7 @@ from .ecs.world import World
 from .ecs.entity import Entity, EntityManager
 from .ecs.component import BaseComponent, Transform, ComponentRegistry
 from .ecs.system import BaseSystem, SystemManager
-from .events.event_bus import EventBus, Event
+from .events import EventBus, GameEvent, EventType
 from .math.vector import Vector3, Vector2Int
 
 __all__ = [
@@ -16,6 +16,6 @@ __all__ = [
     'Entity', 'EntityManager',
     'BaseComponent', 'Transform', 'ComponentRegistry',
     'BaseSystem', 'SystemManager',
-    'EventBus', 'Event',
+    'EventBus', 'GameEvent', 'EventType',
     'Vector3', 'Vector2Int'
 ]

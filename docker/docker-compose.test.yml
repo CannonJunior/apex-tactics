@@ -1,0 +1,97 @@
+version: '3.8'
+
+# Test configuration for Docker Compose
+# Runs all services with minimal resources for testing
+
+services:
+  # Game Engine Service with integrated MCP Gateway
+  game-engine:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-game-engine
+    ports:
+      - "8002:8002"  # WebSocket server
+      - "8004:8004"  # MCP Gateway
+    environment:
+      - ENVIRONMENT=test
+      - LOG_LEVEL=DEBUG
+      - WEBSOCKET_PORT=8002
+      - MCP_GATEWAY_PORT=8004
+      - AI_SERVICE_URL=http://ai-service:8001
+      - CREATE_TEST_SESSION=true
+    volumes:
+      - ./src:/app/src
+      - ./assets:/app/assets
+      - ./data:/app/data
+    depends_on:
+      - ai-service
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # AI Service with Ollama
+  ai-service:
+    build:
+      context: .
+      dockerfile: docker/ai-service/Dockerfile
+    container_name: test-ai-service
+    ports:
+      - "8001:8001"
+      - "11434:11434"
+    environment:
+      - ENVIRONMENT=test
+      - LOG_LEVEL=info
+      - GAME_ENGINE_URL=http://game-engine:8002
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    volumes:
+      - ./src:/app/src
+      - ollama_test_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # Redis for session management (lightweight for testing)
+  redis:
+    image: redis:7-alpine
+    container_name: test-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save ""  # Disable persistence for tests
+    networks:
+      - test-network
+
+  # Test Runner Service
+  test-runner:
+    build:
+      context: .
+      dockerfile: docker/test-runner/Dockerfile
+    container_name: test-runner
+    environment:
+      - GAME_ENGINE_URL=http://game-engine:8002
+      - AI_SERVICE_URL=http://ai-service:8001
+      - MCP_GATEWAY_URL=http://game-engine:8004
+    volumes:
+      - ./docker/test-services.py:/app/test-services.py
+    depends_on:
+      - game-engine
+      - ai-service
+      - redis
+    networks:
+      - test-network
+    profiles:
+      - test
+
+volumes:
+  ollama_test_data:
+
+networks:
+  test-network:
+    driver: bridge

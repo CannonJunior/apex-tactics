@@ -9,9 +9,15 @@ from .component import BaseComponent, Transform, ComponentRegistry
 from .system import BaseSystem, SystemManager
 from .world import World
 
+# Aliases for backward compatibility
+ECSManager = World
+Component = BaseComponent
+System = BaseSystem
+EntityID = str
+
 __all__ = [
-    'Entity', 'EntityManager',
-    'BaseComponent', 'Transform', 'ComponentRegistry', 
-    'BaseSystem', 'SystemManager',
+    'Entity', 'EntityManager', 'ECSManager', 'EntityID',
+    'BaseComponent', 'Component', 'Transform', 'ComponentRegistry', 
+    'BaseSystem', 'System', 'SystemManager',
     'World'
 ]

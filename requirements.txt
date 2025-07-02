@@ -1,0 +1,35 @@
+# Core game engine dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+structlog>=23.0.0
+pydantic>=2.0.0
+
+# AI integration
+aiohttp>=3.9.0
+
+# MCP Framework
+fastmcp>=0.3.0
+
+# Game engine utilities  
+numpy>=1.24.0
+python-multipart>=0.0.6
+
+# Ursina game engine (when needed)
+ursina>=6.2.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.7.0
+
+# Monitoring and logging
+prometheus-client>=0.19.0
+
+# Optional: For advanced features
+# redis>=5.0.0  # For distributed sessions
+# postgresql>=4.0.0  # For persistent storage
+# openai>=1.3.0  # For OpenAI integration
+# anthropic>=0.7.0  # For Anthropic integration

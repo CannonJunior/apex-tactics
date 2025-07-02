@@ -11,7 +11,7 @@ import time
 
 from .entity import Entity
 from .component import BaseComponent
-from core.events.event_bus import EventBus
+from ..events import EventBus
 
 class BaseSystem(ABC):
     """

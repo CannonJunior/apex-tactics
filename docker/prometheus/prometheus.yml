@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Game Engine metrics
+  - job_name: 'game-engine'
+    static_configs:
+      - targets: ['game-engine:8002']
+    metrics_path: '/api/metrics'
+    scrape_interval: 10s
+
+  # AI Service metrics
+  - job_name: 'ai-service'
+    static_configs:
+      - targets: ['ai-service:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Redis metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # RabbitMQ metrics
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    scrape_interval: 30s
+
+  # System metrics (if node_exporter is added)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
