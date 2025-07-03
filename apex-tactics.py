@@ -57,12 +57,11 @@ def input(key):
     # Handle camera controls only if not handling unit movement
     game.camera_controller.handle_input(key, control_panel)
 
-# Initialize game
-game = TacticalRPG()
+# Initialize game (pass control_panel to prevent duplication)
+game = TacticalRPG(control_panel=control_panel)
 
 # Set game reference for all panels
 control_panel.set_game_reference(game)
-game.set_control_panel(control_panel)
 talent_panel.game_reference = game
 inventory_panel.game_reference = game
 party_panel.game_reference = game

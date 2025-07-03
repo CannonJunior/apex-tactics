@@ -1,21 +1,31 @@
 # AI WebSocket Integration
 
-This document describes the AI WebSocket integration system that connects the Apex Tactics game engine with the AI service for real-time tactical decision making.
+This document describes the AI WebSocket integration system that connects the Apex Tactics game engine with AI services through the MCP (Model Context Protocol) framework for real-time tactical decision making.
 
 ## Overview
 
-The AI integration consists of several key components:
+The AI integration consists of several key components working in a client-server architecture:
 
-- **AIWebSocketClient**: Handles WebSocket communication with the AI service
-- **AIIntegrationManager**: Coordinates AI decision making with game systems
-- **WebSocketHandler**: Manages client connections to the game engine
+- **Headless Game Engine** (`run_game_engine.py`): FastAPI server handling game logic and AI coordination
+- **MCP AI Server** (`src/mcp/`): FastMCP server providing AI tools and tactical analysis
+- **WebSocket Client** (`apex-tactics-websocket-client.py`): Ursina frontend for visualization
+- **AI Integration Manager**: Coordinates AI decision making with game systems
+- **WebSocket Protocol**: Real-time communication between all components
 
 ## Architecture
 
 ```
-Game Engine ←→ AI Integration Manager ←→ AI WebSocket Client ←→ AI Service
-     ↕                    ↕                       ↕
- Game Systems        Event Bus              WebSocket Protocol
+┌─────────────────────┐    WebSocket     ┌──────────────────────┐
+│  Ursina Frontend    │ ←───────────→    │  Headless Engine     │
+│  (Visualization)    │                  │  (Game Logic)        │
+└─────────────────────┘                  └──────────────────────┘
+                                                     ↕
+                                              MCP Integration
+                                                     ↕
+┌─────────────────────┐    FastMCP       ┌──────────────────────┐
+│  AI Services        │ ←───────────→    │  MCP AI Server       │
+│  (Ollama/OpenAI)    │                  │  (Tactical Tools)    │
+└─────────────────────┘                  └──────────────────────┘
 ```
 
 ## AI WebSocket Client
@@ -261,17 +271,32 @@ python -m pytest tests/test_ai_integration.py::TestAIIntegrationManager -v
 
 ## Deployment
 
-### Starting the Game Engine
+### Starting the Game System
+
+**Complete System Startup:**
 
 ```bash
-# Start with default configuration
-python run_game_engine.py
+# Terminal 1: Start headless game engine
+uv run python run_game_engine.py
 
-# Start with custom AI service URL
+# Terminal 2: Start MCP AI server (if using AI)
+cd src/mcp && uv run mcp run apex-tactics-mcp
+
+# Terminal 3: Start Ursina frontend client
+uv run python apex-tactics-websocket-client.py
+```
+
+**Configuration Options:**
+
+```bash
+# Start engine with custom AI service URL
 python run_game_engine.py --ai-service-url ws://ai-service:8003/ws
 
-# Start with specific difficulty
+# Start with specific difficulty and port
 python run_game_engine.py --ai-difficulty expert --port 8002
+
+# Start standalone legacy client (no WebSocket)
+uv run python apex-tactics.py
 ```
 
 ### Docker Deployment

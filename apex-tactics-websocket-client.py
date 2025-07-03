@@ -82,14 +82,13 @@ def input(key):
     # Handle camera controls (same as working apex-tactics.py)
     game.camera_controller.handle_input(key, control_panel)
 
-# Initialize game (same as working apex-tactics.py)
+# Initialize game (pass control_panel to prevent duplication)
 print("🧪 Initializing TacticalRPG...")
-game = TacticalRPG()
+game = TacticalRPG(control_panel=control_panel)
 print("✅ TacticalRPG initialized - battlefield should be created")
 
 # Set game reference for all panels (same as working apex-tactics.py)
 control_panel.set_game_reference(game)
-game.set_control_panel(control_panel)
 talent_panel.game_reference = game
 inventory_panel.game_reference = game
 party_panel.game_reference = game

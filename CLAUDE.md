@@ -8,8 +8,11 @@ This is a tactical RPG 3D engine implementation using Python and Ursina, designe
 
 ## Architecture
 
-The engine implements a **hybrid ECS architecture** optimized for Unity portability:
+The engine implements a **hybrid client-server WebSocket architecture** with ECS design optimized for Unity portability:
 
+- **Headless Game Engine** (`run_game_engine.py`): FastAPI server with WebSocket support, handles all game logic
+- **Ursina Frontend Client** (`apex-tactics-websocket-client.py`): 3D visualization and UI, connects via WebSocket
+- **Legacy Standalone Client** (`apex-tactics.py`): Original monolithic implementation for development
 - **Component System**: Uses modular components (Transform, Stats, Equipment, Movement, Combat)
 - **System Manager**: Event-driven messaging between independent game systems
 - **MCP Integration**: FastMCP server for AI agent control and tactical decision-making
@@ -79,9 +82,25 @@ The project includes advanced runtime optimization detailed in `Runtime-Organiza
 
 ## Development Commands
 
-Since this is currently a documentation-only repository, no build/test commands are established yet. When implementation begins, expect:
+### Running the Game
 
-- **Python Environment**: Requires Python with Ursina engine
+**Option 1: WebSocket Client-Server (Recommended)**
+```bash
+# Terminal 1: Start headless game engine
+uv run python run_game_engine.py
+
+# Terminal 2: Start Ursina frontend client  
+uv run python apex-tactics-websocket-client.py
+```
+
+**Option 2: Standalone Client (Legacy)**
+```bash
+uv run python apex-tactics.py
+```
+
+### Development Requirements
+- **Python Environment**: Python 3.12+ with Ursina engine
+- **WebSocket Support**: FastAPI + WebSockets for client-server communication
 - **MCP Server**: FastMCP for AI integration
 - **Testing**: Comprehensive test suite for combat mechanics
 - **Performance**: Target <1ms stat calculations, <2ms pathfinding

@@ -1,6 +1,6 @@
 # Asset Management Systems
 
-This document outlines the comprehensive asset management system for the Tactical RPG 3D Engine, supporting dependency tracking, versioning, streaming, LOD (Level of Detail), and multi-platform localization.
+This document outlines the comprehensive asset management system for the Tactical RPG 3D Engine, supporting dependency tracking, versioning, streaming, LOD (Level of Detail), and multi-platform localization in both client-server and standalone architectures.
 
 ## Core Asset Management Architecture
 
@@ -16,7 +16,9 @@ The central asset registry maintains metadata and relationships for all game ass
     "type": "model|texture|audio|data|localization",
     "version": "semantic_version",
     "platform_variants": {
-        "ursina": "path/to/ursina/asset",
+        "ursina_client": "path/to/ursina/client/asset",
+        "ursina_standalone": "path/to/ursina/standalone/asset",
+        "headless_engine": "path/to/headless/engine/asset",
         "unity": "path/to/unity/asset", 
         "ios": "path/to/ios/asset",
         "console": "path/to/console/asset"
@@ -541,6 +543,78 @@ class RegionSettings:
         config = self.region_configs.get(region, self.region_configs["US"])
         format_str = config["date_format"]
         return date.strftime(format_str.replace("YYYY", "%Y").replace("MM", "%m").replace("DD", "%d"))
+```
+
+## Client-Server Asset Coordination
+
+### WebSocket Asset Synchronization
+
+In the client-server architecture, assets must be coordinated between the headless engine and Ursina frontend:
+
+```python
+class ClientServerAssetManager:
+    def __init__(self, websocket_client):
+        self.ws_client = websocket_client
+        self.client_cache = ClientAssetCache()
+        self.server_manifest = {}
+        
+    async def sync_assets_with_server(self):
+        """Synchronize asset manifests between client and server"""
+        # Request asset manifest from server
+        manifest_request = {
+            "type": "asset_manifest_request",
+            "client_platform": "ursina_client"
+        }
+        await self.ws_client.send(manifest_request)
+        
+    async def handle_asset_manifest(self, manifest):
+        """Handle asset manifest from server"""
+        self.server_manifest = manifest
+        
+        # Check for asset updates needed
+        updates_needed = self.client_cache.compare_versions(manifest)
+        
+        if updates_needed:
+            await self.request_asset_updates(updates_needed)
+            
+    async def request_asset_updates(self, asset_list):
+        """Request specific asset updates from server"""
+        update_request = {
+            "type": "asset_update_request", 
+            "assets": asset_list
+        }
+        await self.ws_client.send(update_request)
+```
+
+### Server-Side Asset Management
+
+The headless engine manages core game data while clients handle visual assets:
+
+```python
+class HeadlessAssetManager:
+    def __init__(self):
+        self.game_data = GameDataManager()  # Stats, abilities, etc.
+        self.client_manifests = {}  # Track client asset versions
+        
+    def generate_client_manifest(self, platform: str) -> dict:
+        """Generate asset manifest for specific client platform"""
+        return {
+            "platform": platform,
+            "required_assets": self.get_required_assets(platform),
+            "version_info": self.get_version_info(),
+            "streaming_config": self.get_streaming_config(platform)
+        }
+        
+    def get_required_assets(self, platform: str) -> list:
+        """Get list of assets required for platform"""
+        if platform == "ursina_client":
+            return [
+                "ui_textures", "unit_models", "battlefield_tiles", 
+                "sound_effects", "background_music"
+            ]
+        elif platform == "unity":
+            return ["all_unity_assets"]
+        return []
 ```
 
 ## Asset Pipeline Integration

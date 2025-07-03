@@ -13,7 +13,10 @@ apex-tactics/
 ├── tests/                         # Test suites
 ├── docs/                          # Documentation
 ├── exports/                       # Unity export packages
-└── temp/                          # Temporary files and cache
+├── temp/                          # Temporary files and cache
+├── run_game_engine.py             # Headless WebSocket game engine
+├── apex-tactics.py                # Legacy standalone client
+└── apex-tactics-websocket-client.py # WebSocket frontend client
 ```
 
 ## Source Code Organization (`src/`)
@@ -71,27 +74,39 @@ src/
 │   ├── visual_system.py           # Visual feedback
 │   └── input_system.py            # Input handling
 ├── ai/                            # AI implementation
-│   ├── mcp/                       # MCP server integration
-│   │   ├── tactical_server.py     # Main MCP server
-│   │   ├── tools/                 # MCP tools
-│   │   │   ├── analyze_battle.py  # Battle analysis
-│   │   │   ├── execute_action.py  # Action execution
-│   │   │   ├── evaluate_position.py # Position evaluation
-│   │   │   └── predict_outcome.py # Outcome prediction
-│   │   └── handlers/              # Tool handlers
-│   ├── difficulty/                # AI difficulty levels
-│   │   ├── scripted_ai.py         # Basic scripted AI
-│   │   ├── strategic_ai.py        # Strategic AI
-│   │   ├── adaptive_ai.py         # Adaptive AI
-│   │   └── learning_ai.py         # Learning AI
-│   ├── leaders/                   # Leader AI systems
-│   │   ├── leader_ai.py           # Leader AI controller
-│   │   ├── battle_reset.py        # Battle reset ability
-│   │   └── coordination.py        # Unit coordination
-│   └── behaviors/                 # AI behavior trees
-│       ├── combat_behaviors.py    # Combat behavior trees
-│       ├── movement_behaviors.py  # Movement behaviors
-│       └── utility_behaviors.py   # Utility behaviors
+│   ├── adaptive_difficulty.py     # Adaptive difficulty system
+│   ├── decision_explainer.py      # AI decision explanations
+│   ├── learning_system.py         # Machine learning components
+│   ├── models.py                  # AI data models
+│   ├── ollama_client.py           # Ollama LLM client
+│   ├── performance_optimizer.py   # AI performance optimization
+│   ├── personalities.py           # AI personality definitions
+│   ├── service.py                 # AI service coordination
+│   ├── tactical_ai.py             # Tactical AI decision making
+│   ├── test_ai_behaviors.py       # AI behavior tests
+│   └── websocket_integration.py   # WebSocket AI integration
+├── api/                           # WebSocket API endpoints
+│   ├── websocket_handler.py       # WebSocket connection handling
+│   ├── session_manager.py         # Game session management
+│   ├── game_state_api.py          # Game state API endpoints
+│   └── health_check.py            # Health check endpoints
+├── client/                        # WebSocket client components
+│   ├── websocket_game_client.py   # Main WebSocket client
+│   ├── client_ui_bridge.py        # UI bridge for client
+│   └── panel_adapter.py           # Panel compatibility adapter
+├── engine/                        # Game engine core
+│   ├── game_engine.py             # Main game engine
+│   ├── session_manager.py         # Session management
+│   ├── turn_manager.py            # Turn-based gameplay
+│   └── battlefield_manager.py     # Battlefield management
+├── mcp/                           # MCP server integration
+│   ├── tactical_server.py         # FastMCP server implementation
+│   ├── tools/                     # MCP tactical tools
+│   │   ├── analyze_battle.py      # Battle analysis tool
+│   │   ├── execute_action.py      # Action execution tool
+│   │   ├── evaluate_position.py   # Position evaluation tool
+│   │   └── predict_outcome.py     # Outcome prediction tool
+│   └── handlers/                  # MCP tool handlers
 ├── ui/                            # User interface
 │   ├── screens/                   # UI screens
 │   │   ├── main_menu.py           # Main menu
