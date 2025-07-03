@@ -68,6 +68,9 @@ party_panel.game_reference = game
 upgrade_panel.game_reference = game
 character_panel.game_reference = game
 
+# Set character state manager for character panel
+character_panel.set_character_state_manager(game.character_state_manager)
+
 def update():
     # Update camera
     game.camera_controller.handle_mouse_input()

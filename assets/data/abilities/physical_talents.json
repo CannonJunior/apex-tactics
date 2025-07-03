@@ -1,0 +1,120 @@
+{
+  "talent_tree_name": "Physical",
+  "description": "Physical combat abilities and martial prowess",
+  "talents": [
+    {
+      "id": "basic_strike",
+      "name": "Basic Strike",
+      "level": 1,
+      "tier": "Novice",
+      "description": "Basic melee attack with increased accuracy",
+      "requirements": {
+        "level": 1,
+        "prerequisites": []
+      },
+      "effects": {
+        "attack_bonus": 5,
+        "accuracy_bonus": 10
+      },
+      "cost": {
+        "talent_points": 1
+      }
+    },
+    {
+      "id": "power_attack",
+      "name": "Power Attack",
+      "level": 2,
+      "tier": "Novice",
+      "description": "Stronger but slower attack that deals extra damage",
+      "requirements": {
+        "level": 2,
+        "prerequisites": ["basic_strike"]
+      },
+      "effects": {
+        "damage_multiplier": 1.5,
+        "attack_speed": 0.8
+      },
+      "cost": {
+        "talent_points": 1
+      }
+    },
+    {
+      "id": "weapon_mastery",
+      "name": "Weapon Mastery",
+      "level": 3,
+      "tier": "Adept",
+      "description": "Increased weapon proficiency and critical hit chance",
+      "requirements": {
+        "level": 5,
+        "prerequisites": ["power_attack"]
+      },
+      "effects": {
+        "critical_chance": 15,
+        "weapon_damage_bonus": 20
+      },
+      "cost": {
+        "talent_points": 2
+      }
+    },
+    {
+      "id": "berserker_rage",
+      "name": "Berserker Rage",
+      "level": 4,
+      "tier": "Adept",
+      "description": "Temporary damage boost at the cost of defense",
+      "requirements": {
+        "level": 6,
+        "prerequisites": ["weapon_mastery"]
+      },
+      "effects": {
+        "damage_bonus": 50,
+        "defense_penalty": 25,
+        "duration": 3
+      },
+      "cost": {
+        "talent_points": 2,
+        "rage_cost": 20
+      }
+    },
+    {
+      "id": "whirlwind",
+      "name": "Whirlwind",
+      "level": 5,
+      "tier": "Expert",
+      "description": "Attack all adjacent enemies in a spinning motion",
+      "requirements": {
+        "level": 8,
+        "prerequisites": ["berserker_rage"]
+      },
+      "effects": {
+        "area_of_effect": "adjacent",
+        "damage_multiplier": 0.8,
+        "max_targets": 8
+      },
+      "cost": {
+        "talent_points": 3,
+        "action_points": 2
+      }
+    },
+    {
+      "id": "legendary_strike",
+      "name": "Legendary Strike",
+      "level": 6,
+      "tier": "Master",
+      "description": "Devastating single attack with massive damage potential",
+      "requirements": {
+        "level": 12,
+        "prerequisites": ["whirlwind"]
+      },
+      "effects": {
+        "damage_multiplier": 3.0,
+        "critical_chance": 50,
+        "armor_penetration": 75
+      },
+      "cost": {
+        "talent_points": 4,
+        "action_points": 3
+      }
+    }
+  ]
+}

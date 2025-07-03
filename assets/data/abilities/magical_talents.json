@@ -1,0 +1,131 @@
+{
+  "talent_tree_name": "Magical",
+  "description": "Arcane spells and magical abilities",
+  "talents": [
+    {
+      "id": "magic_missile",
+      "name": "Magic Missile",
+      "level": 1,
+      "tier": "Novice",
+      "description": "Basic ranged spell that never misses its target",
+      "requirements": {
+        "level": 1,
+        "prerequisites": []
+      },
+      "effects": {
+        "damage_type": "magical",
+        "base_damage": 15,
+        "accuracy": 100,
+        "range": 5
+      },
+      "cost": {
+        "talent_points": 1,
+        "mp_cost": 5
+      }
+    },
+    {
+      "id": "heal",
+      "name": "Heal",
+      "level": 2,
+      "tier": "Novice",
+      "description": "Restore health points to self or allies",
+      "requirements": {
+        "level": 2,
+        "prerequisites": ["magic_missile"]
+      },
+      "effects": {
+        "healing_amount": 30,
+        "range": 3,
+        "target_type": "ally"
+      },
+      "cost": {
+        "talent_points": 1,
+        "mp_cost": 8
+      }
+    },
+    {
+      "id": "fireball",
+      "name": "Fireball",
+      "level": 3,
+      "tier": "Adept",
+      "description": "Area damage spell that explodes on impact",
+      "requirements": {
+        "level": 5,
+        "prerequisites": ["heal"]
+      },
+      "effects": {
+        "damage_type": "fire",
+        "base_damage": 40,
+        "area_of_effect": "2x2",
+        "range": 6
+      },
+      "cost": {
+        "talent_points": 2,
+        "mp_cost": 15
+      }
+    },
+    {
+      "id": "lightning_bolt",
+      "name": "Lightning Bolt",
+      "level": 4,
+      "tier": "Adept",
+      "description": "Chain lightning attack that jumps between enemies",
+      "requirements": {
+        "level": 6,
+        "prerequisites": ["fireball"]
+      },
+      "effects": {
+        "damage_type": "lightning",
+        "base_damage": 35,
+        "chain_targets": 3,
+        "damage_reduction_per_jump": 0.2
+      },
+      "cost": {
+        "talent_points": 2,
+        "mp_cost": 20
+      }
+    },
+    {
+      "id": "teleport",
+      "name": "Teleport",
+      "level": 5,
+      "tier": "Expert",
+      "description": "Instant movement to any visible location",
+      "requirements": {
+        "level": 8,
+        "prerequisites": ["lightning_bolt"]
+      },
+      "effects": {
+        "movement_type": "teleport",
+        "range": 8,
+        "ignores_obstacles": true
+      },
+      "cost": {
+        "talent_points": 3,
+        "mp_cost": 25
+      }
+    },
+    {
+      "id": "meteor",
+      "name": "Meteor",
+      "level": 6,
+      "tier": "Master",
+      "description": "Massive area devastation from a summoned meteor",
+      "requirements": {
+        "level": 12,
+        "prerequisites": ["teleport"]
+      },
+      "effects": {
+        "damage_type": "fire",
+        "base_damage": 100,
+        "area_of_effect": "3x3",
+        "range": 10,
+        "cast_time": 2
+      },
+      "cost": {
+        "talent_points": 4,
+        "mp_cost": 50
+      }
+    }
+  ]
+}

@@ -95,6 +95,11 @@ party_panel.game_reference = game
 upgrade_panel.game_reference = game
 character_panel.game_reference = game
 
+# Set character state manager for character panel
+print("🔧 Setting up character state management...")
+character_panel.set_character_state_manager(game.character_state_manager)
+print("✅ Character panel connected to character state manager")
+
 # WebSocket connection in background
 async def connect_to_server():
     if ws_client:

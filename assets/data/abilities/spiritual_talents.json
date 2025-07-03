@@ -1,0 +1,129 @@
+{
+  "talent_tree_name": "Spiritual",
+  "description": "Spiritual abilities and divine powers",
+  "talents": [
+    {
+      "id": "inner_peace",
+      "name": "Inner Peace",
+      "level": 1,
+      "tier": "Novice",
+      "description": "Restore mental energy and reduce stress",
+      "requirements": {
+        "level": 1,
+        "prerequisites": []
+      },
+      "effects": {
+        "mp_restoration": 20,
+        "stress_reduction": 10,
+        "duration": 1
+      },
+      "cost": {
+        "talent_points": 1,
+        "kwan_cost": 5
+      }
+    },
+    {
+      "id": "blessing",
+      "name": "Blessing",
+      "level": 2,
+      "tier": "Novice",
+      "description": "Temporary stat boost for self or allies",
+      "requirements": {
+        "level": 2,
+        "prerequisites": ["inner_peace"]
+      },
+      "effects": {
+        "stat_bonus": 15,
+        "duration": 5,
+        "target_type": "ally",
+        "affected_stats": ["strength", "finesse", "wisdom"]
+      },
+      "cost": {
+        "talent_points": 1,
+        "kwan_cost": 10
+      }
+    },
+    {
+      "id": "spirit_shield",
+      "name": "Spirit Shield",
+      "level": 3,
+      "tier": "Adept",
+      "description": "Magical damage protection through spiritual energy",
+      "requirements": {
+        "level": 5,
+        "prerequisites": ["blessing"]
+      },
+      "effects": {
+        "magical_defense_bonus": 30,
+        "spiritual_defense_bonus": 20,
+        "duration": 4
+      },
+      "cost": {
+        "talent_points": 2,
+        "kwan_cost": 15
+      }
+    },
+    {
+      "id": "commune",
+      "name": "Commune",
+      "level": 4,
+      "tier": "Adept",
+      "description": "Communicate with spirits for guidance and information",
+      "requirements": {
+        "level": 6,
+        "prerequisites": ["spirit_shield"]
+      },
+      "effects": {
+        "vision_range": 10,
+        "reveals_hidden": true,
+        "duration": 3
+      },
+      "cost": {
+        "talent_points": 2,
+        "kwan_cost": 20
+      }
+    },
+    {
+      "id": "astral_projection",
+      "name": "Astral Projection",
+      "level": 5,
+      "tier": "Expert",
+      "description": "Scout distant locations while body remains protected",
+      "requirements": {
+        "level": 8,
+        "prerequisites": ["commune"]
+      },
+      "effects": {
+        "scouting_range": 15,
+        "body_protection": true,
+        "duration": 2,
+        "ignores_obstacles": true
+      },
+      "cost": {
+        "talent_points": 3,
+        "kwan_cost": 30
+      }
+    },
+    {
+      "id": "divine_intervention",
+      "name": "Divine Intervention",
+      "level": 6,
+      "tier": "Master",
+      "description": "Ultimate protection that prevents death once per battle",
+      "requirements": {
+        "level": 12,
+        "prerequisites": ["astral_projection"]
+      },
+      "effects": {
+        "death_prevention": true,
+        "full_heal_on_trigger": true,
+        "immunity_duration": 2,
+        "uses_per_battle": 1
+      },
+      "cost": {
+        "talent_points": 4,
+        "kwan_cost": 50
+      }
+    }
+  ]
+}

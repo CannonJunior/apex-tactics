@@ -15,6 +15,9 @@ try:
 except ImportError:
     URSINA_AVAILABLE = False
 
+# Import talent manager for asset-based talents
+from core.assets.talent_manager import get_talent_manager
+
 
 class TalentPanel:
     """
@@ -37,6 +40,9 @@ class TalentPanel:
         self.current_tab = "Physical"
         self.talent_trees: Dict[str, List[Dict[str, Any]]] = {}
         
+        # Initialize talent manager
+        self.talent_manager = get_talent_manager()
+        
         # Create text elements
         self._create_text_elements()
         
@@ -46,8 +52,8 @@ class TalentPanel:
         # Position panel
         self._position_panel()
         
-        # Load sample talent data
-        self._load_sample_talents()
+        # Load talent data from assets
+        self._load_talents_from_assets()
         self._update_display()
     
     def _create_text_elements(self):
@@ -97,32 +103,49 @@ class TalentPanel:
         self.panel.y = 0.0
         self.panel.layout()
     
-    def _load_sample_talents(self):
-        """Load sample talent data for testing."""
+    def _load_talents_from_assets(self):
+        """Load talent data from asset files via talent manager."""
+        try:
+            # Get available talent trees from asset system
+            available_trees = self.talent_manager.get_available_trees()
+            
+            for tree_name in available_trees:
+                # Load talents for UI display
+                talents = self.talent_manager.get_talents_for_ui(tree_name)
+                
+                # Set initial learned state for demo purposes
+                # First 2 talents in each tree are learned by default
+                for i, talent in enumerate(talents):
+                    if i < 2:
+                        talent["learned"] = True
+                    else:
+                        talent["learned"] = False
+                
+                self.talent_trees[tree_name] = talents
+                print(f"✅ Loaded {len(talents)} {tree_name.lower()} talents from assets")
+            
+            if not self.talent_trees:
+                print("⚠️ No talent trees loaded from assets, using fallback")
+                self._load_fallback_talents()
+                
+        except Exception as e:
+            print(f"❌ Error loading talents from assets: {e}")
+            self._load_fallback_talents()
+    
+    def _load_fallback_talents(self):
+        """Load minimal fallback talent data if assets fail."""
         self.talent_trees = {
             "Physical": [
-                {"name": "Basic Strike", "level": 1, "tier": "Novice", "learned": True, "description": "Basic melee attack"},
-                {"name": "Power Attack", "level": 2, "tier": "Novice", "learned": True, "description": "Stronger but slower attack"},
-                {"name": "Weapon Mastery", "level": 3, "tier": "Adept", "learned": False, "description": "Increased weapon proficiency"},
-                {"name": "Berserker Rage", "level": 4, "tier": "Adept", "learned": False, "description": "Temporary damage boost"},
-                {"name": "Whirlwind", "level": 5, "tier": "Expert", "learned": False, "description": "Attack all adjacent enemies"},
-                {"name": "Legendary Strike", "level": 6, "tier": "Master", "learned": False, "description": "Devastating single attack"},
+                {"name": "Basic Strike", "level": 1, "tier": "Novice", "learned": True, "description": "Basic melee attack", "id": "basic_strike"},
+                {"name": "Power Attack", "level": 2, "tier": "Novice", "learned": False, "description": "Stronger attack", "id": "power_attack"},
             ],
             "Magical": [
-                {"name": "Magic Missile", "level": 1, "tier": "Novice", "learned": True, "description": "Basic ranged spell"},
-                {"name": "Heal", "level": 2, "tier": "Novice", "learned": True, "description": "Restore health points"},
-                {"name": "Fireball", "level": 3, "tier": "Adept", "learned": False, "description": "Area damage spell"},
-                {"name": "Lightning Bolt", "level": 4, "tier": "Adept", "learned": False, "description": "Chain lightning attack"},
-                {"name": "Teleport", "level": 5, "tier": "Expert", "learned": False, "description": "Instant movement"},
-                {"name": "Meteor", "level": 6, "tier": "Master", "learned": False, "description": "Massive area devastation"},
+                {"name": "Magic Missile", "level": 1, "tier": "Novice", "learned": True, "description": "Basic spell", "id": "magic_missile"},
+                {"name": "Heal", "level": 2, "tier": "Novice", "learned": False, "description": "Restore health", "id": "heal"},
             ],
             "Spiritual": [
-                {"name": "Inner Peace", "level": 1, "tier": "Novice", "learned": True, "description": "Restore mental energy"},
-                {"name": "Blessing", "level": 2, "tier": "Novice", "learned": True, "description": "Temporary stat boost"},
-                {"name": "Spirit Shield", "level": 3, "tier": "Adept", "learned": False, "description": "Magical damage protection"},
-                {"name": "Commune", "level": 4, "tier": "Adept", "learned": False, "description": "Communicate with spirits"},
-                {"name": "Astral Projection", "level": 5, "tier": "Expert", "learned": False, "description": "Scout distant locations"},
-                {"name": "Divine Intervention", "level": 6, "tier": "Master", "learned": False, "description": "Ultimate protection"},
+                {"name": "Inner Peace", "level": 1, "tier": "Novice", "learned": True, "description": "Restore energy", "id": "inner_peace"},
+                {"name": "Blessing", "level": 2, "tier": "Novice", "learned": False, "description": "Stat boost", "id": "blessing"},
             ],
         }
     
@@ -187,9 +210,19 @@ class TalentPanel:
         # Find talent
         for talent in self.talent_trees[tab]:
             if talent['name'] == talent_name and not talent['learned']:
+                # Check prerequisites using talent manager
+                talent_id = talent.get('id', '')
+                if talent_id:
+                    learned_talent_ids = [t.get('id', '') for t in self.get_learned_talents() if t.get('id')]
+                    if not self.talent_manager.validate_prerequisites(talent_id, learned_talent_ids):
+                        print(f"Prerequisites not met for {talent_name}")
+                        return False
+                
                 talent['learned'] = True
                 self._update_display()
-                print(f"{self.current_character.name} learned {talent_name}!")
+                
+                char_name = getattr(self.current_character, 'name', 'Character')
+                print(f"{char_name} learned {talent_name}!")
                 return True
         
         return False
@@ -281,6 +314,67 @@ class TalentPanel:
         if 'talents' in data:
             self.talent_trees = data['talents']
             self._update_display()
+    
+    def get_talent_details(self, talent_name: str, tab: str = None) -> Optional[Dict[str, Any]]:
+        """
+        Get detailed talent information from asset system.
+        
+        Args:
+            talent_name: Name of talent
+            tab: Talent tree tab (defaults to current tab)
+            
+        Returns:
+            Detailed talent information including effects and costs
+        """
+        tab = tab or self.current_tab
+        if tab not in self.talent_trees:
+            return None
+        
+        # Find talent in current display
+        for talent in self.talent_trees[tab]:
+            if talent['name'] == talent_name:
+                talent_id = talent.get('id', '')
+                if talent_id:
+                    # Get full talent data from asset system
+                    full_talent = self.talent_manager.get_talent_by_id(talent_id)
+                    if full_talent:
+                        return {
+                            **talent,  # UI display data
+                            'effects': self.talent_manager.get_talent_effects(talent_id),
+                            'cost': self.talent_manager.get_talent_cost(talent_id),
+                            'full_data': full_talent
+                        }
+                
+                # Return basic data if no asset data found
+                return talent
+        
+        return None
+    
+    def can_learn_talent(self, talent_name: str, tab: str = None) -> bool:
+        """
+        Check if a talent can be learned by current character.
+        
+        Args:
+            talent_name: Name of talent to check
+            tab: Talent tree tab (defaults to current tab)
+            
+        Returns:
+            True if talent can be learned
+        """
+        if not self.current_character:
+            return False
+        
+        talent_details = self.get_talent_details(talent_name, tab)
+        if not talent_details or talent_details.get('learned', False):
+            return False
+        
+        # Check prerequisites
+        talent_id = talent_details.get('id', '')
+        if talent_id:
+            learned_talent_ids = [t.get('id', '') for t in self.get_learned_talents() if t.get('id')]
+            return self.talent_manager.validate_prerequisites(talent_id, learned_talent_ids)
+        
+        return True
     
     def set_game_reference(self, game: Any):
         """

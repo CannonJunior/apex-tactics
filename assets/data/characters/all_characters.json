@@ -1,0 +1,673 @@
+{
+  "version": "1.0",
+  "character_types": {
+    "ubermensch": {
+      "id": "ubermensch",
+      "name": "Ubermensch",
+      "display_name": "Ubermensch",
+      "description": "Superior being with enhanced physical capabilities",
+      "visual": {
+        "color": "red",
+        "model": "cube",
+        "scale": [0.8, 2.0, 0.8]
+      },
+      "stats": {
+        "base_health": 120,
+        "base_mp": 4,
+        "base_move_points": 4,
+        "base_attack_range": 1,
+        "base_effect_area": 1,
+        "attribute_bonuses": ["speed", "strength", "fortitude"]
+      },
+      "combat": {
+        "primary_damage_type": "physical",
+        "resource_type": "rage",
+        "resistances": {
+          "physical": 0.2,
+          "magical": 0.0,
+          "spiritual": -0.1
+        }
+      },
+      "ai": {
+        "aggression": 0.9,
+        "formation_preference": "aggressive"
+      },
+      "inventory": {
+        "starting_items": [
+          {
+            "item_id": "steel_fists",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "weapon"
+          },
+          {
+            "item_id": "reinforced_vest",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "body"
+          },
+          {
+            "item_id": "rage_crystal",
+            "quantity": 2,
+            "equipped": false
+          }
+        ],
+        "max_inventory_size": 15,
+        "gold": 50
+      },
+      "game_state_effects": {
+        "superior_physique": {
+          "description": "Immune to physical debuffs and fatigue",
+          "effect_type": "passive",
+          "immunities": ["exhaustion", "slow", "weakness"]
+        },
+        "intimidating_presence": {
+          "description": "Enemies within 2 tiles have -10% accuracy",
+          "area": 2,
+          "effect_type": "aura",
+          "stat_modifier": {
+            "accuracy": -0.1
+          }
+        }
+      },
+      "talents": {
+        "unstoppable_force": {
+          "name": "Unstoppable Force",
+          "description": "Charge attacks deal double damage and knock back enemies",
+          "tier": "ENHANCED",
+          "unlocked": true,
+          "effects": {
+            "charge_damage_multiplier": 2.0,
+            "knockback_distance": 1
+          }
+        },
+        "adaptive_evolution": {
+          "name": "Adaptive Evolution",
+          "description": "Gain permanent +5 HP for each enemy killed",
+          "tier": "ENCHANTED",
+          "unlocked": false,
+          "requirements": {
+            "level": 6,
+            "damage_dealt": 500
+          },
+          "effects": {
+            "hp_per_kill": 5
+          }
+        }
+      },
+      "hotkey_abilities": {
+        "1": {
+          "ability_id": "devastating_blow",
+          "name": "Devastating Blow",
+          "description": "Deal 200% damage, ignoring 50% of armor",
+          "cooldown": 4,
+          "cost": {
+            "ap": 3,
+            "rage": 6
+          },
+          "range": 1,
+          "area_of_effect": 1,
+          "effects": {
+            "damage_multiplier": 2.0,
+            "armor_penetration": 0.5
+          }
+        },
+        "2": {
+          "ability_id": "berserker_charge",
+          "name": "Berserker Charge",
+          "description": "Move up to 6 tiles and attack with +50% damage",
+          "cooldown": 6,
+          "cost": {
+            "ap": 2,
+            "rage": 4
+          },
+          "range": 6,
+          "area_of_effect": 1,
+          "effects": {
+            "movement_bonus": 6,
+            "damage_multiplier": 1.5
+          }
+        }
+      }
+    },
+    "soul_linked": {
+      "id": "soul_linked",
+      "name": "Soul Linked",
+      "display_name": "Soul Linked",
+      "description": "Being connected to spiritual realm with enhanced faith abilities",
+      "visual": {
+        "color": "light_gray",
+        "model": "cube",
+        "scale": [0.8, 2.0, 0.8]
+      },
+      "stats": {
+        "base_health": 80,
+        "base_mp": 6,
+        "base_move_points": 3,
+        "base_attack_range": 2,
+        "base_effect_area": 2,
+        "attribute_bonuses": ["faith", "fortitude", "worthy"]
+      },
+      "combat": {
+        "primary_damage_type": "spiritual",
+        "resource_type": "kwan",
+        "resistances": {
+          "physical": -0.1,
+          "magical": 0.1,
+          "spiritual": 0.3
+        }
+      },
+      "ai": {
+        "aggression": 0.5,
+        "formation_preference": "support"
+      },
+      "inventory": {
+        "starting_items": [
+          {
+            "item_id": "spirit_staff",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "weapon"
+          },
+          {
+            "item_id": "blessed_robes",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "body"
+          },
+          {
+            "item_id": "soul_gem",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "accessory"
+          }
+        ],
+        "max_inventory_size": 25,
+        "gold": 150
+      },
+      "game_state_effects": {
+        "soul_bond": {
+          "description": "Share 25% of damage taken with nearest ally",
+          "effect_type": "passive",
+          "damage_sharing": 0.25
+        },
+        "spiritual_guidance": {
+          "description": "Allies within 3 tiles gain +1 Kwan per turn",
+          "area": 3,
+          "effect_type": "aura",
+          "resource_bonus": {
+            "kwan": 1
+          }
+        }
+      },
+      "talents": {
+        "divine_protection": {
+          "name": "Divine Protection",
+          "description": "Reduce all damage by 2 points (minimum 1)",
+          "tier": "ENHANCED",
+          "unlocked": true,
+          "effects": {
+            "damage_reduction": 2,
+            "minimum_damage": 1
+          }
+        },
+        "soul_resurrection": {
+          "name": "Soul Resurrection",
+          "description": "Revive fallen ally with 50% HP once per battle",
+          "tier": "SUPERPOWERED",
+          "unlocked": false,
+          "requirements": {
+            "level": 8,
+            "kwan_spent": 150
+          },
+          "effects": {
+            "revive_hp_percent": 0.5,
+            "uses_per_battle": 1
+          }
+        }
+      },
+      "hotkey_abilities": {
+        "1": {
+          "ability_id": "healing_light",
+          "name": "Healing Light",
+          "description": "Restore 30 HP to target ally",
+          "cooldown": 2,
+          "cost": {
+            "ap": 2,
+            "kwan": 4
+          },
+          "range": 4,
+          "area_of_effect": 1,
+          "effects": {
+            "heal_amount": 30
+          }
+        },
+        "2": {
+          "ability_id": "spirit_shield",
+          "name": "Spirit Shield",
+          "description": "Grant ally 50% damage reduction for 3 turns",
+          "cooldown": 5,
+          "cost": {
+            "ap": 1,
+            "kwan": 6
+          },
+          "range": 3,
+          "area_of_effect": 1,
+          "effects": {
+            "damage_reduction": 0.5,
+            "duration": 3
+          }
+        }
+      }
+    },
+    "realm_walker": {
+      "id": "realm_walker",
+      "name": "Realm Walker",
+      "display_name": "Realm Walker",
+      "description": "Interdimensional traveler with spirit abilities",
+      "visual": {
+        "color": [128, 0, 128],
+        "model": "cube",
+        "scale": [0.8, 2.0, 0.8]
+      },
+      "stats": {
+        "base_health": 90,
+        "base_mp": 7,
+        "base_move_points": 4,
+        "base_attack_range": 2,
+        "base_effect_area": 1,
+        "attribute_bonuses": ["spirit", "faith", "worthy"]
+      },
+      "combat": {
+        "primary_damage_type": "spiritual",
+        "resource_type": "kwan",
+        "resistances": {
+          "physical": 0.0,
+          "magical": 0.2,
+          "spiritual": 0.2
+        }
+      },
+      "ai": {
+        "aggression": 0.6,
+        "formation_preference": "flanking"
+      },
+      "inventory": {
+        "starting_items": [
+          {
+            "item_id": "void_blade",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "weapon"
+          },
+          {
+            "item_id": "dimensional_cloak",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "body"
+          },
+          {
+            "item_id": "portal_stone",
+            "quantity": 2,
+            "equipped": false
+          }
+        ],
+        "max_inventory_size": 18,
+        "gold": 200
+      },
+      "game_state_effects": {
+        "phase_step": {
+          "description": "Can move through enemies and difficult terrain",
+          "effect_type": "passive",
+          "movement_abilities": ["phase_through", "ignore_terrain"]
+        },
+        "dimensional_anchor": {
+          "description": "Enemies within 2 tiles cannot teleport or use movement abilities",
+          "area": 2,
+          "effect_type": "aura",
+          "movement_restrictions": ["no_teleport", "no_special_movement"]
+        }
+      },
+      "talents": {
+        "void_walking": {
+          "name": "Void Walking",
+          "description": "Teleport to any visible tile within 5 range",
+          "tier": "ENHANCED",
+          "unlocked": true,
+          "effects": {
+            "teleport_range": 5,
+            "requires_line_of_sight": true
+          }
+        },
+        "reality_tear": {
+          "name": "Reality Tear",
+          "description": "Create a portal that damages enemies passing through",
+          "tier": "ENCHANTED",
+          "unlocked": false,
+          "requirements": {
+            "level": 7,
+            "teleports_used": 25
+          },
+          "effects": {
+            "portal_damage": 20,
+            "portal_duration": 5
+          }
+        }
+      },
+      "hotkey_abilities": {
+        "1": {
+          "ability_id": "dimensional_strike",
+          "name": "Dimensional Strike",
+          "description": "Teleport to enemy and attack with +75% damage",
+          "cooldown": 4,
+          "cost": {
+            "ap": 2,
+            "kwan": 5
+          },
+          "range": 6,
+          "area_of_effect": 1,
+          "effects": {
+            "teleport_to_target": true,
+            "damage_multiplier": 1.75
+          }
+        },
+        "2": {
+          "ability_id": "void_prison",
+          "name": "Void Prison",
+          "description": "Trap enemy in dimensional void for 2 turns",
+          "cooldown": 8,
+          "cost": {
+            "ap": 3,
+            "kwan": 10
+          },
+          "range": 4,
+          "area_of_effect": 1,
+          "effects": {
+            "stun_duration": 2,
+            "damage_per_turn": 5
+          }
+        }
+      }
+    },
+    "wargi": {
+      "id": "wargi",
+      "name": "Wargi",
+      "display_name": "Wargi",
+      "description": "Wise warrior with balanced combat and magical abilities",
+      "visual": {
+        "color": "blue",
+        "model": "cube",
+        "scale": [0.8, 2.0, 0.8]
+      },
+      "stats": {
+        "base_health": 95,
+        "base_mp": 5,
+        "base_move_points": 3,
+        "base_attack_range": 2,
+        "base_effect_area": 1,
+        "attribute_bonuses": ["wisdom", "wonder", "spirit"]
+      },
+      "combat": {
+        "primary_damage_type": "magical",
+        "resource_type": "mp",
+        "resistances": {
+          "physical": 0.1,
+          "magical": 0.1,
+          "spiritual": 0.1
+        }
+      },
+      "ai": {
+        "aggression": 0.6,
+        "formation_preference": "balanced"
+      },
+      "inventory": {
+        "starting_items": [
+          {
+            "item_id": "war_staff",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "weapon"
+          },
+          {
+            "item_id": "battle_robes",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "body"
+          },
+          {
+            "item_id": "wisdom_scroll",
+            "quantity": 3,
+            "equipped": false
+          }
+        ],
+        "max_inventory_size": 22,
+        "gold": 125
+      },
+      "game_state_effects": {
+        "tactical_awareness": {
+          "description": "See enemy movement patterns and attack ranges",
+          "effect_type": "passive",
+          "vision_bonuses": ["enemy_movement", "attack_range_preview"]
+        },
+        "battle_wisdom": {
+          "description": "Gain +1 MP when ally uses ability within 3 tiles",
+          "area": 3,
+          "effect_type": "reactive",
+          "resource_bonus": {
+            "mp": 1
+          }
+        }
+      },
+      "talents": {
+        "spell_sword": {
+          "name": "Spell Sword",
+          "description": "Weapon attacks also deal magical damage equal to 50% of physical",
+          "tier": "ENHANCED",
+          "unlocked": true,
+          "effects": {
+            "magical_damage_percent": 0.5
+          }
+        },
+        "arcane_mastery": {
+          "name": "Arcane Mastery",
+          "description": "All spells cost 1 less MP and have +1 range",
+          "tier": "ENCHANTED",
+          "unlocked": false,
+          "requirements": {
+            "level": 6,
+            "spells_cast": 50
+          },
+          "effects": {
+            "mp_cost_reduction": 1,
+            "spell_range_bonus": 1
+          }
+        }
+      },
+      "hotkey_abilities": {
+        "1": {
+          "ability_id": "elemental_strike",
+          "name": "Elemental Strike",
+          "description": "Weapon attack that cycles through fire, ice, lightning",
+          "cooldown": 3,
+          "cost": {
+            "ap": 2,
+            "mp": 3
+          },
+          "range": 2,
+          "area_of_effect": 1,
+          "effects": {
+            "elemental_rotation": ["fire", "ice", "lightning"],
+            "bonus_damage": 15
+          }
+        },
+        "2": {
+          "ability_id": "mana_burst",
+          "name": "Mana Burst",
+          "description": "Spend all MP to deal damage equal to 5x MP spent",
+          "cooldown": 5,
+          "cost": {
+            "ap": 2,
+            "mp": "all"
+          },
+          "range": 3,
+          "area_of_effect": 2,
+          "effects": {
+            "damage_per_mp": 5
+          }
+        }
+      }
+    },
+    "magi": {
+      "id": "magi",
+      "name": "Magi",
+      "display_name": "Magi",
+      "description": "Master of magical arts with high wisdom and wonder",
+      "visual": {
+        "color": "cyan",
+        "model": "cube",
+        "scale": [0.8, 2.0, 0.8]
+      },
+      "stats": {
+        "base_health": 70,
+        "base_mp": 8,
+        "base_move_points": 2,
+        "base_attack_range": 3,
+        "base_effect_area": 2,
+        "attribute_bonuses": ["wisdom", "wonder", "finesse"]
+      },
+      "combat": {
+        "primary_damage_type": "magical",
+        "resource_type": "mp",
+        "resistances": {
+          "physical": -0.2,
+          "magical": 0.3,
+          "spiritual": 0.1
+        }
+      },
+      "ai": {
+        "aggression": 0.4,
+        "formation_preference": "back_line"
+      },
+      "inventory": {
+        "starting_items": [
+          {
+            "item_id": "arcane_staff",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "weapon"
+          },
+          {
+            "item_id": "mage_robes",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "body"
+          },
+          {
+            "item_id": "spell_component_pouch",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "accessory"
+          },
+          {
+            "item_id": "mana_potion",
+            "quantity": 5,
+            "equipped": false
+          }
+        ],
+        "max_inventory_size": 30,
+        "gold": 250
+      },
+      "game_state_effects": {
+        "arcane_focus": {
+          "description": "Spells have +25% damage and +1 range",
+          "effect_type": "passive",
+          "spell_bonuses": {
+            "damage_multiplier": 1.25,
+            "range_bonus": 1
+          }
+        },
+        "mana_overflow": {
+          "description": "When at full MP, spells don't consume MP (once per turn)",
+          "effect_type": "conditional",
+          "condition": "full_mp",
+          "uses_per_turn": 1
+        }
+      },
+      "talents": {
+        "spell_mastery": {
+          "name": "Spell Mastery",
+          "description": "Learn additional spells and cast 2 spells per turn",
+          "tier": "ENHANCED",
+          "unlocked": true,
+          "effects": {
+            "bonus_spells": 2,
+            "spells_per_turn": 2
+          }
+        },
+        "archmage": {
+          "name": "Archmage",
+          "description": "All spells can target anywhere on battlefield",
+          "tier": "SUPERPOWERED",
+          "unlocked": false,
+          "requirements": {
+            "level": 12,
+            "mp_spent": 500
+          },
+          "effects": {
+            "unlimited_spell_range": true
+          }
+        }
+      },
+      "hotkey_abilities": {
+        "1": {
+          "ability_id": "fireball",
+          "name": "Fireball",
+          "description": "Explosive fire spell dealing area damage",
+          "cooldown": 2,
+          "cost": {
+            "ap": 2,
+            "mp": 4
+          },
+          "range": 5,
+          "area_of_effect": 2,
+          "effects": {
+            "base_damage": 25,
+            "burn_duration": 2
+          }
+        },
+        "2": {
+          "ability_id": "ice_prison",
+          "name": "Ice Prison",
+          "description": "Freeze enemy in place for 3 turns",
+          "cooldown": 6,
+          "cost": {
+            "ap": 2,
+            "mp": 6
+          },
+          "range": 4,
+          "area_of_effect": 1,
+          "effects": {
+            "freeze_duration": 3,
+            "damage_per_turn": 10
+          }
+        },
+        "3": {
+          "ability_id": "meteor",
+          "name": "Meteor",
+          "description": "Devastating spell that hits after 2 turns",
+          "cooldown": 10,
+          "cost": {
+            "ap": 3,
+            "mp": 12
+          },
+          "range": 8,
+          "area_of_effect": 3,
+          "effects": {
+            "delay_turns": 2,
+            "base_damage": 80,
+            "warning_indicator": true
+          }
+        }
+      }
+    }
+  }
+}

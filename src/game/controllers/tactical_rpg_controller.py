@@ -29,6 +29,10 @@ from core.models.unit import Unit
 from core.game.battle_grid import BattleGrid
 from core.game.turn_manager import TurnManager
 
+# Character state management
+from game.state.character_state_manager import get_character_state_manager, CharacterStateManager
+from core.assets.unit_data_manager import get_unit_data_manager
+
 # UI system imports
 from ui.camera.camera_controller import CameraController
 from ui.visual.grid_visualizer import GridVisualizer
@@ -65,6 +69,10 @@ class TacticalRPG:
         
         # Initialize ECS World
         self.world = World()
+        
+        # Initialize character state management
+        self.unit_data_manager = get_unit_data_manager()
+        self.character_state_manager = get_character_state_manager(self.unit_data_manager)
         
         # Legacy components for backwards compatibility
         self.grid = BattleGrid()
@@ -246,25 +254,99 @@ class TacticalRPG:
         # Auto-activate the first unit in turn order
         first_unit = self.turn_manager.current_unit()
         if first_unit:
-            self.active_unit = first_unit
-            self.current_path = []
-            self.path_cursor = (first_unit.x, first_unit.y)
-            self.current_mode = None
-            # Update all highlights and bars for the selected unit
-            self.update_path_highlights()
-            self.update_health_bar(first_unit)
-            self.update_resource_bar(first_unit)
-            
-            # Update control panel with first unit info
-            if self.control_panel:
-                try:
-                    self.control_panel.update_unit_info(first_unit)
-                except Exception as e:
-                    print(f"⚠ Error updating control panel with first unit: {e}")
-            
+            # Use centralized method for consistent behavior
+            self.set_active_unit(first_unit, update_highlights=True, update_ui=True)
             print(f"✓ Auto-selected first unit: {first_unit.name} (Speed: {first_unit.speed})")
         
         print(f"✓ Battle setup complete: {len(self.units)} units, ECS World with {self.world.entity_count} entities")
+    
+    def set_active_unit(self, unit: Optional[Unit], update_highlights: bool = True, update_ui: bool = True):
+        """
+        Centralized method to set the active unit with full integration.
+        
+        This method ensures consistent behavior across all unit selection methods:
+        - Mouse click on grid tiles
+        - End Turn button 
+        - Unit carousel buttons
+        - Programmatic selection
+        
+        Args:
+            unit: Unit to set as active, or None to clear selection
+            update_highlights: Whether to update visual highlights
+            update_ui: Whether to update UI elements (health bars, control panel)
+        """
+        # Store the new active unit
+        self.active_unit = unit
+        
+        if unit is not None:
+            # === Unit Selected ===
+            
+            # Reset path and cursor for new unit
+            self.current_path = []
+            self.path_cursor = (unit.x, unit.y)
+            self.current_mode = None
+            
+            # Update character state manager with selected character
+            if hasattr(unit, 'character_instance_id'):
+                self.character_state_manager.set_active_character(unit.character_instance_id)
+            else:
+                # Create character instance for legacy units without instance IDs
+                try:
+                    character_instance = self.character_state_manager.create_character_instance(
+                        unit.type, f"legacy_{unit.name}_{id(unit)}"
+                    )
+                    unit.character_instance_id = character_instance.instance_id
+                    self.character_state_manager.set_active_character(character_instance.instance_id)
+                except Exception as e:
+                    print(f"Warning: Could not create character instance for {unit.name}: {e}")
+                    self.character_state_manager.set_active_character(None)
+            
+            # Update visual highlights if requested
+            if update_highlights:
+                self.update_path_highlights()
+            
+            # Update UI elements if requested
+            if update_ui:
+                # Update control panel with selected unit info
+                if self.control_panel:
+                    try:
+                        self.control_panel.update_unit_info(unit)
+                    except Exception as e:
+                        print(f"⚠ Error updating control panel: {e}")
+                
+                # Create/update health bar and resource bar for selected unit
+                self.update_health_bar(unit)
+                self.update_resource_bar(unit)
+        
+        else:
+            # === Unit Deselected ===
+            
+            # Clear path and mode
+            self.current_path = []
+            self.path_cursor = None
+            self.current_mode = None
+            
+            # Clear character state manager active character
+            self.character_state_manager.set_active_character(None)
+            
+            # Hide UI elements if requested
+            if update_ui:
+                self.hide_health_bar()
+                self.hide_resource_bar()
+                
+                # Clear control panel unit info
+                if self.control_panel:
+                    try:
+                        self.control_panel.update_unit_info(None)
+                    except Exception as e:
+                        print(f"⚠ Error updating control panel: {e}")
+    
+    def clear_active_unit(self):
+        """
+        Clear the active unit selection.
+        Convenience method that calls set_active_unit(None).
+        """
+        self.set_active_unit(None)
     
     def equip_demo_weapons(self):
         """Equip demonstration weapons to show range/area effects"""
@@ -320,9 +402,7 @@ class TacticalRPG:
         if self.turn_manager:
             # Clear current selection
             self.clear_highlights()
-            self.active_unit = None
-            self.hide_health_bar()
-            self.hide_resource_bar()
+            self.clear_active_unit()
             
             # Move to next turn
             self.turn_manager.next_turn()
@@ -330,14 +410,8 @@ class TacticalRPG:
             # Auto-select the new current unit
             current_unit = self.turn_manager.current_unit()
             if current_unit:
-                self.active_unit = current_unit
-                self.current_path = []
-                self.path_cursor = (current_unit.x, current_unit.y)
-                self.current_mode = None
-                # Update all highlights and bars for the new current unit
-                self.update_path_highlights()
-                self.update_health_bar(current_unit)
-                self.update_resource_bar(current_unit)
+                # Use centralized method for consistent behavior
+                self.set_active_unit(current_unit, update_highlights=True, update_ui=True)
                 
                 # Update control panel with new current unit
                 if self.control_panel:
@@ -367,24 +441,8 @@ class TacticalRPG:
         if (x, y) in self.grid.units:
             clicked_unit = self.grid.units[(x, y)]
             
-            # Select the clicked unit and show action modal
-            self.active_unit = clicked_unit
-            self.current_path = []  # Reset path when selecting new unit
-            self.path_cursor = (clicked_unit.x, clicked_unit.y)  # Start cursor at unit position
-            self.current_mode = None  # Reset mode
-            # Update all highlights including yellow cursor at unit's position
-            self.update_path_highlights()
-            
-            # Update control panel with selected unit info
-            if self.control_panel:
-                try:
-                    self.control_panel.update_unit_info(clicked_unit)
-                except Exception as e:
-                    print(f"⚠ Error updating control panel: {e}")
-            
-            # Create/update health bar and resource bar for selected unit
-            self.update_health_bar(clicked_unit)
-            self.update_resource_bar(clicked_unit)
+            # Use centralized method for consistent behavior
+            self.set_active_unit(clicked_unit, update_highlights=True, update_ui=True)
             
             # Show action modal for the selected unit
             self.show_action_modal(clicked_unit)
@@ -394,19 +452,8 @@ class TacticalRPG:
                 # In movement mode - don't clear selection, this could be path planning
                 return
             else:
-                # Not in movement mode - clear selection
-                self.active_unit = None
-                self.current_path = []
-                self.path_cursor = None
-                self.current_mode = None
-                self.hide_health_bar()
-                self.hide_resource_bar()
-                # Clear control panel unit info
-                if self.control_panel:
-                    try:
-                        self.control_panel.update_unit_info(None)
-                    except Exception as e:
-                        print(f"⚠ Error updating control panel: {e}")
+                # Not in movement mode - clear selection using centralized method
+                self.clear_active_unit()
     
     # Complete TacticalRPG controller implementation
     

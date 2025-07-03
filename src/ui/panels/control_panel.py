@@ -50,8 +50,8 @@ class CharacterAttackInterface:
         self.unit_carousel_icons: List[Button] = []
         self.carousel_container = Entity(parent=camera.ui)
         
-        # Create text elements
-        self._create_text_elements()
+        # Text elements removed
+        # self._create_text_elements()
         
         # Create action buttons
         self._create_action_buttons()
@@ -67,10 +67,8 @@ class CharacterAttackInterface:
     
     def _create_text_elements(self):
         """Create all text display elements."""
-        self.unit_info_text = Text('No unit selected')
-        self.camera_controls_text = Text('CAMERA: [1] Orbit | [2] Free | [3] Top-down | ACTIVE: Orbit')
-        self.game_controls_text = Text('CONTROLS: Click unit to select | Click tile to move | Mouse/WASD for camera')
-        self.stats_display_text = Text('')
+        # Text elements removed per user request
+        pass
     
     def _create_action_buttons(self):
         """Create action buttons with callbacks."""
@@ -92,48 +90,12 @@ class CharacterAttackInterface:
         """Create the main interface using configuration values."""
         config = get_config_manager()
         
-        # Get panel configuration
-        panel_scale = config.get_scale('ui_layout.ui_layout.control_panel.main_panel.scale', (0.8, 0.25, 0.01))
-        panel_position = config.get_scale('ui_layout.ui_layout.control_panel.main_panel.position', (0, -0.3, 0))
-        panel_color = config.get_color('ui_layout.ui_layout.control_panel.main_panel.color', (0.1, 0.1, 0.15, 0.9))
+        # Main background panel removed per user request
+        self.panel = None
         
-        # Main background panel
-        self.panel = Entity(
-            model='cube',
-            scale=panel_scale,
-            color=panel_color,
-            position=panel_position,
-            parent=camera.ui
-        )
-        
-        # Position text elements on the panel using configuration
-        self.unit_info_text.parent = self.panel
-        unit_info_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.unit_info.position', (0, 0.08, 0.01))
-        unit_info_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.unit_info.scale', 0.8)
-        self.unit_info_text.position = unit_info_pos
-        self.unit_info_text.scale = unit_info_scale
-        
-        self.camera_controls_text.parent = self.panel
-        camera_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.camera_controls.position', (0, 0.04, 0.01))
-        camera_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.camera_controls.scale', 0.6)
-        self.camera_controls_text.position = camera_pos
-        self.camera_controls_text.scale = camera_scale
-        
-        self.game_controls_text.parent = self.panel
-        game_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.game_controls.position', (0, 0.0, 0.01))
-        game_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.game_controls.scale', 0.6)
-        self.game_controls_text.position = game_pos
-        self.game_controls_text.scale = game_scale
-        
-        self.stats_display_text.parent = self.panel
-        stats_pos = config.get_scale('ui_layout.ui_layout.control_panel.text_elements.stats_display.position', (0, -0.04, 0.01))
-        stats_scale = config.get_value('ui_layout.ui_layout.control_panel.text_elements.stats_display.scale', 0.6)
-        self.stats_display_text.position = stats_pos
-        self.stats_display_text.scale = stats_scale
-        
-        # Position end turn button using configuration
-        self.end_turn_btn.parent = self.panel
-        btn_pos = config.get_scale('ui_layout.ui_layout.control_panel.end_turn_button.position', (0, -0.08, 0.01))
+        # Position end turn button independently (no panel parent)
+        self.end_turn_btn.parent = camera.ui
+        btn_pos = config.get_scale('ui_layout.ui_layout.control_panel.end_turn_button.position', (0, -0.38, 0.01))
         btn_scale = config.get_value('ui_layout.ui_layout.control_panel.end_turn_button.scale', 0.08)
         self.end_turn_btn.position = btn_pos
         self.end_turn_btn.scale = btn_scale
@@ -290,11 +252,8 @@ class CharacterAttackInterface:
         if self.game_reference:
             print(f"Unit icon clicked: {unit.name}")
             
-            # Select the unit in the game
-            self.game_reference.active_unit = unit
-            
-            # Update UI to show selected unit
-            self.update_unit_info(unit)
+            # Use centralized method for consistent behavior
+            self.game_reference.set_active_unit(unit, update_highlights=True, update_ui=True)
             
             # Highlight the unit on the battlefield
             if hasattr(self.game_reference, 'clear_highlights'):
@@ -363,45 +322,7 @@ class CharacterAttackInterface:
         Args:
             unit: Unit object to display info for, or None to clear
         """
-        if unit:
-            # Get weapon info safely
-            weapon_name = 'None'
-            range_info = 'Range: 0 | Area: 0'
-            
-            if hasattr(unit, 'equipped_weapon') and unit.equipped_weapon:
-                weapon_name = unit.equipped_weapon.get('name', 'Unknown')
-            
-            if hasattr(unit, 'attack_range') and hasattr(unit, 'attack_effect_area'):
-                range_info = f"Range: {unit.attack_range} | Area: {unit.attack_effect_area}"
-            
-            # Build unit info text with safe attribute access
-            unit_name = getattr(unit, 'name', f'Unit {getattr(unit, "id", "Unknown")}')
-            unit_type = getattr(unit, 'type', type('obj', (object,), {'value': 'Unknown'})())
-            unit_type_name = getattr(unit_type, 'value', 'Unknown') if hasattr(unit_type, 'value') else str(unit_type)
-            
-            current_mp = getattr(unit, 'current_move_points', 0)
-            max_mp = getattr(unit, 'move_points', 0)
-            current_hp = getattr(unit, 'hp', 0)
-            max_hp = getattr(unit, 'max_hp', 0)
-            
-            self.unit_info_text.text = f"ACTIVE: {unit_name} ({unit_type_name}) | MP: {current_mp}/{max_mp} | HP: {current_hp}/{max_hp}"
-            
-            # Build stats display with safe attribute access
-            phys_atk = getattr(unit, 'physical_attack', 0)
-            mag_atk = getattr(unit, 'magical_attack', 0)
-            spir_atk = getattr(unit, 'spiritual_attack', 0)
-            phys_def = getattr(unit, 'physical_defense', 0)
-            mag_def = getattr(unit, 'magical_defense', 0)
-            spir_def = getattr(unit, 'spiritual_defense', 0)
-            
-            self.stats_display_text.text = f"WEAPON: {weapon_name} | {range_info}\nATK - Physical: {phys_atk} | Magical: {mag_atk} | Spiritual: {spir_atk}\nDEF - Physical: {phys_def} | Magical: {mag_def} | Spiritual: {spir_def}"
-        else:
-            self.unit_info_text.text = "No unit selected"
-            self.stats_display_text.text = ""
-        
-        # Re-layout after text changes
-        # No layout needed for fixed positioning
-        
+        # Text display removed per user request
         # Update carousel highlighting
         self.update_carousel_highlighting()
     
@@ -412,13 +333,8 @@ class CharacterAttackInterface:
         Args:
             mode: Camera mode (0=Orbit, 1=Free, 2=Top-down)
         """
-        mode_names = ["Orbit", "Free", "Top-down"]
-        if 0 <= mode < len(mode_names):
-            mode_name = mode_names[mode]
-            self.camera_controls_text.text = f"CAMERA: [1] Orbit | [2] Free | [3] Top-down | ACTIVE: {mode_name}"
-            
-            # Re-layout after text changes
-            # No layout needed for fixed positioning
+        # Camera mode display removed per user request
+        pass
     
     def set_controls_text(self, controls_text: str):
         """
@@ -427,51 +343,44 @@ class CharacterAttackInterface:
         Args:
             controls_text: New controls text to display
         """
-        self.game_controls_text.text = controls_text
-        # No layout needed for fixed positioning
+        # Game controls text display removed per user request
+        pass
     
     def toggle_visibility(self):
         """Toggle the visibility of the control panel."""
-        if hasattr(self, 'panel') and self.panel:
-            self.panel.enabled = not self.panel.enabled
+        # Toggle end turn button and carousel visibility
+        if hasattr(self, 'end_turn_btn') and self.end_turn_btn:
+            self.end_turn_btn.enabled = not self.end_turn_btn.enabled
             # Toggle carousel visibility too
-            self.carousel_label.enabled = self.panel.enabled
-            self.carousel_container.enabled = self.panel.enabled
-            status = "shown" if self.panel.enabled else "hidden"
+            self.carousel_label.enabled = self.end_turn_btn.enabled
+            self.carousel_container.enabled = self.end_turn_btn.enabled
+            status = "shown" if self.end_turn_btn.enabled else "hidden"
             print(f"Character Attack Interface {status}")
     
     def show(self):
         """Show the character attack interface."""
-        if hasattr(self, 'panel') and self.panel:
-            self.panel.enabled = True
+        if hasattr(self, 'end_turn_btn') and self.end_turn_btn:
+            self.end_turn_btn.enabled = True
             self.carousel_label.enabled = True
             self.carousel_container.enabled = True
     
     def hide(self):
         """Hide the character attack interface."""
-        if hasattr(self, 'panel') and self.panel:
-            self.panel.enabled = False
+        if hasattr(self, 'end_turn_btn') and self.end_turn_btn:
+            self.end_turn_btn.enabled = False
             self.carousel_label.enabled = False
             self.carousel_container.enabled = False
     
     def is_visible(self) -> bool:
         """Check if the character attack interface is currently visible."""
-        if hasattr(self, 'panel') and self.panel:
-            return self.panel.enabled
+        if hasattr(self, 'end_turn_btn') and self.end_turn_btn:
+            return self.end_turn_btn.enabled
         return False
     
     def cleanup(self):
         """Clean up all interface resources."""
         self.cleanup_carousel()
-        if hasattr(self, 'panel') and self.panel:
-            destroy(self.panel)
-        if hasattr(self, 'unit_info_text') and self.unit_info_text:
-            destroy(self.unit_info_text)
-        if hasattr(self, 'camera_controls_text') and self.camera_controls_text:
-            destroy(self.camera_controls_text)
-        if hasattr(self, 'game_controls_text') and self.game_controls_text:
-            destroy(self.game_controls_text)
-        if hasattr(self, 'stats_display_text') and self.stats_display_text:
-            destroy(self.stats_display_text)
+        # Panel removed per user request
+        # Text elements removed per user request
         if hasattr(self, 'end_turn_btn') and self.end_turn_btn:
             destroy(self.end_turn_btn)
