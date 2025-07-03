@@ -216,6 +216,136 @@ class CharacterInstance:
     def get_character_class(self) -> str:
         """Get character class name."""
         return self.unit_type.value.title()
+    
+    @property
+    def hotkey_abilities(self) -> List[Dict[str, Any]]:
+        """Get hotkey abilities in slot order for the Character Interface."""
+        hotkey_abilities_data = self.template_data.get('hotkey_abilities', {})
+        
+        # Convert to ordered list based on slot numbers
+        abilities_list = []
+        
+        # Process slots 1-8 (or max configured slots)
+        for i in range(1, 9):  # Slots 1-8
+            slot_key = str(i)
+            if slot_key in hotkey_abilities_data:
+                ability_data = hotkey_abilities_data[slot_key].copy()
+                
+                # Check if this is a talent_id reference that needs resolution
+                if 'talent_id' in ability_data and 'name' not in ability_data:
+                    talent_id = ability_data['talent_id']
+                    
+                    # Attempt to resolve talent_id to full ability data
+                    try:
+                        from src.core.assets.data_manager import get_data_manager
+                        data_manager = get_data_manager()
+                        talent_data = data_manager.get_talent(talent_id)
+                        
+                        if talent_data:
+                            # Normalize cost format from talent data (TalentData object)
+                            talent_cost = talent_data.cost
+                            normalized_cost = {}
+                            for key, value in talent_cost.items():
+                                # Convert talent cost format to ability cost format
+                                if key == 'mp_cost':
+                                    normalized_cost['mp'] = value
+                                elif key == 'rage_cost':
+                                    normalized_cost['rage'] = value
+                                elif key == 'kwan_cost':
+                                    normalized_cost['kwan'] = value
+                                elif key == 'action_points':
+                                    normalized_cost['ap'] = value
+                                else:
+                                    # Keep other cost types as-is
+                                    normalized_cost[key] = value
+                            
+                            # Use talent data to populate ability information
+                            ability = {
+                                'ability_id': talent_id,
+                                'talent_id': talent_id,  # Keep reference
+                                'name': talent_data.name,
+                                'description': talent_data.description,
+                                'cooldown': 0,  # Cooldown not in TalentData schema
+                                'cost': normalized_cost,
+                                'range': 1,  # Range not in TalentData schema
+                                'area_of_effect': 1,  # AoE not in TalentData schema
+                                'effects': talent_data.effects,
+                                'action_type': talent_data.action_type
+                            }
+                        else:
+                            # Fallback if talent not found
+                            ability = {
+                                'ability_id': talent_id,
+                                'talent_id': talent_id,
+                                'name': f'Unknown Talent: {talent_id}',
+                                'description': f'Talent ID {talent_id} not found in talent trees',
+                                'cooldown': 0,
+                                'cost': {},
+                                'range': 1,
+                                'area_of_effect': 1,
+                                'effects': {}
+                            }
+                    except Exception as e:
+                        # Fallback if talent manager fails
+                        ability = {
+                            'ability_id': talent_id,
+                            'talent_id': talent_id,
+                            'name': f'Error: {talent_id}',
+                            'description': f'Failed to resolve talent: {e}',
+                            'cooldown': 0,
+                            'cost': {},
+                            'range': 1,
+                            'area_of_effect': 1,
+                            'effects': {}
+                        }
+                else:
+                    # Use existing detailed format
+                    ability = ability_data
+                
+                # Add common interface properties
+                ability['slot_index'] = i - 1  # Convert to 0-based index
+                ability['hotkey'] = slot_key
+                # TODO: Add real availability checking
+                ability['available'] = True
+                ability['on_cooldown'] = False
+                ability['cooldown_remaining'] = 0
+                abilities_list.append(ability)
+        
+        return abilities_list
+    
+    def activate_hotkey_ability(self, slot_index: int) -> bool:
+        """Activate a hotkey ability by slot index."""
+        hotkey_abilities = self.hotkey_abilities
+        
+        if slot_index < 0 or slot_index >= len(hotkey_abilities):
+            return False
+        
+        ability = hotkey_abilities[slot_index]
+        
+        # Check if ability is available
+        if not ability.get('available', False) or ability.get('on_cooldown', False):
+            return False
+        
+        # Check resource costs
+        cost = ability.get('cost', {})
+        if cost.get('ap', 0) > self.current_ap:
+            return False
+        if cost.get('mp', 0) > self.current_mp:
+            return False
+        if cost.get('rage', 0) > self.current_rage:
+            return False
+        if cost.get('kwan', 0) > self.current_kwan:
+            return False
+        
+        # TODO: Implement actual ability execution
+        # For now, just consume resources and start cooldown
+        self.current_ap -= cost.get('ap', 0)
+        self.current_mp -= cost.get('mp', 0)
+        self.current_rage -= cost.get('rage', 0)
+        self.current_kwan -= cost.get('kwan', 0)
+        
+        print(f"🔥 Activated ability: {ability.get('name', 'Unknown')}")
+        return True
 
 
 class CharacterStateManager:

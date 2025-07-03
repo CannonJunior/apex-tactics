@@ -8,7 +8,7 @@ Extracted from apex-tactics.py for better modularity and organization.
 from typing import List, Optional, Tuple, Dict, Any
 
 try:
-    from ursina import Entity, color, destroy, Button, Text, WindowPanel, camera
+    from ursina import Entity, color, destroy, Button, Text, WindowPanel, camera, Tooltip
     from ursina.prefabs.health_bar import HealthBar
     URSINA_AVAILABLE = True
 except ImportError:
@@ -32,6 +32,7 @@ from core.game.turn_manager import TurnManager
 # Character state management
 from game.state.character_state_manager import get_character_state_manager, CharacterStateManager
 from core.assets.unit_data_manager import get_unit_data_manager
+from core.assets.config_manager import get_config_manager
 
 # UI system imports
 from ui.camera.camera_controller import CameraController
@@ -98,6 +99,10 @@ class TacticalRPG:
         self.resource_bar: Optional[HealthBar] = None  # Resource bar for active unit
         self.resource_bar_label: Optional[Any] = None  # Resource bar label
         
+        # Hotkey ability slots
+        self.hotkey_slots: List[Button] = []  # Hotkey ability buttons
+        self.hotkey_config: Optional[Dict[str, Any]] = None  # Hotkey configuration
+        
         # Targeted unit bars (can be multiple units for area effects)
         self.targeted_health_bars: List[HealthBar] = []  # Health bars for targeted units
         self.targeted_health_bar_labels: List[Any] = []  # Labels for targeted health bars
@@ -136,6 +141,10 @@ class TacticalRPG:
         # else:
         #     print("⚠ Skipping GridVisualizer - AStarPathfinder not available")
         self.grid_visualizer = None
+        
+        # Initialize hotkey system after all variable declarations
+        self._load_hotkey_config()
+        self._create_hotkey_slots()
         
         # Initialize tile highlighter (requires grid visualizer)
         if self.grid_visualizer:
@@ -317,6 +326,9 @@ class TacticalRPG:
                 # Create/update health bar and resource bar for selected unit
                 self.update_health_bar(unit)
                 self.update_resource_bar(unit)
+                
+                # Update hotkey slots for selected character
+                self.update_hotkey_slots()
         
         else:
             # === Unit Deselected ===
@@ -333,6 +345,7 @@ class TacticalRPG:
             if update_ui:
                 self.hide_health_bar()
                 self.hide_resource_bar()
+                self.hide_hotkey_slots()
                 
                 # Clear control panel unit info
                 if self.control_panel:
@@ -1388,6 +1401,12 @@ class TacticalRPG:
                 self.control_panel.toggle_visibility()
                 return True
         
+        # Handle hotkey number keys (1-8) to activate abilities
+        if key in ['1', '2', '3', '4', '5', '6', '7', '8']:
+            slot_index = int(key) - 1  # Convert to 0-based index
+            self._handle_hotkey_activation(slot_index)
+            return True
+        
         # Handle camera controls if no other input was processed
         if hasattr(self, 'camera_controller') and self.camera_controller:
             self.camera_controller.handle_input(key)
@@ -1724,6 +1743,291 @@ class TacticalRPG:
         """Called when a unit's resource changes to update resource bar if it's the selected unit"""
         if self.active_unit and self.active_unit == unit:
             self.refresh_resource_bar()
+    
+    # Hotkey Ability Slot Management Methods
+    
+    def _load_hotkey_config(self):
+        """Load hotkey configuration from config file."""
+        try:
+            config_manager = get_config_manager()
+            # Access the hotkey system config directly
+            self.hotkey_config = {
+                'hotkey_system': config_manager.get_value('character_interface_config.hotkey_system', {})
+            }
+            if not self.hotkey_config['hotkey_system']:
+                self.hotkey_config = self._get_default_hotkey_config()
+        except Exception as e:
+            print(f"Warning: Failed to load hotkey config: {e}")
+            self.hotkey_config = self._get_default_hotkey_config()
+    
+    def _get_default_hotkey_config(self):
+        """Get default hotkey configuration if config file is unavailable."""
+        return {
+            "hotkey_system": {
+                "max_hotkey_abilities": 8,
+                "max_interface_slots": 8,
+                "slot_layout": {
+                    "rows": 1,
+                    "columns": 8,
+                    "slot_size": 0.06,
+                    "slot_spacing": 0.01,
+                    "start_position": {
+                        "x": -0.4,
+                        "y": 0.35,
+                        "z": 0
+                    }
+                },
+                "visual_settings": {
+                    "empty_slot_color": "#404040",
+                    "ability_slot_color": "#ffffff",
+                    "cooldown_overlay_color": "#800000",
+                    "hotkey_text_color": "#ffff00",
+                    "hotkey_text_scale": 0.3,
+                    "tooltip_enabled": True
+                },
+                "interaction": {
+                    "click_to_activate": True,
+                    "keyboard_shortcuts": True,
+                    "keyboard_keys": ["1", "2", "3", "4", "5", "6", "7", "8"]
+                },
+                "display_options": {
+                    "show_ability_icons": True,
+                    "show_cooldown_timer": True,
+                    "show_hotkey_numbers": True,
+                    "show_ability_names": False,
+                    "icon_fallback": "white_cube"
+                }
+            }
+        }
+    
+    def _create_hotkey_slots(self):
+        """Create hotkey ability slots positioned below the resource bar."""
+        if not URSINA_AVAILABLE or not self.hotkey_config:
+            return
+        
+        hotkey_settings = self.hotkey_config.get('hotkey_system', {})
+        slot_layout = hotkey_settings.get('slot_layout', {})
+        visual_settings = hotkey_settings.get('visual_settings', {})
+        
+        # Get configuration values
+        max_slots = hotkey_settings.get('max_interface_slots', 8)
+        slot_size = slot_layout.get('slot_size', 0.06)
+        slot_spacing = slot_layout.get('slot_spacing', 0.01)
+        start_pos = slot_layout.get('start_position', {'x': -0.4, 'y': 0.35, 'z': 0})
+        
+        # Colors
+        empty_color = self._hex_to_color(visual_settings.get('empty_slot_color', '#404040'))
+        
+        # Clear existing slots
+        self._clear_hotkey_slots()
+        
+        # Create slots
+        for i in range(max_slots):
+            x_offset = i * (slot_size + slot_spacing)
+            
+            # Create slot button
+            slot_button = Button(
+                parent=camera.ui,
+                model='cube',
+                texture='white_cube',
+                color=empty_color,
+                scale=slot_size,
+                position=(start_pos['x'] + x_offset, start_pos['y'], start_pos['z']),
+                on_click=lambda slot_index=i: self._on_hotkey_slot_clicked(slot_index)
+            )
+            
+            # Add hotkey number text
+            if hotkey_settings.get('display_options', {}).get('show_hotkey_numbers', True):
+                hotkey_text_color = self._hex_to_color(visual_settings.get('hotkey_text_color', '#ffff00'))
+                hotkey_text_scale = visual_settings.get('hotkey_text_scale', 0.3)
+                
+                hotkey_text = Text(
+                    text=str(i + 1),
+                    parent=slot_button,
+                    position=(0, 0, -0.01),
+                    scale=hotkey_text_scale,
+                    color=hotkey_text_color,
+                    origin=(0, 0)
+                )
+                slot_button.hotkey_text = hotkey_text
+            
+            # Initialize slot data
+            slot_button.ability_data = None
+            slot_button.tooltip = None
+            slot_button.slot_index = i
+            slot_button.enabled = False  # Start hidden
+            
+            self.hotkey_slots.append(slot_button)
+    
+    def _clear_hotkey_slots(self):
+        """Clear existing hotkey slots."""
+        for slot in self.hotkey_slots:
+            if hasattr(slot, 'hotkey_text'):
+                destroy(slot.hotkey_text)
+            if hasattr(slot, 'tooltip') and slot.tooltip:
+                destroy(slot.tooltip)
+            destroy(slot)
+        self.hotkey_slots.clear()
+    
+    def _hex_to_color(self, hex_color: str):
+        """Convert hex color string to Ursina color."""
+        try:
+            # Remove # if present
+            hex_color = hex_color.lstrip('#')
+            # Convert to RGB values (0-1 range)
+            r = int(hex_color[0:2], 16) / 255.0
+            g = int(hex_color[2:4], 16) / 255.0
+            b = int(hex_color[4:6], 16) / 255.0
+            return color.rgb(r, g, b)
+        except:
+            return color.gray  # Fallback color
+    
+    def _on_hotkey_slot_clicked(self, slot_index: int):
+        """Handle clicking on a hotkey slot."""
+        self._handle_hotkey_activation(slot_index)
+    
+    def _handle_hotkey_activation(self, slot_index: int):
+        """Handle hotkey activation from either mouse click or keyboard shortcut."""
+        if slot_index >= len(self.hotkey_slots):
+            print(f"❌ Invalid hotkey slot {slot_index + 1}")
+            return
+        
+        slot = self.hotkey_slots[slot_index]
+        ability_data = slot.ability_data
+        
+        if ability_data:
+            # Get ability name for feedback (try talent resolution first)
+            ability_name = "Unknown"
+            talent_id = ability_data.get('talent_id')
+            
+            if talent_id:
+                from src.core.assets.data_manager import get_data_manager
+                data_manager = get_data_manager()
+                talent_data = data_manager.get_talent(talent_id)
+                if talent_data:
+                    ability_name = talent_data.name
+            else:
+                ability_name = ability_data.get('name', 'Unknown')
+            
+            print(f"🎯 Hotkey {slot_index + 1}: Activating {ability_name}")
+            self._activate_ability(ability_data)
+        else:
+            print(f"❌ Empty hotkey slot {slot_index + 1}")
+    
+    def _activate_ability(self, ability_data: Dict[str, Any]):
+        """Activate the specified ability by invoking the corresponding Unit Action."""
+        if not self.active_unit:
+            print("❌ No active unit selected")
+            return
+        
+        # Check if this is talent_id reference or old format ability data
+        talent_id = ability_data.get('talent_id')
+        
+        if talent_id:
+            # New format: resolve talent by ID
+            from src.core.assets.data_manager import get_data_manager
+            data_manager = get_data_manager()
+            talent_data = data_manager.get_talent(talent_id)
+            
+            if not talent_data:
+                print(f"❌ Talent '{talent_id}' not found")
+                return
+            
+            ability_name = talent_data.name
+            action_type = talent_data.action_type
+            
+            print(f"🔥 Activating talent: {ability_name} (Action: {action_type})")
+        else:
+            # Legacy format: use provided ability data
+            ability_name = ability_data.get('name', 'Unknown Ability')
+            action_type = ability_data.get('action_type', 'Attack')  # Default to Attack
+            
+            print(f"🔥 Activating legacy ability: {ability_name} (Action: {action_type})")
+        
+        # Map talent action type to Unit Action
+        if action_type == "Attack":
+            self.handle_action_selection("Attack", self.active_unit)
+        elif action_type == "Magic":
+            self.handle_action_selection("Magic", self.active_unit)
+        elif action_type == "Spirit":
+            self.handle_action_selection("Spirit", self.active_unit)
+        elif action_type == "Move":
+            self.handle_action_selection("Move", self.active_unit)
+        elif action_type == "Inventory":
+            self.handle_action_selection("Inventory", self.active_unit)
+        else:
+            print(f"❌ Unknown action type: {action_type}")
+            return
+        
+        print(f"   ✅ Unit Action '{action_type}' triggered for {self.active_unit.name}")
+    
+    def update_hotkey_slots(self):
+        """Update hotkey slots with current active character's abilities."""
+        if not self.hotkey_slots:
+            return
+        
+        # Get active character
+        active_character = self.character_state_manager.get_active_character()
+        
+        if not active_character:
+            # No active character, hide all slots
+            for slot in self.hotkey_slots:
+                slot.enabled = False
+            return
+        
+        # Get character's hotkey abilities
+        hotkey_abilities = active_character.hotkey_abilities
+        hotkey_settings = self.hotkey_config.get('hotkey_system', {})
+        visual_settings = hotkey_settings.get('visual_settings', {})
+        
+        # Get data manager for talent resolution
+        from src.core.assets.data_manager import get_data_manager
+        data_manager = get_data_manager()
+        
+        # Colors
+        empty_color = self._hex_to_color(visual_settings.get('empty_slot_color', '#404040'))
+        ability_color = self._hex_to_color(visual_settings.get('ability_slot_color', '#ffffff'))
+        
+        # Update each slot
+        for i, slot in enumerate(self.hotkey_slots):
+            slot.enabled = True  # Show slot
+            
+            # hotkey_abilities from character state manager is a list of abilities
+            if isinstance(hotkey_abilities, list) and i < len(hotkey_abilities):
+                # Get ability data from the list
+                ability_data = hotkey_abilities[i]
+                slot.ability_data = ability_data
+                slot.color = ability_color
+                
+                # Create tooltip with ability data
+                if hasattr(slot, 'tooltip') and slot.tooltip:
+                    destroy(slot.tooltip)
+                
+                ability_name = ability_data.get('name', 'Unknown Ability')
+                ability_description = ability_data.get('description', 'No description available')
+                action_type = ability_data.get('action_type', 'Unknown')
+                tooltip_text = f"{ability_name}\n{ability_description}\nAction: {action_type}\nHotkey: {i + 1}"
+                
+                slot.tooltip = Tooltip(tooltip_text)
+                slot.tooltip.background.color = color.hsv(0, 0, 0, .8)
+            else:
+                # Empty slot
+                slot.ability_data = None
+                slot.color = empty_color
+                
+                # Remove tooltip if exists
+                if hasattr(slot, 'tooltip') and slot.tooltip:
+                    destroy(slot.tooltip)
+                    slot.tooltip = None
+    
+    def hide_hotkey_slots(self):
+        """Hide hotkey slots when no unit is selected."""
+        for slot in self.hotkey_slots:
+            slot.enabled = False
+    
+    def show_hotkey_slots(self):
+        """Show hotkey slots for active character."""
+        self.update_hotkey_slots()
     
     # Targeted Unit Management Methods
     

@@ -97,36 +97,13 @@
       },
       "hotkey_abilities": {
         "1": {
-          "ability_id": "devastating_blow",
-          "name": "Devastating Blow",
-          "description": "Deal 200% damage, ignoring 50% of armor",
-          "cooldown": 4,
-          "cost": {
-            "ap": 3,
-            "rage": 6
-          },
-          "range": 1,
-          "area_of_effect": 1,
-          "effects": {
-            "damage_multiplier": 2.0,
-            "armor_penetration": 0.5
-          }
+          "talent_id": "power_attack"
         },
         "2": {
-          "ability_id": "berserker_charge",
-          "name": "Berserker Charge",
-          "description": "Move up to 6 tiles and attack with +50% damage",
-          "cooldown": 6,
-          "cost": {
-            "ap": 2,
-            "rage": 4
-          },
-          "range": 6,
-          "area_of_effect": 1,
-          "effects": {
-            "movement_bonus": 6,
-            "damage_multiplier": 1.5
-          }
+          "talent_id": "berserker_rage"
+        },
+        "3": {
+          "talent_id": "whirlwind"
         }
       }
     },
@@ -228,35 +205,13 @@
       },
       "hotkey_abilities": {
         "1": {
-          "ability_id": "healing_light",
-          "name": "Healing Light",
-          "description": "Restore 30 HP to target ally",
-          "cooldown": 2,
-          "cost": {
-            "ap": 2,
-            "kwan": 4
-          },
-          "range": 4,
-          "area_of_effect": 1,
-          "effects": {
-            "heal_amount": 30
-          }
+          "talent_id": "inner_peace"
         },
         "2": {
-          "ability_id": "spirit_shield",
-          "name": "Spirit Shield",
-          "description": "Grant ally 50% damage reduction for 3 turns",
-          "cooldown": 5,
-          "cost": {
-            "ap": 1,
-            "kwan": 6
-          },
-          "range": 3,
-          "area_of_effect": 1,
-          "effects": {
-            "damage_reduction": 0.5,
-            "duration": 3
-          }
+          "talent_id": "blessing"
+        },
+        "3": {
+          "talent_id": "spirit_shield"
         }
       }
     },
@@ -355,36 +310,10 @@
       },
       "hotkey_abilities": {
         "1": {
-          "ability_id": "dimensional_strike",
-          "name": "Dimensional Strike",
-          "description": "Teleport to enemy and attack with +75% damage",
-          "cooldown": 4,
-          "cost": {
-            "ap": 2,
-            "kwan": 5
-          },
-          "range": 6,
-          "area_of_effect": 1,
-          "effects": {
-            "teleport_to_target": true,
-            "damage_multiplier": 1.75
-          }
+          "talent_id": "teleport"
         },
         "2": {
-          "ability_id": "void_prison",
-          "name": "Void Prison",
-          "description": "Trap enemy in dimensional void for 2 turns",
-          "cooldown": 8,
-          "cost": {
-            "ap": 3,
-            "kwan": 10
-          },
-          "range": 4,
-          "area_of_effect": 1,
-          "effects": {
-            "stun_duration": 2,
-            "damage_per_turn": 5
-          }
+          "talent_id": "astral_projection"
         }
       }
     },
@@ -484,35 +413,13 @@
       },
       "hotkey_abilities": {
         "1": {
-          "ability_id": "elemental_strike",
-          "name": "Elemental Strike",
-          "description": "Weapon attack that cycles through fire, ice, lightning",
-          "cooldown": 3,
-          "cost": {
-            "ap": 2,
-            "mp": 3
-          },
-          "range": 2,
-          "area_of_effect": 1,
-          "effects": {
-            "elemental_rotation": ["fire", "ice", "lightning"],
-            "bonus_damage": 15
-          }
+          "talent_id": "basic_strike"
         },
         "2": {
-          "ability_id": "mana_burst",
-          "name": "Mana Burst",
-          "description": "Spend all MP to deal damage equal to 5x MP spent",
-          "cooldown": 5,
-          "cost": {
-            "ap": 2,
-            "mp": "all"
-          },
-          "range": 3,
-          "area_of_effect": 2,
-          "effects": {
-            "damage_per_mp": 5
-          }
+          "talent_id": "magic_missile"
+        },
+        "3": {
+          "talent_id": "lightning_bolt"
         }
       }
     },
@@ -619,53 +526,13 @@
       },
       "hotkey_abilities": {
         "1": {
-          "ability_id": "fireball",
-          "name": "Fireball",
-          "description": "Explosive fire spell dealing area damage",
-          "cooldown": 2,
-          "cost": {
-            "ap": 2,
-            "mp": 4
-          },
-          "range": 5,
-          "area_of_effect": 2,
-          "effects": {
-            "base_damage": 25,
-            "burn_duration": 2
-          }
+          "talent_id": "fireball"
         },
         "2": {
-          "ability_id": "ice_prison",
-          "name": "Ice Prison",
-          "description": "Freeze enemy in place for 3 turns",
-          "cooldown": 6,
-          "cost": {
-            "ap": 2,
-            "mp": 6
-          },
-          "range": 4,
-          "area_of_effect": 1,
-          "effects": {
-            "freeze_duration": 3,
-            "damage_per_turn": 10
-          }
+          "talent_id": "heal"
         },
         "3": {
-          "ability_id": "meteor",
-          "name": "Meteor",
-          "description": "Devastating spell that hits after 2 turns",
-          "cooldown": 10,
-          "cost": {
-            "ap": 3,
-            "mp": 12
-          },
-          "range": 8,
-          "area_of_effect": 3,
-          "effects": {
-            "delay_turns": 2,
-            "base_damage": 80,
-            "warning_indicator": true
-          }
+          "talent_id": "meteor"
         }
       }
     }

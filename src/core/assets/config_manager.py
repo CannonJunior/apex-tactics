@@ -75,6 +75,7 @@ class ConfigManager:
             'combat': 'data/gameplay/combat_values.json',
             'movement': 'data/gameplay/movement_values.json', 
             'ui_layout': 'data/ui/layout_config.json',
+            'character_interface_config': 'data/ui/character_interface_config.json',
             'animations': 'data/visual/animation_config.json',
             'ui_styles': 'ui_styles.json',
             'units': 'data/units/unit_generation.json'

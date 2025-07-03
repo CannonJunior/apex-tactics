@@ -8,6 +8,7 @@
       "level": 1,
       "tier": "Novice",
       "description": "Basic ranged spell that never misses its target",
+      "action_type": "Magic",
       "requirements": {
         "level": 1,
         "prerequisites": []
@@ -29,6 +30,7 @@
       "level": 2,
       "tier": "Novice",
       "description": "Restore health points to self or allies",
+      "action_type": "Magic",
       "requirements": {
         "level": 2,
         "prerequisites": ["magic_missile"]
@@ -49,6 +51,7 @@
       "level": 3,
       "tier": "Adept",
       "description": "Area damage spell that explodes on impact",
+      "action_type": "Magic",
       "requirements": {
         "level": 5,
         "prerequisites": ["heal"]
@@ -70,6 +73,7 @@
       "level": 4,
       "tier": "Adept",
       "description": "Chain lightning attack that jumps between enemies",
+      "action_type": "Magic",
       "requirements": {
         "level": 6,
         "prerequisites": ["fireball"]
@@ -91,6 +95,7 @@
       "level": 5,
       "tier": "Expert",
       "description": "Instant movement to any visible location",
+      "action_type": "Move",
       "requirements": {
         "level": 8,
         "prerequisites": ["lightning_bolt"]
@@ -111,6 +116,7 @@
       "level": 6,
       "tier": "Master",
       "description": "Massive area devastation from a summoned meteor",
+      "action_type": "Magic",
       "requirements": {
         "level": 12,
         "prerequisites": ["teleport"]

@@ -70,6 +70,35 @@ class ItemData:
 
 
 @dataclass
+class TalentData:
+    """Represents a talent from the talent files."""
+    id: str
+    name: str
+    level: int
+    tier: str
+    description: str
+    action_type: str  # Attack, Magic, Spirit, Move, Inventory
+    requirements: Dict[str, Any]
+    effects: Dict[str, Any]
+    cost: Dict[str, Any]
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'TalentData':
+        """Create TalentData from dictionary."""
+        return cls(
+            id=data['id'],
+            name=data['name'],
+            level=data['level'],
+            tier=data['tier'],
+            description=data['description'],
+            action_type=data.get('action_type', 'Attack'),
+            requirements=data.get('requirements', {}),
+            effects=data.get('effects', {}),
+            cost=data.get('cost', {})
+        )
+
+
+@dataclass
 class AbilityData:
     """Represents an ability from the data files."""
     id: str
@@ -122,6 +151,7 @@ class DataManager:
         # Data caches
         self._items: Dict[str, ItemData] = {}
         self._abilities: Dict[str, AbilityData] = {}
+        self._talents: Dict[str, TalentData] = {}
         self._item_types: Dict[str, List[ItemData]] = {}
         
         # Load data
@@ -131,6 +161,7 @@ class DataManager:
         """Load all game data from files."""
         self._load_items()
         self._load_abilities()
+        self._load_talents()
         print("✅ DataManager loaded all game data")
     
     def _load_items(self):
@@ -160,6 +191,26 @@ class DataManager:
         
         print(f"✅ Loaded {len(self._abilities)} abilities from data files")
     
+    def _load_talents(self):
+        """Load talents from talent files."""
+        # Load talents from each talent tree file
+        talent_files = [
+            "abilities/physical_talents.json",
+            "abilities/magical_talents.json", 
+            "abilities/spiritual_talents.json"
+        ]
+        
+        total_talents = 0
+        for file_path in talent_files:
+            talent_data = self.asset_loader.load_data(file_path)
+            if talent_data and 'talents' in talent_data:
+                for talent_dict in talent_data['talents']:
+                    talent = TalentData.from_dict(talent_dict)
+                    self._talents[talent.id] = talent
+                    total_talents += 1
+        
+        print(f"✅ Loaded {total_talents} talents from data files")
+    
     def get_item(self, item_id: str) -> Optional[ItemData]:
         """Get item data by ID."""
         return self._items.get(item_id)
@@ -183,6 +234,22 @@ class DataManager:
     def get_abilities_by_type(self, ability_type: str) -> List[AbilityData]:
         """Get all abilities of a specific type."""
         return [ability for ability in self._abilities.values() if ability.type == ability_type]
+    
+    def get_talent(self, talent_id: str) -> Optional[TalentData]:
+        """Get talent data by ID."""
+        return self._talents.get(talent_id)
+    
+    def get_talents_by_action_type(self, action_type: str) -> List[TalentData]:
+        """Get all talents of a specific action type."""
+        return [talent for talent in self._talents.values() if talent.action_type == action_type]
+    
+    def get_talents_by_tier(self, tier: str) -> List[TalentData]:
+        """Get all talents of a specific tier."""
+        return [talent for talent in self._talents.values() if talent.tier == tier]
+    
+    def get_all_talents(self) -> List[TalentData]:
+        """Get all talents."""
+        return list(self._talents.values())
     
     def create_sample_inventory(self, character_assignments: Dict[str, str] = None) -> List[Dict[str, Any]]:
         """
@@ -232,6 +299,7 @@ class DataManager:
         """Reload all data from files."""
         self._items.clear()
         self._abilities.clear()
+        self._talents.clear()
         self._item_types.clear()
         
         # Clear asset loader cache

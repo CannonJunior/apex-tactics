@@ -8,6 +8,7 @@
       "level": 1,
       "tier": "Novice",
       "description": "Restore mental energy and reduce stress",
+      "action_type": "Spirit",
       "requirements": {
         "level": 1,
         "prerequisites": []
@@ -28,6 +29,7 @@
       "level": 2,
       "tier": "Novice",
       "description": "Temporary stat boost for self or allies",
+      "action_type": "Spirit",
       "requirements": {
         "level": 2,
         "prerequisites": ["inner_peace"]
@@ -49,6 +51,7 @@
       "level": 3,
       "tier": "Adept",
       "description": "Magical damage protection through spiritual energy",
+      "action_type": "Spirit",
       "requirements": {
         "level": 5,
         "prerequisites": ["blessing"]
@@ -69,6 +72,7 @@
       "level": 4,
       "tier": "Adept",
       "description": "Communicate with spirits for guidance and information",
+      "action_type": "Spirit",
       "requirements": {
         "level": 6,
         "prerequisites": ["spirit_shield"]
@@ -89,6 +93,7 @@
       "level": 5,
       "tier": "Expert",
       "description": "Scout distant locations while body remains protected",
+      "action_type": "Spirit",
       "requirements": {
         "level": 8,
         "prerequisites": ["commune"]
@@ -110,6 +115,7 @@
       "level": 6,
       "tier": "Master",
       "description": "Ultimate protection that prevents death once per battle",
+      "action_type": "Spirit",
       "requirements": {
         "level": 12,
         "prerequisites": ["astral_projection"]

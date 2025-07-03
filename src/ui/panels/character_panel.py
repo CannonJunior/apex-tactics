@@ -8,8 +8,9 @@ Toggleable with 'c' key, shows selected unit's complete information.
 from typing import Optional, Dict, Any, List
 
 try:
-    from ursina import Text, Button, color
+    from ursina import Text, Button, color, Entity, camera, Tooltip, destroy
     from ursina.prefabs.window_panel import WindowPanel
+    from ursina.models.procedural.quad import Quad
     URSINA_AVAILABLE = True
 except ImportError:
     URSINA_AVAILABLE = False
@@ -21,6 +22,8 @@ try:
 except ImportError:
     CHARACTER_STATE_AVAILABLE = False
     print("Warning: Character state management not available")
+
+# Config manager import removed - hotkey functionality moved to TacticalRPG controller
 
 
 class CharacterPanel:
@@ -43,6 +46,8 @@ class CharacterPanel:
         self.character_state_manager = character_state_manager
         self.current_character = None
         self.current_character_instance: Optional[CharacterInstance] = None
+        
+        # Note: Hotkey slots moved to TacticalRPG controller for better gameplay integration
         
         # Register as observer for character state changes
         if self.character_state_manager and CHARACTER_STATE_AVAILABLE:
@@ -210,6 +215,8 @@ class CharacterPanel:
         else:
             # No character selected
             self._clear_display()
+    
+    # Hotkey slots functionality moved to TacticalRPG controller
     
     def _update_character_instance_display(self):
         """Update display using CharacterInstance data."""
@@ -388,19 +395,27 @@ class CharacterPanel:
     def toggle_visibility(self):
         """Toggle the visibility of the character panel."""
         if hasattr(self, 'panel') and self.panel:
-            self.panel.enabled = not self.panel.enabled
-            status = "shown" if self.panel.enabled else "hidden"
+            is_visible = not self.panel.enabled
+            self.panel.enabled = is_visible
+            
+            # Hotkey slots now managed by TacticalRPG controller
+            
+            status = "shown" if is_visible else "hidden"
             print(f"Character panel {status}")
     
     def show(self):
         """Show the character panel."""
         if hasattr(self, 'panel') and self.panel:
             self.panel.enabled = True
+            
+            # Hotkey slots now managed by TacticalRPG controller
     
     def hide(self):
         """Hide the character panel."""
         if hasattr(self, 'panel') and self.panel:
             self.panel.enabled = False
+            
+            # Hotkey slots now managed by TacticalRPG controller
     
     def is_visible(self) -> bool:
         """Check if the character panel is currently visible."""
@@ -448,6 +463,8 @@ class CharacterPanel:
         # Remove observer registration
         if self.character_state_manager and CHARACTER_STATE_AVAILABLE:
             self.character_state_manager.remove_observer(self.on_character_state_changed)
+        
+        # Hotkey slots now managed by TacticalRPG controller
         
         if hasattr(self, 'panel') and self.panel:
             self.panel.enabled = False
