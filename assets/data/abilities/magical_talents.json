@@ -59,7 +59,7 @@
       "effects": {
         "damage_type": "fire",
         "base_damage": 40,
-        "area_of_effect": "2x2",
+        "area_of_effect": 2,
         "range": 6
       },
       "cost": {
@@ -124,13 +124,67 @@
       "effects": {
         "damage_type": "fire",
         "base_damage": 100,
-        "area_of_effect": "3x3",
+        "area_of_effect": 3,
         "range": 10,
         "cast_time": 2
       },
       "cost": {
         "talent_points": 4,
         "mp_cost": 50
+      }
+    },
+    {
+      "id": "divine_restoration",
+      "name": "Divine Restoration",
+      "level": 7,
+      "tier": "Master",
+      "description": "A powerful spell that heals allies, restores MP, and provides temporary protection",
+      "action_type": "Magic",
+      "requirements": {
+        "level": 10,
+        "prerequisites": ["heal", "meteor"]
+      },
+      "effects": {
+        "healing_amount": 50,
+        "mp_restoration": 25,
+        "magical_defense_bonus": 20,
+        "spiritual_defense_bonus": 15,
+        "duration": 4,
+        "range": 4,
+        "area_of_effect": 2,
+        "target_type": "ally"
+      },
+      "cost": {
+        "talent_points": 5,
+        "mp_cost": 40
+      }
+    },
+    {
+      "id": "elemental_burst",
+      "name": "Elemental Burst",
+      "level": 8,
+      "tier": "Master",
+      "description": "Devastating attack that deals multiple damage types and weakens enemy defenses",
+      "action_type": "Magic",
+      "requirements": {
+        "level": 12,
+        "prerequisites": ["fireball", "lightning_bolt"]
+      },
+      "effects": {
+        "magical_damage": 40,
+        "physical_damage": 20,
+        "spiritual_damage": 30,
+        "magical_defense_reduction": 10,
+        "physical_defense_reduction": 5,
+        "duration": 3,
+        "range": 5,
+        "area_of_effect": 3,
+        "target_type": "enemy",
+        "guaranteed_hit": true
+      },
+      "cost": {
+        "talent_points": 6,
+        "mp_cost": 60
       }
     }
   ]

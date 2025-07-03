@@ -6,6 +6,7 @@
       "name": "Ubermensch",
       "display_name": "Ubermensch",
       "description": "Superior being with enhanced physical capabilities",
+      "faction": "player",
       "visual": {
         "color": "red",
         "model": "cube",
@@ -112,6 +113,7 @@
       "name": "Soul Linked",
       "display_name": "Soul Linked",
       "description": "Being connected to spiritual realm with enhanced faith abilities",
+      "faction": "player",
       "visual": {
         "color": "light_gray",
         "model": "cube",
@@ -220,6 +222,7 @@
       "name": "Realm Walker",
       "display_name": "Realm Walker",
       "description": "Interdimensional traveler with spirit abilities",
+      "faction": "player",
       "visual": {
         "color": [128, 0, 128],
         "model": "cube",
@@ -322,6 +325,7 @@
       "name": "Wargi",
       "display_name": "Wargi",
       "description": "Wise warrior with balanced combat and magical abilities",
+      "faction": "player",
       "visual": {
         "color": "blue",
         "model": "cube",
@@ -428,6 +432,7 @@
       "name": "Magi",
       "display_name": "Magi",
       "description": "Master of magical arts with high wisdom and wonder",
+      "faction": "player",
       "visual": {
         "color": "cyan",
         "model": "cube",
@@ -533,6 +538,237 @@
         },
         "3": {
           "talent_id": "meteor"
+        }
+      }
+    },
+    "shadow_assassin": {
+      "id": "shadow_assassin",
+      "name": "Shadow Assassin",
+      "display_name": "Shadow Assassin",
+      "description": "Stealthy enemy operative with high mobility and critical strike abilities",
+      "faction": "enemy",
+      "visual": {
+        "color": "black",
+        "model": "cube",
+        "scale": [0.8, 2.0, 0.8]
+      },
+      "stats": {
+        "base_health": 85,
+        "base_mp": 3,
+        "base_move_points": 5,
+        "base_attack_range": 1,
+        "base_effect_area": 1,
+        "attribute_bonuses": ["finesse", "speed", "spirit"]
+      },
+      "combat": {
+        "primary_damage_type": "physical",
+        "resource_type": "rage",
+        "resistances": {
+          "physical": 0.1,
+          "magical": -0.1,
+          "spiritual": 0.2
+        }
+      },
+      "ai": {
+        "aggression": 0.8,
+        "formation_preference": "flanking"
+      },
+      "inventory": {
+        "starting_items": [
+          {
+            "item_id": "shadow_blade",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "weapon"
+          },
+          {
+            "item_id": "stealth_cloak",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "body"
+          },
+          {
+            "item_id": "poison_vial",
+            "quantity": 3,
+            "equipped": false
+          }
+        ],
+        "max_inventory_size": 12,
+        "gold": 75
+      },
+      "game_state_effects": {
+        "stealth_strike": {
+          "description": "First attack each turn has +50% critical chance",
+          "effect_type": "passive",
+          "critical_bonus": 0.5
+        },
+        "shadow_step": {
+          "description": "Can move through enemy units without provoking attacks",
+          "effect_type": "passive",
+          "movement_abilities": ["phase_through_enemies"]
+        }
+      },
+      "talents": {
+        "backstab": {
+          "name": "Backstab",
+          "description": "Attack from behind deals double damage",
+          "tier": "ENHANCED",
+          "unlocked": true,
+          "effects": {
+            "backstab_multiplier": 2.0,
+            "requires_flanking": true
+          }
+        },
+        "shadow_clone": {
+          "name": "Shadow Clone",
+          "description": "Create a temporary duplicate that mimics your actions",
+          "tier": "SUPERPOWERED",
+          "unlocked": false,
+          "requirements": {
+            "level": 8,
+            "successful_backstabs": 15
+          },
+          "effects": {
+            "clone_duration": 3,
+            "clone_damage_percent": 0.75
+          }
+        }
+      },
+      "hotkey_abilities": {
+        "1": {
+          "talent_id": "basic_strike"
+        },
+        "2": {
+          "talent_id": "power_attack"
+        },
+        "3": {
+          "talent_id": "stealth"
+        }
+      }
+    },
+    "heromancer": {
+      "id": "heromancer",
+      "name": "Heromancer",
+      "display_name": "Heromancer",
+      "description": "A hero-mancer skilled in leadership and combat prowess",
+      "faction": "player",
+      "visual": {
+        "color": "orange",
+        "model": "cube",
+        "scale": [0.8, 2.0, 0.8]
+      },
+      "stats": {
+        "base_health": 100,
+        "base_mp": 5,
+        "base_move_points": 3,
+        "base_attack_range": 1,
+        "base_effect_area": 1,
+        "attribute_bonuses": ["speed", "strength", "finesse"]
+      },
+      "combat": {
+        "primary_damage_type": "physical",
+        "resource_type": "rage",
+        "resistances": {
+          "physical": 0.0,
+          "magical": 0.1,
+          "spiritual": 0.0
+        }
+      },
+      "ai": {
+        "aggression": 0.7,
+        "formation_preference": "front_line"
+      },
+      "inventory": {
+        "starting_items": [
+          {
+            "item_id": "iron_sword",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "weapon"
+          },
+          {
+            "item_id": "leather_armor",
+            "quantity": 1,
+            "equipped": true,
+            "slot": "body"
+          },
+          {
+            "item_id": "health_potion",
+            "quantity": 3,
+            "equipped": false
+          }
+        ],
+        "max_inventory_size": 20,
+        "gold": 100
+      },
+      "game_state_effects": {
+        "leadership_bonus": {
+          "description": "Nearby allies gain +10% attack damage",
+          "area": 2,
+          "effect_type": "aura",
+          "stat_modifier": {
+            "physical_attack": 0.1
+          }
+        },
+        "morale_boost": {
+          "description": "When heromancer scores a kill, all allies gain +5 MP",
+          "trigger": "on_kill",
+          "effect_type": "team_buff",
+          "stat_modifier": {
+            "mp": 5
+          }
+        }
+      },
+      "talents": {
+        "combat_mastery": {
+          "name": "Combat Mastery",
+          "description": "Increases physical attack by 25% and reduces rage cost by 1",
+          "tier": "ENHANCED",
+          "unlocked": true,
+          "effects": {
+            "physical_attack_multiplier": 1.25,
+            "rage_cost_reduction": 1
+          }
+        },
+        "tactical_leadership": {
+          "name": "Tactical Leadership",
+          "description": "Allies within 3 tiles gain +1 move point",
+          "tier": "ENCHANTED",
+          "unlocked": false,
+          "requirements": {
+            "level": 5,
+            "kills": 10
+          },
+          "effects": {
+            "ally_move_bonus": 1,
+            "aura_range": 3
+          }
+        },
+        "berserker_rage": {
+          "name": "Berserker Rage",
+          "description": "When below 25% health, gain +50% attack and +1 AP per turn",
+          "tier": "SUPERPOWERED",
+          "unlocked": false,
+          "requirements": {
+            "level": 10,
+            "rage_spent": 100
+          },
+          "effects": {
+            "low_health_attack_bonus": 1.5,
+            "low_health_ap_bonus": 1,
+            "health_threshold": 0.25
+          }
+        }
+      },
+      "hotkey_abilities": {
+        "1": {
+          "talent_id": "power_attack"
+        },
+        "2": {
+          "talent_id": "berserker_rage"
+        },
+        "3": {
+          "talent_id": "basic_strike"
         }
       }
     }

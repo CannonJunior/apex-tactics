@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "description": "Configuration for talent types and their visual/behavior properties",
+  "talent_types": {
+    "Magic": {
+      "display_name": "Magic",
+      "description": "Arcane spells and magical abilities",
+      "highlighting": {
+        "range_color": [0, 0, 1, 1],
+        "range_color_name": "blue",
+        "area_color": [0.5, 0.7, 1.0, 1],
+        "area_color_name": "light_blue",
+        "target_color": [0, 0, 1, 1],
+        "target_color_name": "blue"
+      },
+      "targeting": {
+        "requires_targeting": true,
+        "show_area_preview": true,
+        "confirmation_modal": true
+      },
+      "resource_costs": ["mp_cost", "kwan_cost"],
+      "default_range": 3,
+      "default_area": 1
+    },
+    "Attack": {
+      "display_name": "Physical Attack",
+      "description": "Physical combat abilities and weapon techniques",
+      "highlighting": {
+        "range_color": [1, 0, 0, 1],
+        "range_color_name": "red",
+        "area_color": [1, 0.5, 0.5, 1],
+        "area_color_name": "light_red",
+        "target_color": [1, 0, 0, 1],
+        "target_color_name": "red"
+      },
+      "targeting": {
+        "requires_targeting": true,
+        "show_area_preview": true,
+        "confirmation_modal": true
+      },
+      "resource_costs": ["rage_cost", "ap_cost"],
+      "default_range": 1,
+      "default_area": 0
+    },
+    "Spirit": {
+      "display_name": "Spiritual Power",
+      "description": "Divine abilities and spiritual techniques",
+      "highlighting": {
+        "range_color": [1, 1, 0, 1],
+        "range_color_name": "yellow",
+        "area_color": [1, 1, 0.5, 1],
+        "area_color_name": "light_yellow",
+        "target_color": [1, 1, 0, 1],
+        "target_color_name": "yellow"
+      },
+      "targeting": {
+        "requires_targeting": true,
+        "show_area_preview": true,
+        "confirmation_modal": true
+      },
+      "resource_costs": ["kwan_cost", "faith_cost"],
+      "default_range": 2,
+      "default_area": 1
+    },
+    "Move": {
+      "display_name": "Movement",
+      "description": "Special movement abilities and positioning",
+      "highlighting": {
+        "range_color": [0, 1, 0, 1],
+        "range_color_name": "green",
+        "area_color": [0.5, 1, 0.5, 1],
+        "area_color_name": "light_green",
+        "target_color": [0, 1, 0, 1],
+        "target_color_name": "green"
+      },
+      "targeting": {
+        "requires_targeting": true,
+        "show_area_preview": false,
+        "confirmation_modal": false
+      },
+      "resource_costs": ["ap_cost", "mp_cost"],
+      "default_range": 4,
+      "default_area": 0
+    },
+    "Inventory": {
+      "display_name": "Item Usage",
+      "description": "Use items from inventory",
+      "highlighting": {
+        "range_color": [0.5, 0, 0.5, 1],
+        "range_color_name": "purple",
+        "area_color": [0.7, 0.5, 0.7, 1],
+        "area_color_name": "light_purple",
+        "target_color": [0.5, 0, 0.5, 1],
+        "target_color_name": "purple"
+      },
+      "targeting": {
+        "requires_targeting": false,
+        "show_area_preview": false,
+        "confirmation_modal": false
+      },
+      "resource_costs": ["item_quantity"],
+      "default_range": 0,
+      "default_area": 0
+    },
+    "Passive": {
+      "display_name": "Passive Ability",
+      "description": "Always-active abilities and traits",
+      "highlighting": {
+        "range_color": [0.5, 0.5, 0.5, 1],
+        "range_color_name": "gray",
+        "area_color": [0.7, 0.7, 0.7, 1],
+        "area_color_name": "light_gray",
+        "target_color": [0.5, 0.5, 0.5, 1],
+        "target_color_name": "gray"
+      },
+      "targeting": {
+        "requires_targeting": false,
+        "show_area_preview": false,
+        "confirmation_modal": false
+      },
+      "resource_costs": [],
+      "default_range": 0,
+      "default_area": 0
+    }
+  }
+}

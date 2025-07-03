@@ -1,0 +1,49 @@
+{
+  "talent_tree_name": "Movement",
+  "description": "Special movement and positioning abilities",
+  "talents": [
+    {
+      "id": "teleport",
+      "name": "Teleport",
+      "level": 1,
+      "tier": "Novice", 
+      "description": "Instantly move to a target location",
+      "action_type": "Move",
+      "requirements": {
+        "level": 3,
+        "prerequisites": []
+      },
+      "effects": {
+        "movement_type": "teleport",
+        "range": 5,
+        "ignores_obstacles": true
+      },
+      "cost": {
+        "talent_points": 2,
+        "mp_cost": 15
+      }
+    },
+    {
+      "id": "dash_attack",
+      "name": "Dash Attack",
+      "level": 2,
+      "tier": "Adept",
+      "description": "Move quickly to target and attack in one action",
+      "action_type": "Move",
+      "requirements": {
+        "level": 5,
+        "prerequisites": ["teleport"]
+      },
+      "effects": {
+        "movement_type": "dash",
+        "range": 4,
+        "base_damage": 20,
+        "attack_after_move": true
+      },
+      "cost": {
+        "talent_points": 3,
+        "ap_cost": 2
+      }
+    }
+  ]
+}

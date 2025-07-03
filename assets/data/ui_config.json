@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "description": "UI configuration settings for consistent sizing and appearance",
+  "icon_settings": {
+    "talent_icon": {
+      "scale": 0.04,
+      "description": "Size of talent icons in talent panel"
+    },
+    "hotkey_icon": {
+      "scale": 0.04,
+      "description": "Size of icons in hotkey slots"
+    },
+    "inventory_icon": {
+      "scale": 0.08,
+      "description": "Size of inventory item icons"
+    }
+  },
+  "panel_settings": {
+    "talent_panel": {
+      "position": {
+        "x": 0.25,
+        "y": 0.0
+      },
+      "icons_per_row": 3,
+      "icon_spacing": {
+        "x": 0.1,
+        "y": 0.08
+      }
+    },
+    "hotkey_slots": {
+      "count": 8,
+      "scale": 0.05,
+      "spacing": 0.08
+    }
+  },
+  "colors": {
+    "talent_colors": {
+      "Attack": "#FF0000",
+      "Magic": "#0000FF",
+      "Spirit": "#FFFF00",
+      "Move": "#00FF00",
+      "Inventory": "#FFA500"
+    },
+    "ui_colors": {
+      "empty_slot": "#404040",
+      "hotkey_text": "#FFFF00"
+    }
+  }
+}

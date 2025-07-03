@@ -33,6 +33,7 @@ from core.game.turn_manager import TurnManager
 from game.state.character_state_manager import get_character_state_manager, CharacterStateManager
 from core.assets.unit_data_manager import get_unit_data_manager
 from core.assets.config_manager import get_config_manager
+from core.assets.talent_type_config import get_talent_type_config
 
 # UI system imports
 from ui.camera.camera_controller import CameraController
@@ -42,6 +43,7 @@ from ui.visual.unit_renderer import UnitEntity
 from ui.battlefield.grid_tile import GridTile
 from ui.interaction.interaction_manager import InteractionManager
 from ui.panels.control_panel import CharacterAttackInterface
+from ui.panels.talent_panel import TalentPanel
 from ui.core.ui_style_manager import get_ui_style_manager
 
 
@@ -186,6 +188,14 @@ class TacticalRPG:
         else:
             # Fallback: create control panel if none provided
             self.control_panel = CharacterAttackInterface(game_reference=self)
+        
+        # Initialize talent panel
+        try:
+            self.talent_panel = TalentPanel(game_reference=self)
+            print("✓ Talent panel initialized successfully")
+        except Exception as e:
+            print(f"⚠ Could not initialize talent panel: {e}")
+            self.talent_panel = None
         
         # Setup initial battle
         self.setup_battle()
@@ -951,9 +961,10 @@ class TacticalRPG:
             self._confirm_current_magic()
             return
             
-        # Check if clicked tile is within magic range
+        # Check if clicked tile is within magic range (use talent range if available)
         distance = abs(x - self.active_unit.x) + abs(y - self.active_unit.y)
-        if distance <= self.active_unit.magic_range and distance > 0:
+        magic_range = getattr(self.active_unit, '_talent_magic_range', self.active_unit.magic_range)
+        if distance <= magic_range and distance > 0:
             # Valid magic target tile
             self.magic_target_tile = (x, y)
             self.magic_modal_from_double_click = from_double_click
@@ -961,8 +972,22 @@ class TacticalRPG:
             # Clear highlights and show magic effect area
             self.clear_highlights()
             self.highlight_active_unit()
-            self.highlight_magic_range(self.active_unit)
-            self.highlight_magic_effect_area(x, y)
+            
+            # Use talent-specific highlighting if in talent mode
+            if hasattr(self.active_unit, '_talent_magic_range') and hasattr(self, 'current_talent_data'):
+                talent_type = self.current_talent_data.action_type if self.current_talent_data else 'Magic'
+                talent_config = get_talent_type_config()
+                range_color = talent_config.get_range_color(talent_type)
+                self._highlight_talent_range_no_clear(self.active_unit, talent_type, range_color)
+            else:
+                self.highlight_magic_range_no_clear(self.active_unit)
+            
+            # Use type-aware effect area highlighting if in talent mode
+            if hasattr(self.active_unit, '_talent_magic_range') and hasattr(self, 'current_talent_data'):
+                talent_type = self.current_talent_data.action_type if self.current_talent_data else 'Magic'
+                self.highlight_talent_effect_area(x, y, talent_type)
+            else:
+                self.highlight_magic_effect_area(x, y)
             
             # Show magic confirmation modal
             self.show_magic_confirmation(x, y)
@@ -970,11 +995,25 @@ class TacticalRPG:
             print(f"Target at ({x}, {y}) is out of magic range!")
     
     def highlight_magic_effect_area(self, target_x: int, target_y: int):
-        """Highlight the magic effect area around the target tile."""
+        """Highlight the magic effect area around the target tile (legacy magic system)."""
+        self.highlight_talent_effect_area(target_x, target_y, 'Magic')
+    
+    def highlight_talent_effect_area(self, target_x: int, target_y: int, talent_type: str):
+        """Highlight the talent effect area around the target tile with type-specific colors."""
         if not self.active_unit:
             return
         
-        effect_radius = self.active_unit.magic_effect_area
+        # Get talent type configuration
+        talent_config = get_talent_type_config()
+        
+        # Use talent-specific area if available, otherwise use unit's default or type default
+        effect_radius = getattr(self.active_unit, '_talent_magic_effect_area', 
+                               getattr(self.active_unit, 'magic_effect_area', 
+                                       talent_config.get_default_area(talent_type)))
+        
+        # Get type-specific colors
+        target_color = talent_config.get_target_color(talent_type)
+        area_color = talent_config.get_area_color(talent_type)
         
         for x in range(self.grid.width):
             for y in range(self.grid.height):
@@ -984,11 +1023,11 @@ class TacticalRPG:
                 # Highlight tiles within effect area
                 if distance <= effect_radius:
                     if (x, y) == (target_x, target_y):
-                        # Target tile gets special color (bright blue for target)
-                        highlight_color = color.blue
+                        # Target tile gets special color (bright color for target)
+                        highlight_color = target_color
                     else:
-                        # Effect area tiles (lighter blue for area)
-                        highlight_color = color.Color(0.5, 0.7, 1.0, 1.0)  # Light blue RGB
+                        # Effect area tiles (lighter color for area)
+                        highlight_color = area_color
                     
                     # Create highlight overlay entity
                     highlight = Entity(
@@ -1061,7 +1100,8 @@ class TacticalRPG:
     def get_units_in_magic_effect_area(self, target_x: int, target_y: int) -> List[Any]:
         """Get all units within the magic effect area."""
         affected_units = []
-        effect_radius = self.active_unit.magic_effect_area
+        # Use talent-specific area if available, otherwise use unit's default
+        effect_radius = getattr(self.active_unit, '_talent_magic_effect_area', self.active_unit.magic_effect_area)
         
         for x in range(self.grid.width):
             for y in range(self.grid.height):
@@ -1401,6 +1441,12 @@ class TacticalRPG:
                 self.control_panel.toggle_visibility()
                 return True
         
+        # Handle 't' key to toggle talent panel visibility
+        if key == 't':
+            if hasattr(self, 'talent_panel') and self.talent_panel:
+                self.talent_panel.toggle_visibility()
+                return True
+        
         # Handle hotkey number keys (1-8) to activate abilities
         if key in ['1', '2', '3', '4', '5', '6', '7', '8']:
             slot_index = int(key) - 1  # Convert to 0-based index
@@ -1491,6 +1537,187 @@ class TacticalRPG:
         target_y = magic_data['target_y'] 
         unit_list = magic_data['affected_units']
         
+        # Check if this is talent-specific magic or generic magic
+        is_talent_magic = hasattr(self, 'current_spell_params') and self.current_spell_params
+        
+        if is_talent_magic:
+            # Execute talent-specific magic
+            self._execute_talent_magic(target_x, target_y, unit_list)
+        else:
+            # Execute generic magic (fallback)
+            self._execute_generic_magic(target_x, target_y, unit_list)
+    
+    def _execute_talent_magic(self, target_x: int, target_y: int, unit_list: List):
+        """Execute talent-specific magic with multiple possible effects."""
+        spell_params = self.current_spell_params
+        talent_data = self.current_talent_data
+        spell_name = spell_params.get('spell_name', 'Talent Spell')
+        
+        print(f"{self.active_unit.name} casts {spell_name} on tile ({target_x}, {target_y})!")
+        
+        # Apply multiple effects from talent data
+        effects = talent_data.effects if talent_data else {}
+        self._apply_targeted_effects(effects, unit_list, spell_params)
+        
+        # Restore original magic properties after execution
+        self._restore_original_magic_properties()
+        
+        # Complete the magic execution cleanup
+        self._complete_magic_execution()
+    
+    def _apply_targeted_effects(self, effects, target_units: List, spell_params: dict):
+        """Apply all effects from a talent to the targeted units."""
+        if not target_units:
+            print("  No targets found in area.")
+            return
+        
+        # Damage effects
+        damage_effects = ['base_damage', 'magical_damage', 'physical_damage', 'spiritual_damage']
+        for damage_type in damage_effects:
+            if damage_type in effects:
+                damage = int(effects[damage_type])
+                guaranteed_hit = effects.get('guaranteed_hit', False)
+                attack_type = self._get_attack_type_from_damage_effect(damage_type)
+                
+                for target_unit in target_units:
+                    if self._is_valid_damage_target(target_unit, effects):
+                        if guaranteed_hit:
+                            print(f"  {target_unit.name} takes {damage} {damage_type.replace('_', ' ')}! (guaranteed hit)")
+                        else:
+                            print(f"  {target_unit.name} takes {damage} {damage_type.replace('_', ' ')}!")
+                        target_unit.take_damage(damage, attack_type)
+                        
+                        if not target_unit.alive:
+                            print(f"  {target_unit.name} has been defeated!")
+                            self._remove_defeated_unit(target_unit)
+        
+        # Healing effects
+        healing_effects = ['healing_amount', 'healing']
+        for heal_type in healing_effects:
+            if heal_type in effects:
+                healing = int(effects[heal_type])
+                
+                for target_unit in target_units:
+                    if self._is_valid_healing_target(target_unit, effects):
+                        old_hp = target_unit.hp
+                        target_unit.hp = min(target_unit.max_hp, target_unit.hp + healing)
+                        actual_healing = target_unit.hp - old_hp
+                        print(f"  {target_unit.name} healed for {actual_healing} HP (now {target_unit.hp}/{target_unit.max_hp})")
+        
+        # MP restoration effects
+        if 'mp_restoration' in effects:
+            mp_restore = int(effects['mp_restoration'])
+            for target_unit in target_units:
+                if self._is_valid_mp_target(target_unit, effects):
+                    old_mp = target_unit.mp
+                    target_unit.mp = min(target_unit.max_mp, target_unit.mp + mp_restore)
+                    actual_restoration = target_unit.mp - old_mp
+                    print(f"  {target_unit.name} restored {actual_restoration} MP (now {target_unit.mp}/{target_unit.max_mp})")
+        
+        # Buff effects (stat bonuses, damage reduction, etc.)
+        if 'stat_bonus' in effects:
+            stat_bonus = int(effects['stat_bonus'])
+            duration = int(effects.get('duration', 5))
+            affected_stats = effects.get('affected_stats', ['strength', 'finesse', 'wisdom'])
+            
+            for target_unit in target_units:
+                if self._is_valid_buff_target(target_unit, effects):
+                    print(f"  {target_unit.name} receives +{stat_bonus} to {', '.join(affected_stats)} for {duration} turns")
+                    # TODO: Implement temporary stat modifier system
+        
+        # Defense bonus effects
+        defense_bonuses = ['magical_defense_bonus', 'spiritual_defense_bonus', 'physical_defense_bonus']
+        for defense_type in defense_bonuses:
+            if defense_type in effects:
+                bonus = int(effects[defense_type])
+                duration = int(effects.get('duration', 3))
+                
+                for target_unit in target_units:
+                    if self._is_valid_buff_target(target_unit, effects):
+                        defense_name = defense_type.replace('_bonus', '').replace('_', ' ')
+                        print(f"  {target_unit.name} gains +{bonus} {defense_name} for {duration} turns")
+                        # TODO: Implement defense bonus system
+        
+        # Defense reduction effects (debuffs)
+        defense_reductions = ['magical_defense_reduction', 'spiritual_defense_reduction', 'physical_defense_reduction']
+        for reduction_type in defense_reductions:
+            if reduction_type in effects:
+                reduction = int(effects[reduction_type])
+                duration = int(effects.get('duration', 3))
+                
+                for target_unit in target_units:
+                    if self._is_valid_debuff_target(target_unit, effects):
+                        defense_name = reduction_type.replace('_reduction', '').replace('_', ' ')
+                        print(f"  {target_unit.name} loses -{reduction} {defense_name} for {duration} turns")
+                        # TODO: Implement defense reduction system
+    
+    def _get_attack_type_from_damage_effect(self, damage_effect: str):
+        """Convert damage effect name to AttackType enum."""
+        if 'magical' in damage_effect:
+            return AttackType.MAGICAL
+        elif 'physical' in damage_effect:
+            return AttackType.PHYSICAL
+        elif 'spiritual' in damage_effect:
+            return AttackType.SPIRITUAL
+        else:
+            return AttackType.MAGICAL  # Default to magical
+    
+    def _is_valid_damage_target(self, target_unit, effects) -> bool:
+        """Check if unit is a valid target for damage effects."""
+        target_type = effects.get('target_type', 'enemy')
+        if target_type == 'ally':
+            return False  # Don't damage allies
+        elif target_type == 'self':
+            return target_unit == self.active_unit
+        else:  # 'enemy' or 'any'
+            return True
+    
+    def _is_valid_healing_target(self, target_unit, effects) -> bool:
+        """Check if unit is a valid target for healing effects."""
+        target_type = effects.get('target_type', 'ally')
+        if target_type == 'enemy':
+            return False  # Don't heal enemies
+        elif target_type == 'self':
+            return target_unit == self.active_unit
+        else:  # 'ally' or 'any'
+            return True  # TODO: Implement proper ally detection
+    
+    def _is_valid_mp_target(self, target_unit, effects) -> bool:
+        """Check if unit is a valid target for MP restoration."""
+        return self._is_valid_healing_target(target_unit, effects)
+    
+    def _is_valid_buff_target(self, target_unit, effects) -> bool:
+        """Check if unit is a valid target for buff effects."""
+        return self._is_valid_healing_target(target_unit, effects)
+    
+    def _is_valid_debuff_target(self, target_unit, effects) -> bool:
+        """Check if unit is a valid target for debuff effects."""
+        return self._is_valid_damage_target(target_unit, effects)
+    
+    def _parse_area_of_effect(self, area_value):
+        """Parse area of effect value from various formats."""
+        if isinstance(area_value, int):
+            return area_value
+        elif isinstance(area_value, str):
+            # Handle formats like "2x2", "3x3", "2"
+            if 'x' in area_value.lower():
+                # For "2x2" format, take the first number as radius
+                try:
+                    return int(area_value.split('x')[0])
+                except (ValueError, IndexError):
+                    return 1
+            else:
+                # Try to parse as simple integer string
+                try:
+                    return int(area_value)
+                except ValueError:
+                    return 1
+        else:
+            # Default fallback
+            return 1
+    
+    def _execute_generic_magic(self, target_x: int, target_y: int, unit_list: List):
+        """Execute generic magic (fallback for non-talent magic)."""
         # Check if unit has enough MP
         mp_cost = self.active_unit.magic_mp_cost if hasattr(self.active_unit, 'magic_mp_cost') else 10
         if self.active_unit.mp < mp_cost:
@@ -1514,17 +1741,26 @@ class TacticalRPG:
             
             if not target_unit.alive:
                 print(f"  {target_unit.name} has been defeated!")
-                # Remove dead unit from grid
-                if (target_unit.x, target_unit.y) in self.grid.units:
-                    del self.grid.units[(target_unit.x, target_unit.y)]
-                
-                # Remove unit entity from scene
-                for entity in self.unit_entities:
-                    if entity.unit == target_unit:
-                        destroy(entity)
-                        self.unit_entities.remove(entity)
-                        break
+                self._remove_defeated_unit(target_unit)
         
+        # Complete the magic execution cleanup
+        self._complete_magic_execution()
+    
+    def _remove_defeated_unit(self, target_unit):
+        """Remove a defeated unit from the grid and scene."""
+        # Remove dead unit from grid
+        if (target_unit.x, target_unit.y) in self.grid.units:
+            del self.grid.units[(target_unit.x, target_unit.y)]
+        
+        # Remove unit entity from scene
+        for entity in self.unit_entities:
+            if entity.unit == target_unit:
+                destroy(entity)
+                self.unit_entities.remove(entity)
+                break
+    
+    def _complete_magic_execution(self):
+        """Complete magic execution and clean up state."""
         # Clean up modal and reset state
         if self.magic_modal:
             self.magic_modal.enabled = False
@@ -1544,6 +1780,10 @@ class TacticalRPG:
     
     def _cancel_current_magic(self):
         """Cancel the current magic and return to magic mode."""
+        # If this was talent magic, restore original properties
+        if hasattr(self, 'current_spell_params') and self.current_spell_params:
+            self._restore_original_magic_properties()
+        
         # Return to magic mode without casting
         self.clear_highlights()
         self.highlight_active_unit()
@@ -1882,6 +2122,25 @@ class TacticalRPG:
         except:
             return color.gray  # Fallback color
     
+    def _get_talent_action_color(self, action_type: str):
+        """Get color for talent based on action type using unified configuration."""
+        try:
+            from src.core.assets.data_manager import get_action_item_color, convert_hex_to_ursina_color
+            color_hex = get_action_item_color(action_type)
+            return convert_hex_to_ursina_color(color_hex)
+        except Exception as e:
+            print(f"⚠️ Could not load unified colors for hotkey: {e}, using fallback")
+            
+            # Fallback color map
+            color_map = {
+                'Attack': color.red,
+                'Magic': color.blue, 
+                'Spirit': color.yellow,
+                'Move': color.green,
+                'Inventory': color.orange
+            }
+            return color_map.get(action_type, color.white)
+    
     def _on_hotkey_slot_clicked(self, slot_index: int):
         """Handle clicking on a hotkey slot."""
         self._handle_hotkey_activation(slot_index)
@@ -1915,7 +2174,7 @@ class TacticalRPG:
             print(f"❌ Empty hotkey slot {slot_index + 1}")
     
     def _activate_ability(self, ability_data: Dict[str, Any]):
-        """Activate the specified ability by invoking the corresponding Unit Action."""
+        """Activate the specified ability by executing the specific talent."""
         if not self.active_unit:
             print("❌ No active unit selected")
             return
@@ -1924,7 +2183,7 @@ class TacticalRPG:
         talent_id = ability_data.get('talent_id')
         
         if talent_id:
-            # New format: resolve talent by ID
+            # New format: execute specific talent
             from src.core.assets.data_manager import get_data_manager
             data_manager = get_data_manager()
             talent_data = data_manager.get_talent(talent_id)
@@ -1936,30 +2195,302 @@ class TacticalRPG:
             ability_name = talent_data.name
             action_type = talent_data.action_type
             
-            print(f"🔥 Activating talent: {ability_name} (Action: {action_type})")
+            print(f"🔥 Executing specific talent: {ability_name} (ID: {talent_id})")
+            self._execute_specific_talent(talent_data)
         else:
-            # Legacy format: use provided ability data
+            # Legacy format: use generic action triggers
             ability_name = ability_data.get('name', 'Unknown Ability')
-            action_type = ability_data.get('action_type', 'Attack')  # Default to Attack
+            action_type = ability_data.get('action_type', 'Attack')
             
             print(f"🔥 Activating legacy ability: {ability_name} (Action: {action_type})")
+            
+            # Map talent action type to Unit Action
+            if action_type == "Attack":
+                self.handle_action_selection("Attack", self.active_unit)
+            elif action_type == "Magic":
+                self.handle_action_selection("Magic", self.active_unit)
+            elif action_type == "Spirit":
+                self.handle_action_selection("Spirit", self.active_unit)
+            elif action_type == "Move":
+                self.handle_action_selection("Move", self.active_unit)
+            elif action_type == "Inventory":
+                self.handle_action_selection("Inventory", self.active_unit)
+            else:
+                print(f"❌ Unknown action type: {action_type}")
+                return
+            
+            print(f"   ✅ Unit Action '{action_type}' triggered for {self.active_unit.name}")
+    
+    def _execute_specific_talent(self, talent_data):
+        """Execute a specific talent with its unique effects."""
+        talent_name = talent_data.name
+        talent_id = talent_data.id
+        effects = talent_data.effects
+        cost = talent_data.cost
         
-        # Map talent action type to Unit Action
-        if action_type == "Attack":
-            self.handle_action_selection("Attack", self.active_unit)
-        elif action_type == "Magic":
-            self.handle_action_selection("Magic", self.active_unit)
-        elif action_type == "Spirit":
-            self.handle_action_selection("Spirit", self.active_unit)
-        elif action_type == "Move":
-            self.handle_action_selection("Move", self.active_unit)
-        elif action_type == "Inventory":
-            self.handle_action_selection("Inventory", self.active_unit)
+        print(f"💫 Executing '{talent_name}' with specific effects:")
+        
+        # Check costs and apply them
+        mp_cost = cost.get('mp_cost', 0)
+        if mp_cost > 0:
+            if self.active_unit.mp < mp_cost:
+                print(f"❌ Not enough MP! Need {mp_cost}, have {self.active_unit.mp}")
+                return
+            self.active_unit.mp -= mp_cost
+            print(f"   💙 Consumed {mp_cost} MP (remaining: {self.active_unit.mp})")
+        
+        # Execute talent using generalized effect system
+        self._execute_talent_effects(talent_data)
+        
+        print(f"   ✅ '{talent_name}' execution completed")
+    
+    def _execute_talent_effects(self, talent_data):
+        """Execute talent using generalized effect system supporting multiple effects."""
+        talent_name = talent_data.name
+        action_type = talent_data.action_type
+        effects = talent_data.effects
+        
+        print(f"   ✨ Executing '{talent_name}' ({action_type})...")
+        
+        # Check if this talent requires targeting (magic/attack/spirit with range)
+        requires_targeting = self._talent_requires_targeting(talent_data)
+        
+        if requires_targeting:
+            # Set up targeting mode with talent parameters
+            spell_params = self._build_spell_params_from_effects(talent_data)
+            self._setup_talent_magic_mode(talent_data, spell_params)
         else:
-            print(f"❌ Unknown action type: {action_type}")
+            # Execute immediate effects (self-targeting or passive)
+            self._apply_immediate_effects(talent_data)
+    
+    def _talent_requires_targeting(self, talent_data):
+        """Determine if a talent requires target selection."""
+        effects = talent_data.effects
+        action_type = talent_data.action_type
+        
+        # Check for effects that require targeting
+        targeting_effects = [
+            'base_damage', 'magical_damage', 'physical_damage', 'spiritual_damage',
+            'healing_amount', 'healing', 'area_of_effect', 'range'
+        ]
+        
+        # Check if any targeting effects are present
+        has_targeting_effects = any(effect in effects for effect in targeting_effects)
+        
+        # Check if range is specified (range > 0 means targeting needed)
+        has_range = int(effects.get('range', 0)) > 0
+        
+        # Magic and Attack actions typically require targeting unless self-only
+        requires_targeting_by_type = action_type in ['Magic', 'Attack'] and not effects.get('self_target_only', False)
+        
+        return has_targeting_effects or has_range or requires_targeting_by_type
+    
+    def _build_spell_params_from_effects(self, talent_data):
+        """Build spell parameters from talent effects for targeting mode."""
+        effects = talent_data.effects
+        talent_name = talent_data.name
+        
+        spell_params = {
+            'spell_name': talent_name,
+            'area_of_effect': self._parse_area_of_effect(effects.get('area_of_effect', 1)),
+            'range': int(effects.get('range', 3)),
+            'mp_cost': int(talent_data.cost.get('mp_cost', 0)),
+        }
+        
+        # Add damage if present
+        if 'base_damage' in effects:
+            spell_params['damage'] = int(effects['base_damage'])
+        elif 'magical_damage' in effects:
+            spell_params['damage'] = int(effects['magical_damage'])
+        elif 'physical_damage' in effects:
+            spell_params['damage'] = int(effects['physical_damage'])
+        elif 'spiritual_damage' in effects:
+            spell_params['damage'] = int(effects['spiritual_damage'])
+        
+        # Add healing if present
+        if 'healing_amount' in effects or 'healing' in effects:
+            spell_params['healing'] = int(effects.get('healing_amount', effects.get('healing', 0)))
+            spell_params['target_type'] = 'ally'
+        
+        # Add special properties
+        if effects.get('guaranteed_hit', False):
+            spell_params['guaranteed_hit'] = True
+        
+        return spell_params
+    
+    def _apply_immediate_effects(self, talent_data):
+        """Apply effects that don't require targeting (self-buffs, instant effects)."""
+        effects = talent_data.effects
+        talent_name = talent_data.name
+        
+        # MP restoration
+        if 'mp_restoration' in effects:
+            mp_restore = int(effects['mp_restoration'])
+            old_mp = self.active_unit.mp
+            self.active_unit.mp = min(self.active_unit.max_mp, self.active_unit.mp + mp_restore)
+            actual_restoration = self.active_unit.mp - old_mp
+            print(f"   💙 Restored {actual_restoration} MP (now {self.active_unit.mp}/{self.active_unit.max_mp})")
+        
+        # HP restoration (self-healing)
+        if 'hp_restoration' in effects:
+            hp_restore = int(effects['hp_restoration'])
+            old_hp = self.active_unit.hp
+            self.active_unit.hp = min(self.active_unit.max_hp, self.active_unit.hp + hp_restore)
+            actual_restoration = self.active_unit.hp - old_hp
+            print(f"   ❤️  Restored {actual_restoration} HP (now {self.active_unit.hp}/{self.active_unit.max_hp})")
+        
+        # Stat bonuses (temporary buffs)
+        if 'stat_bonus' in effects:
+            stat_bonus = int(effects['stat_bonus'])
+            duration = int(effects.get('duration', 5))
+            affected_stats = effects.get('affected_stats', ['strength', 'finesse', 'wisdom'])
+            print(f"   🎆 Applied +{stat_bonus} to {', '.join(affected_stats)} for {duration} turns")
+            # TODO: Implement temporary stat modifier system
+        
+        # Damage reduction buffs
+        if 'damage_reduction' in effects:
+            reduction = int(effects['damage_reduction'])
+            duration = int(effects.get('duration', 3))
+            print(f"   🛡️  Applied {reduction} damage reduction for {duration} turns")
+            # TODO: Implement damage reduction system
+        
+        # Attack/accuracy bonuses for combat talents
+        if 'attack_bonus' in effects or 'accuracy_bonus' in effects:
+            attack_bonus = effects.get('attack_bonus', 0)
+            accuracy_bonus = effects.get('accuracy_bonus', 0)
+            damage_mult = effects.get('damage_multiplier', 1.0)
+            print(f"   ⚔️  Combat bonuses: +{attack_bonus} attack, +{accuracy_bonus}% accuracy, {damage_mult}x damage")
+            # Trigger attack mode with bonuses
+            self.handle_action_selection("Attack", self.active_unit)
+        
+        # Stress reduction
+        if 'stress_reduction' in effects:
+            stress_reduction = int(effects['stress_reduction'])
+            print(f"   🧘 Reduced stress by {stress_reduction}")
+            # TODO: Implement stress system
+        
+        # Defense bonuses
+        if 'magical_defense_bonus' in effects or 'spiritual_defense_bonus' in effects:
+            mag_def = effects.get('magical_defense_bonus', 0)
+            spr_def = effects.get('spiritual_defense_bonus', 0)
+            duration = int(effects.get('duration', 3))
+            print(f"   🛡️  Defense bonuses: +{mag_def} magical, +{spr_def} spiritual for {duration} turns")
+            # TODO: Implement defense bonus system
+        
+        print(f"   ✅ '{talent_name}' effects applied!")
+    
+    def _setup_talent_magic_mode(self, talent_data, spell_params):
+        """Set up magic mode with talent-specific parameters."""
+        # Store the current talent being cast
+        self.current_talent_data = talent_data
+        self.current_spell_params = spell_params
+        
+        # Store original magic properties for restoration
+        self._original_magic_range = self.active_unit.magic_range
+        self._original_magic_effect_area = self.active_unit.magic_effect_area
+        self._original_magic_spell_name = getattr(self.active_unit, 'magic_spell_name', 'Magic Spell')
+        self._original_magic_mp_cost = self.active_unit.magic_mp_cost
+        
+        # Store talent-specific magic properties on the unit temporarily (ensure integers)
+        self.active_unit._talent_magic_range = int(spell_params.get('range', 3))
+        self.active_unit._talent_magic_effect_area = int(spell_params.get('area_of_effect', 1))
+        self.active_unit.magic_spell_name = spell_params.get('spell_name', 'Talent Spell')
+        self.active_unit._talent_magic_mp_cost = int(spell_params.get('mp_cost', 10))
+        
+        # Enter talent mode based on talent type
+        talent_type = talent_data.action_type
+        self.current_mode = talent_type.lower()
+        self._handle_talent(self.active_unit, talent_type)
+        
+        print(f"   🎯 Magic mode: {spell_params.get('spell_name')} targeting enabled!")
+        print(f"   📏 Range: {self.active_unit._talent_magic_range}, Area: {self.active_unit._talent_magic_effect_area}")
+    
+    def _restore_original_magic_properties(self):
+        """Restore unit's original magic properties after talent casting."""
+        if hasattr(self, '_original_magic_spell_name'):
+            self.active_unit.magic_spell_name = self._original_magic_spell_name
+            
+            # Clean up temporary attributes from unit
+            if hasattr(self.active_unit, '_talent_magic_range'):
+                delattr(self.active_unit, '_talent_magic_range')
+            if hasattr(self.active_unit, '_talent_magic_effect_area'):
+                delattr(self.active_unit, '_talent_magic_effect_area')
+            if hasattr(self.active_unit, '_talent_magic_mp_cost'):
+                delattr(self.active_unit, '_talent_magic_mp_cost')
+            
+            # Clean up temporary attributes from controller
+            delattr(self, '_original_magic_range')
+            delattr(self, '_original_magic_effect_area')
+            delattr(self, '_original_magic_spell_name')
+            delattr(self, '_original_magic_mp_cost')
+        
+        # Clear talent-specific data
+        self.current_talent_data = None
+        self.current_spell_params = None
+    
+    def _handle_talent(self, unit, talent_type: str):
+        """Handle talent activation with type-specific highlighting and behavior."""
+        if not unit:
             return
         
-        print(f"   ✅ Unit Action '{action_type}' triggered for {self.active_unit.name}")
+        # Get talent type configuration
+        talent_config = get_talent_type_config()
+        
+        # Get talent-specific range or fall back to type default
+        talent_range = getattr(unit, '_talent_magic_range', talent_config.get_default_range(talent_type))
+        
+        # Get highlighting color for this talent type
+        range_color = talent_config.get_range_color(talent_type)
+        color_name = talent_config.get_highlighting_config(talent_type).get('range_color_name', 'blue')
+        
+        print(f"{unit.name} entering {talent_type} talent mode. Range: {talent_range}")
+        
+        # Check if this talent type requires targeting
+        if talent_config.requires_targeting(talent_type):
+            # Clear existing highlights and show talent range with type-specific color
+            self.clear_highlights()
+            self.highlight_active_unit()
+            self._highlight_talent_range(unit, talent_type, range_color)
+            
+            print(f"Click on a target within {color_name} highlighted tiles to use {talent_type} talent.")
+        else:
+            # No targeting required - execute immediately
+            print(f"{talent_type} talent activated without targeting.")
+            # TODO: Execute non-targeting talents immediately
+    
+    def _highlight_talent_range(self, unit, talent_type: str, highlight_color):
+        """Highlight the talent-specific range around the unit with type-specific color."""
+        if not unit:
+            return
+        
+        # Get talent-specific range or fall back to type default
+        talent_config = get_talent_type_config()
+        talent_range = getattr(unit, '_talent_magic_range', talent_config.get_default_range(talent_type))
+        
+        # Clear existing highlights first
+        self.clear_highlights()
+        
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                # Calculate Manhattan distance from unit to tile
+                distance = abs(x - unit.x) + abs(y - unit.y)
+                
+                # Highlight tiles within talent range (excluding unit's own tile)
+                if distance <= talent_range and distance > 0:
+                    # Check if tile is within grid bounds
+                    if 0 <= x < self.grid.width and 0 <= y < self.grid.height:
+                        # Create highlight overlay entity with type-specific color
+                        highlight = Entity(
+                            model='cube',
+                            color=highlight_color,
+                            scale=(0.9, 0.2, 0.9),
+                            position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                            alpha=1.0  # Same transparency as standard highlighting
+                        )
+                        # Store in a list for cleanup
+                        if not hasattr(self, 'highlight_entities'):
+                            self.highlight_entities = []
+                        self.highlight_entities.append(highlight)
     
     def update_hotkey_slots(self):
         """Update hotkey slots with current active character's abilities."""
@@ -1986,7 +2517,6 @@ class TacticalRPG:
         
         # Colors
         empty_color = self._hex_to_color(visual_settings.get('empty_slot_color', '#404040'))
-        ability_color = self._hex_to_color(visual_settings.get('ability_slot_color', '#ffffff'))
         
         # Update each slot
         for i, slot in enumerate(self.hotkey_slots):
@@ -1997,7 +2527,10 @@ class TacticalRPG:
                 # Get ability data from the list
                 ability_data = hotkey_abilities[i]
                 slot.ability_data = ability_data
-                slot.color = ability_color
+                
+                # Set slot color based on talent action type
+                action_type = ability_data.get('action_type', 'Unknown')
+                slot.color = self._get_talent_action_color(action_type)
                 
                 # Create tooltip with ability data
                 if hasattr(slot, 'tooltip') and slot.tooltip:
@@ -2165,3 +2698,61 @@ class TacticalRPG:
                 resource_bar = self.targeted_resource_bars[i]
                 if resource_bar:
                     resource_bar.value = unit.get_primary_resource_value()
+    
+    def highlight_magic_range_no_clear(self, unit):
+        """Highlight all tiles within the unit's magic range in blue (without clearing existing highlights)."""
+        if not unit:
+            return
+        
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                # Calculate Manhattan distance from unit to tile
+                distance = abs(x - unit.x) + abs(y - unit.y)
+                
+                # Highlight tiles within magic range (excluding unit's own tile)
+                if distance <= unit.magic_range and distance > 0:
+                    # Check if tile is within grid bounds
+                    if 0 <= x < self.grid.width and 0 <= y < self.grid.height:
+                        # Create highlight overlay entity
+                        highlight = Entity(
+                            model='cube',
+                            color=color.blue,
+                            scale=(0.9, 0.2, 0.9),
+                            position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                            alpha=1.0  # Same transparency as grid
+                        )
+                        # Store in a list for cleanup
+                        if not hasattr(self, 'highlight_entities'):
+                            self.highlight_entities = []
+                        self.highlight_entities.append(highlight)
+    
+    def _highlight_talent_range_no_clear(self, unit, talent_type: str, highlight_color):
+        """Highlight the talent-specific range around the unit (without clearing existing highlights)."""
+        if not unit:
+            return
+        
+        # Get talent-specific range or fall back to type default
+        talent_config = get_talent_type_config()
+        talent_range = getattr(unit, '_talent_magic_range', talent_config.get_default_range(talent_type))
+        
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                # Calculate Manhattan distance from unit to tile
+                distance = abs(x - unit.x) + abs(y - unit.y)
+                
+                # Highlight tiles within talent range (excluding unit's own tile)
+                if distance <= talent_range and distance > 0:
+                    # Check if tile is within grid bounds
+                    if 0 <= x < self.grid.width and 0 <= y < self.grid.height:
+                        # Create highlight overlay entity with type-specific color
+                        highlight = Entity(
+                            model='cube',
+                            color=highlight_color,
+                            scale=(0.9, 0.2, 0.9),
+                            position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
+                            alpha=1.0  # Same transparency as standard highlighting
+                        )
+                        # Store in a list for cleanup
+                        if not hasattr(self, 'highlight_entities'):
+                            self.highlight_entities = []
+                        self.highlight_entities.append(highlight)

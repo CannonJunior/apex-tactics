@@ -182,14 +182,9 @@ class DataManager:
     
     def _load_abilities(self):
         """Load ability data from files."""
-        # Try to load abilities (file may not exist yet)
-        abilities_data = self.asset_loader.load_data("abilities/base_abilities.json")
-        if abilities_data and 'abilities' in abilities_data:
-            for ability_dict in abilities_data['abilities']:
-                ability = AbilityData.from_dict(ability_dict)
-                self._abilities[ability.id] = ability
-        
-        print(f"✅ Loaded {len(self._abilities)} abilities from data files")
+        # No abilities files exist yet - abilities are different from talents
+        # When abilities are implemented, they would be loaded from abilities/base_abilities.json
+        print(f"✅ Loaded {len(self._abilities)} abilities from data files (no ability files exist yet)")
     
     def _load_talents(self):
         """Load talents from talent files."""
@@ -250,6 +245,61 @@ class DataManager:
     def get_all_talents(self) -> List[TalentData]:
         """Get all talents."""
         return list(self._talents.values())
+    
+    def get_ui_config(self) -> Optional[Dict[str, Any]]:
+        """Get unified UI configuration data."""
+        try:
+            # Try new unified config first
+            ui_config_data = self.asset_loader.load_data("ui/unified_ui_config.json")
+            if ui_config_data:
+                return ui_config_data
+                
+            # Fallback to old config files
+            print("⚠️ Falling back to legacy UI config files")
+            
+            # Try character interface config
+            char_config = self.asset_loader.load_data("ui/character_interface_config.json")
+            old_ui_config = self.asset_loader.load_data("ui_config.json")
+            
+            # Merge legacy configs if available
+            if char_config or old_ui_config:
+                merged_config = {}
+                if char_config:
+                    merged_config.update(char_config)
+                if old_ui_config:
+                    merged_config.update(old_ui_config)
+                return merged_config
+                
+            return None
+        except Exception as e:
+            print(f"Could not load UI config: {e}")
+            return None
+    
+    def get_action_item_config(self) -> Dict[str, Any]:
+        """Get action item configuration (talents, hotkeys, inventory items)."""
+        ui_config = self.get_ui_config()
+        if ui_config and 'action_items' in ui_config:
+            return ui_config['action_items']
+        
+        # Fallback configuration
+        return {
+            "sizing": {"icon_scale": 0.06},
+            "colors": {
+                "Attack": "#FF0000",
+                "Magic": "#0000FF", 
+                "Spirit": "#FFFF00",
+                "Move": "#00FF00",
+                "Inventory": "#FFA500",
+                "Empty": "#404040",
+                "Default": "#FFFFFF"
+            },
+            "visual_effects": {
+                "hover_brightness": 1.2,
+                "selected_brightness": 1.4,
+                "disabled_alpha": 0.5,
+                "dragging_alpha": 0.7
+            }
+        }
     
     def create_sample_inventory(self, character_assignments: Dict[str, str] = None) -> List[Dict[str, Any]]:
         """
@@ -335,3 +385,27 @@ def get_items_by_type(item_type: str) -> List[ItemData]:
 def create_sample_inventory(character_assignments: Dict[str, str] = None) -> List[Dict[str, Any]]:
     """Convenience function to create sample inventory."""
     return get_data_manager().create_sample_inventory(character_assignments)
+
+
+# Unified UI helper functions
+def get_action_item_scale() -> float:
+    """Get standard scale for all action items (talents, hotkeys, inventory)."""
+    return get_data_manager().get_action_item_config().get('sizing', {}).get('icon_scale', 0.06)
+
+def get_action_item_color(action_type: str) -> str:
+    """Get hex color for action type."""
+    colors = get_data_manager().get_action_item_config().get('colors', {})
+    return colors.get(action_type, colors.get('Default', '#FFFFFF'))
+
+def convert_hex_to_ursina_color(hex_color: str):
+    """Convert hex color to Ursina color object."""
+    try:
+        hex_color = hex_color.lstrip('#')
+        r = int(hex_color[0:2], 16) / 255.0
+        g = int(hex_color[2:4], 16) / 255.0
+        b = int(hex_color[4:6], 16) / 255.0
+        from ursina import color
+        return color.rgb(r, g, b)
+    except:
+        from ursina import color
+        return color.white

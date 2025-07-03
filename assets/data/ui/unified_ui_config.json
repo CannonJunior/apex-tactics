@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "description": "Unified UI configuration for consistent appearance across all interfaces",
+  
+  "action_items": {
+    "description": "Configuration for all action-related items (talents, hotkeys, inventory items)",
+    "sizing": {
+      "icon_scale": 0.06,
+      "description": "Standard scale for all action item icons (talents, hotkeys, inventory)"
+    },
+    "colors": {
+      "description": "Action type colors used consistently across all UI elements",
+      "Attack": "#FF0000",
+      "Magic": "#0000FF", 
+      "Spirit": "#FFFF00",
+      "Move": "#00FF00",
+      "Inventory": "#FFA500",
+      "Empty": "#404040",
+      "Default": "#FFFFFF"
+    },
+    "visual_effects": {
+      "hover_brightness": 1.2,
+      "selected_brightness": 1.4,
+      "disabled_alpha": 0.5,
+      "dragging_alpha": 0.7
+    }
+  },
+
+  "hotkey_system": {
+    "max_hotkey_abilities": 8,
+    "max_interface_slots": 8,
+    "slot_layout": {
+      "rows": 1,
+      "columns": 8,
+      "slot_size": 0.06,
+      "slot_spacing": 0.01,
+      "start_position": {
+        "x": -0.4,
+        "y": 0.35,
+        "z": 0
+      }
+    },
+    "visual_settings": {
+      "empty_slot_color": "#404040",
+      "ability_slot_color": "#ffffff",
+      "cooldown_overlay_color": "#800000",
+      "hotkey_text_color": "#ffff00",
+      "hotkey_text_scale": 0.3,
+      "tooltip_enabled": true
+    },
+    "interaction": {
+      "click_to_activate": true,
+      "keyboard_shortcuts": true,
+      "keyboard_keys": ["1", "2", "3", "4", "5", "6", "7", "8"],
+      "enable_drag_reorder": false
+    },
+    "display_options": {
+      "show_ability_icons": true,
+      "show_cooldown_timer": true,
+      "show_hotkey_numbers": true,
+      "show_ability_names": false,
+      "icon_fallback": "white_cube"
+    }
+  },
+
+  "talent_panel": {
+    "position": {
+      "x": 0.25,
+      "y": 0.0
+    },
+    "layout": {
+      "icons_per_row": 3,
+      "icon_spacing": {
+        "x": 0.1,
+        "y": 0.08
+      },
+      "max_talents_displayed": 12
+    },
+    "tabs": {
+      "tab_names": ["Physical", "Magical", "Spiritual"],
+      "tab_colors": {
+        "active": "#87CEEB",
+        "inactive": "#696969"
+      }
+    }
+  },
+
+  "inventory_panel": {
+    "grid": {
+      "width": 6,
+      "height": 8,
+      "cell_size": 0.08
+    },
+    "categories": {
+      "tab_names": ["All", "Weapons", "Armor", "Accessories", "Consumables", "Materials"],
+      "filters_enabled": true
+    }
+  },
+
+  "drag_and_drop": {
+    "copy_offset": {
+      "x": 0.02,
+      "y": 0.02,
+      "z": -0.02
+    },
+    "drop_tolerance": 0.12,
+    "feedback": {
+      "valid_drop_highlight": "#00FF00",
+      "invalid_drop_highlight": "#FF0000",
+      "drop_zone_alpha": 0.3
+    }
+  },
+
+  "tooltips": {
+    "enabled": true,
+    "background_color": "#000000",
+    "background_alpha": 0.8,
+    "text_color": "#FFFFFF",
+    "border_color": "#666666",
+    "padding": 0.01,
+    "delay_ms": 500
+  },
+
+  "animations": {
+    "fade_duration": 0.3,
+    "scale_duration": 0.2,
+    "slide_duration": 0.4,
+    "bounce_intensity": 0.1
+  }
+}
