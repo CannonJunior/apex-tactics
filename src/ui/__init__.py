@@ -69,3 +69,38 @@ if URSINA_UI_AVAILABLE:
         'UrsinaUIButton', 'UrsinaUIPanel', 'UrsinaUIText', 
         'UrsinaUIScreen', 'UrsinaUIManager'
     ])
+
+# Week 4 Queue Management UI (import conditionally)
+try:
+    from .queue_management import (
+        QueueManagementUIManager, QueueTimelineDisplay, UnitActionQueuePanel,
+        AICoordinationDisplay, UIConfig, UITheme as QueueUITheme
+    )
+    from .action_prediction import (
+        ActionPredictionEngine, PredictionDisplayWidget, ActionPrediction,
+        BattleStatePrediction, PredictionType
+    )
+    from .ui_integration import (
+        ActionManagerUIBridge, UIIntegrationConfig, create_integrated_ui
+    )
+    
+    QUEUE_MANAGEMENT_UI_AVAILABLE = True
+    
+    __all__.extend([
+        # Queue Management
+        'QueueManagementUIManager', 'QueueTimelineDisplay', 'UnitActionQueuePanel',
+        'AICoordinationDisplay', 'UIConfig', 'QueueUITheme',
+        
+        # Action Prediction
+        'ActionPredictionEngine', 'PredictionDisplayWidget', 'ActionPrediction',
+        'BattleStatePrediction', 'PredictionType',
+        
+        # Integration
+        'ActionManagerUIBridge', 'UIIntegrationConfig', 'create_integrated_ui'
+    ])
+    
+except ImportError:
+    QUEUE_MANAGEMENT_UI_AVAILABLE = False
+
+# Update availability flags
+__all__.extend(['QUEUE_MANAGEMENT_UI_AVAILABLE'])
