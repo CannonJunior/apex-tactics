@@ -15,6 +15,7 @@ import threading
 # Add the src directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
+#from game.controllers.apex_tactics_controller import TacticalRPG
 from game.controllers.tactical_rpg_controller import TacticalRPG
 from ui.panels.control_panel import CharacterAttackInterface
 from ui.panels.talent_panel import TalentPanel
