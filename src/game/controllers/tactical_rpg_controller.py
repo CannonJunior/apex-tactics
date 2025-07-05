@@ -50,6 +50,7 @@ from ui.core.ui_style_manager import get_ui_style_manager
 from game.utils.effects.apply_targeted_effects import apply_targeted_effects
 from game.utils.effects.talents import execute_specific_talent, execute_talent_effects, talent_requires_targeting, build_spell_params_from_effects, apply_immediate_effects, setup_talent_magic_mode, restore_original_magic_properties, handle_talent, highlight_talent_range
 from game.utils.ui_bars import util_update_health_bar, util_hide_health_bar, util_refresh_health_bar, util_on_unit_hp_changed, util_update_resource_bar, util_hide_resource_bar, util_refresh_resource_bar, util_on_unit_resource_changed
+from game.utils.targets import target_update_targeted_unit_bars, target_hide_targeted_unit_bars, target_refresh_targeted_unit_bars, target_highlight_magic_range_no_clear, target_highlight_talent_range_no_clear
 
 class TacticalRPG:
     """
@@ -81,8 +82,26 @@ class TacticalRPG:
         self.unit_data_manager = get_unit_data_manager()
         self.character_state_manager = get_character_state_manager(self.unit_data_manager)
         
-        # Legacy components for backwards compatibility
-        self.grid = BattleGrid()
+        # Load battlefield configuration
+        config_manager = get_config_manager()
+        self.battlefield_config = config_manager.get_value('battlefield_config', {
+            'grid': {'width': 8, 'height': 8},
+            'units': {'player_units': [], 'enemy_units': []},
+            'demo_weapons': {}
+        })
+        
+        # Load highlighting configuration
+        self.highlighting_config = config_manager.get_value('highlighting_config', {
+            'highlight_styles': {},
+            'unit_rendering': {}
+        })
+        
+        # Legacy components for backwards compatibility  
+        grid_config = self.battlefield_config.get('grid', {})
+        self.grid = BattleGrid(
+            width=grid_config.get('width', 8),
+            height=grid_config.get('height', 8)
+        )
         self.units: List[Unit] = []
         self.unit_entities: List[UnitEntity] = []
         self.tile_entities: List[Any] = []  # Grid tiles for mouse interaction
@@ -229,15 +248,41 @@ class TacticalRPG:
         
         print(f"✓ Created {len(self.tile_entities)} grid tiles for mouse interaction")
         
-        # Create units with randomized attributes based on type
-        player_units = [
-            Unit("Hero", UnitType.HEROMANCER, 1, 1),
-            Unit("Sage", UnitType.MAGI, 2, 1)
-        ]
-        enemy_units = [
-            Unit("Orc", UnitType.UBERMENSCH, 6, 6),
-            Unit("Spirit", UnitType.REALM_WALKER, 5, 6)
-        ]
+        # Create units from configuration
+        player_units = []
+        enemy_units = []
+        
+        # Load player units from config
+        for unit_config in self.battlefield_config.get('units', {}).get('player_units', []):
+            unit_type = getattr(UnitType, unit_config.get('type', 'HEROMANCER'))
+            player_units.append(Unit(
+                unit_config.get('name', 'Player'),
+                unit_type,
+                unit_config.get('start_x', 1),
+                unit_config.get('start_y', 1)
+            ))
+        
+        # Load enemy units from config  
+        for unit_config in self.battlefield_config.get('units', {}).get('enemy_units', []):
+            unit_type = getattr(UnitType, unit_config.get('type', 'UBERMENSCH'))
+            enemy_units.append(Unit(
+                unit_config.get('name', 'Enemy'),
+                unit_type,
+                unit_config.get('start_x', 6),
+                unit_config.get('start_y', 6)
+            ))
+        
+        # Fallback to hard-coded units if config is empty
+        if not player_units:
+            player_units = [
+                Unit("Hero", UnitType.HEROMANCER, 1, 1),
+                Unit("Sage", UnitType.MAGI, 2, 1)
+            ]
+        if not enemy_units:
+            enemy_units = [
+                Unit("Orc", UnitType.UBERMENSCH, 6, 6),
+                Unit("Spirit", UnitType.REALM_WALKER, 5, 6)
+            ]
         
         self.units = player_units + enemy_units
         
@@ -377,52 +422,78 @@ class TacticalRPG:
     
     def equip_demo_weapons(self):
         """Equip demonstration weapons to show range/area effects"""
-        # Create spear weapon
-        spear_data = {
-            "id": "spear",
-            "name": "Spear",
-            "type": "Weapons",
-            "tier": "BASE",
-            "description": "A long-reach spear with extended attack range and area effect.",
-            "stats": {
-                "physical_attack": 14,
-                "attack_range": 2,
-                "effect_area": 2
-            }
-        }
+        demo_weapons_config = self.battlefield_config.get('demo_weapons', {})
         
-        # Create bow weapon for comparison
-        bow_data = {
-            "id": "magic_bow",
-            "name": "Magic Bow",
-            "type": "Weapons", 
-            "tier": "ENCHANTED",
-            "description": "An enchanted bow with long range.",
-            "stats": {
-                "physical_attack": 22,
-                "magical_attack": 8,
-                "attack_range": 3,
-                "effect_area": 1
-            }
-        }
+        # Load weapon data from data manager
+        from core.assets.data_manager import get_data_manager
+        data_manager = get_data_manager()
         
-        # Equip weapons to units
-        if len(self.units) >= 4:
-            # Give Hero the spear (range 2, area 2)
-            self.units[0].equip_weapon(spear_data)
-            print(f"🔥 {self.units[0].name} equipped {spear_data['name']} - Range: {self.units[0].attack_range}, Area: {self.units[0].attack_effect_area}")
+        # Equip weapons based on configuration
+        for unit in self.units:
+            weapon_id = demo_weapons_config.get(unit.name)
+            if weapon_id:
+                weapon_data = data_manager.get_item(weapon_id)
+                if weapon_data:
+                    unit.equip_weapon(weapon_data)
+                    print(f"🔥 {unit.name} equipped {weapon_data.name} - Range: {unit.attack_range}, Area: {unit.attack_effect_area}")
+                else:
+                    print(f"⚠️ Weapon '{weapon_id}' not found for {unit.name}")
             
-            # Give Sage the bow (range 3, area 1)
-            self.units[1].equip_weapon(bow_data)
-            print(f"🏹 {self.units[1].name} equipped {bow_data['name']} - Range: {self.units[1].attack_range}, Area: {self.units[1].attack_effect_area}")
-            
-            print("\n📋 Test Instructions:")
-            print("1. Click on Hero - notice spear gives Range 2, Area 2")
-            print("2. Click Attack - see red tiles show 2-tile attack range")
-            print("3. Click target - see yellow area effect covering 2-tile radius")
-            print("4. Try same with Sage - bow has Range 3, Area 1")
-            print("5. Compare the different weapon effects!")
-            print("✅ Demo weapons equipped for testing")
+        print("\n📋 Test Instructions:")
+        print("1. Click on Hero - notice spear gives Range 2, Area 2")
+        print("2. Click Attack - see red tiles show 2-tile attack range")
+        print("3. Click target - see yellow area effect covering 2-tile radius")
+        print("4. Try same with Sage - bow has Range 3, Area 1")
+        print("5. Compare the different weapon effects!")
+        print("✅ Demo weapons equipped for testing")
+    
+    def _get_highlight_style(self, style_name: str, fallback_color=None):
+        """Get highlight style from configuration."""
+        styles = self.highlighting_config.get('highlight_styles', {})
+        style = styles.get(style_name, {})
+        
+        # Convert color array to ursina color if available
+        color_data = style.get('color', fallback_color or [1, 1, 1])
+        if isinstance(color_data, list) and len(color_data) >= 3:
+            return color.rgb(color_data[0], color_data[1], color_data[2])
+        
+        # Fallback to provided color or white
+        return fallback_color or color.white
+    
+    def _get_button_config(self, modal_type: str, button_type: str):
+        """Get button configuration from UI layout config."""
+        try:
+            ui_config = get_config_manager().get_value('layout_config.ui_layout.modal_dialogs', {})
+            modal_config = ui_config.get(modal_type, {})
+            buttons = modal_config.get('buttons', {})
+            return buttons.get(button_type, {})
+        except:
+            return {}
+    
+    def _get_button_color(self, modal_type: str, button_type: str, fallback_color):
+        """Get button color from configuration."""
+        button_config = self._get_button_config(modal_type, button_type)
+        color_data = button_config.get('color', fallback_color)
+        
+        if isinstance(color_data, list) and len(color_data) >= 3:
+            return color.rgb(color_data[0], color_data[1], color_data[2])
+        
+        return fallback_color
+    
+    def _create_highlight_entity(self, x: int, y: int, highlight_color, style_name: str = 'movement'):
+        """Create a highlight entity with configurable style."""
+        style_data = self.highlighting_config.get('highlight_styles', {}).get(style_name, {})
+        scale = style_data.get('scale', [0.9, 0.2, 0.9])
+        position_offset = style_data.get('position_offset', [0.5, 0, 0.5])
+        alpha = style_data.get('alpha', 1.0)
+        
+        return Entity(
+            model='cube',
+            color=highlight_color,
+            scale=tuple(scale),
+            position=(x + position_offset[0], position_offset[1], y + position_offset[2]),
+            alpha=alpha
+        )
     
     def end_current_turn(self):
         """End the current unit's turn and move to next unit."""
@@ -535,19 +606,14 @@ class TacticalRPG:
                 if distance <= self.active_unit.current_move_points and self.grid.is_valid(x, y):
                     if distance == 0:
                         # Current position - different color
-                        highlight_color = color.white
+                        highlight_color = self._get_highlight_style('selection', color.white)
                     else:
                         # Valid movement range
-                        highlight_color = color.green
+                        highlight_color = self._get_highlight_style('movement', color.green)
                     
                     # Create highlight overlay entity
-                    highlight = Entity(
-                        model='cube',
-                        color=highlight_color,
-                        scale=(0.9, 0.2, 0.9),
-                        position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
-                        alpha=1.0  # Same transparency as grid
-                    )
+                    style_name = 'selection' if distance == 0 else 'movement'
+                    highlight = self._create_highlight_entity(x, y, highlight_color, style_name)
                     # Store in a list for cleanup
                     if not hasattr(self, 'highlight_entities'):
                         self.highlight_entities = []
@@ -877,8 +943,14 @@ class TacticalRPG:
         self.set_targeted_units(unit_list)
         
         # Create confirmation buttons
-        confirm_btn = Button(text='Confirm Attack', color=color.red)
-        cancel_btn = Button(text='Cancel', color=color.gray)
+        confirm_btn = Button(
+            text=self._get_button_config('attack_confirmation', 'confirm').get('text', 'Confirm Attack'),
+            color=self._get_button_color('attack_confirmation', 'confirm', color.red)
+        )
+        cancel_btn = Button(
+            text=self._get_button_config('attack_confirmation', 'cancel').get('text', 'Cancel'),
+            color=self._get_button_color('attack_confirmation', 'cancel', color.gray)
+        )
         
         # Store attack data for keyboard handling
         self._current_attack_data = {
@@ -1059,8 +1131,14 @@ class TacticalRPG:
         self.set_targeted_units(unit_list)
         
         # Create confirmation buttons
-        confirm_btn = Button(text='Confirm Magic', color=color.blue)
-        cancel_btn = Button(text='Cancel', color=color.gray)
+        confirm_btn = Button(
+            text=self._get_button_config('magic_confirmation', 'confirm').get('text', 'Confirm Magic'),
+            color=self._get_button_color('magic_confirmation', 'confirm', color.blue)
+        )
+        cancel_btn = Button(
+            text=self._get_button_config('magic_confirmation', 'cancel').get('text', 'Cancel'),
+            color=self._get_button_color('magic_confirmation', 'cancel', color.gray)
+        )
         
         # Store magic data for keyboard handling
         self._current_magic_data = {
@@ -1129,8 +1207,14 @@ class TacticalRPG:
         
             
         # Create confirmation buttons
-        confirm_btn = Button(text='Confirm Move', color=color.green)
-        cancel_btn = Button(text='Cancel', color=color.red)
+        confirm_btn = Button(
+            text=self._get_button_config('movement_confirmation', 'confirm').get('text', 'Confirm Move'),
+            color=self._get_button_color('movement_confirmation', 'confirm', color.green)
+        )
+        cancel_btn = Button(
+            text=self._get_button_config('movement_confirmation', 'cancel').get('text', 'Cancel'),
+            color=self._get_button_color('movement_confirmation', 'cancel', color.red)
+        )
         
         # Set up button callbacks
         def confirm_move():
@@ -2231,171 +2315,20 @@ class TacticalRPG:
     
     def update_targeted_unit_bars(self):
         """Update health and resource bars for all targeted units"""
-        # Clear existing targeted unit bars
-        self.hide_targeted_unit_bars()
-        
-        # Create bars for each targeted unit
-        if self.targeted_units:
-            style_manager = get_ui_style_manager()
-            
-            for i, unit in enumerate(self.targeted_units):
-                # Calculate position for multiple units (stack vertically)
-                base_x = 0.4  # Right side of screen
-                base_y = 0.45 - (i * 0.15)  # Stack downward
-                
-                # Create health bar label
-                health_label = Text(
-                    text=f"{unit.name} HP:",
-                    parent=camera.ui,
-                    position=(base_x - 0.07, base_y),
-                    scale=0.8,
-                    color=style_manager.get_bar_label_color(),
-                    origin=(-0.5, 0)
-                )
-                self.targeted_health_bar_labels.append(health_label)
-                
-                # Create health bar
-                health_bar = HealthBar(
-                    max_value=unit.max_hp,
-                    value=unit.hp,
-                    position=(base_x, base_y),
-                    parent=camera.ui,
-                    scale=(0.25, 0.025),
-                    color=style_manager.get_health_bar_bg_color()
-                )
-                
-                # Set health bar color
-                if hasattr(health_bar, 'bar'):
-                    health_bar.bar.color = style_manager.get_health_bar_color()
-                
-                self.targeted_health_bars.append(health_bar)
-                
-                # Create resource bar label
-                resource_type = unit.primary_resource_type
-                resource_value = unit.get_primary_resource_value()
-                resource_max = unit.get_primary_resource_max()
-                resource_label_text = style_manager.get_resource_bar_label(resource_type)
-                
-                resource_label = Text(
-                    text=f"{unit.name} {resource_label_text}:",
-                    parent=camera.ui,
-                    position=(base_x - 0.07, base_y - 0.05),
-                    scale=0.8,
-                    color=style_manager.get_bar_label_color(),
-                    origin=(-0.5, 0)
-                )
-                self.targeted_resource_bar_labels.append(resource_label)
-                
-                # Create resource bar
-                resource_bar = HealthBar(
-                    max_value=resource_max,
-                    value=resource_value,
-                    position=(base_x, base_y - 0.05),
-                    parent=camera.ui,
-                    scale=(0.25, 0.025),
-                    color=style_manager.get_resource_bar_bg_color()
-                )
-                
-                # Set resource bar color
-                bar_color = style_manager.get_resource_bar_color(resource_type)
-                if hasattr(resource_bar, 'bar'):
-                    resource_bar.bar.color = bar_color
-                
-                self.targeted_resource_bars.append(resource_bar)
-    
+        target_update_targeted_unit_bars(self)
+
     def hide_targeted_unit_bars(self):
         """Hide all targeted unit health and resource bars"""
-        # Hide and clear health bars
-        for bar in self.targeted_health_bars:
-            if bar:
-                bar.enabled = False
-        self.targeted_health_bars.clear()
-        
-        # Hide and clear health bar labels
-        for label in self.targeted_health_bar_labels:
-            if label:
-                label.enabled = False
-        self.targeted_health_bar_labels.clear()
-        
-        # Hide and clear resource bars
-        for bar in self.targeted_resource_bars:
-            if bar:
-                bar.enabled = False
-        self.targeted_resource_bars.clear()
-        
-        # Hide and clear resource bar labels
-        for label in self.targeted_resource_bar_labels:
-            if label:
-                label.enabled = False
-        self.targeted_resource_bar_labels.clear()
-    
+        target_hide_targeted_unit_bars(self)
+
     def refresh_targeted_unit_bars(self):
         """Refresh all targeted unit bars to match current HP/resource values"""
-        for i, unit in enumerate(self.targeted_units):
-            if i < len(self.targeted_health_bars):
-                health_bar = self.targeted_health_bars[i]
-                if health_bar:
-                    health_bar.value = unit.hp
-            
-            if i < len(self.targeted_resource_bars):
-                resource_bar = self.targeted_resource_bars[i]
-                if resource_bar:
-                    resource_bar.value = unit.get_primary_resource_value()
-    
+        target_refresh_targeted_unit_bars(self)
+
     def highlight_magic_range_no_clear(self, unit):
         """Highlight all tiles within the unit's magic range in blue (without clearing existing highlights)."""
-        if not unit:
-            return
-        
-        for x in range(self.grid.width):
-            for y in range(self.grid.height):
-                # Calculate Manhattan distance from unit to tile
-                distance = abs(x - unit.x) + abs(y - unit.y)
-                
-                # Highlight tiles within magic range (excluding unit's own tile)
-                if distance <= unit.magic_range and distance > 0:
-                    # Check if tile is within grid bounds
-                    if 0 <= x < self.grid.width and 0 <= y < self.grid.height:
-                        # Create highlight overlay entity
-                        highlight = Entity(
-                            model='cube',
-                            color=color.blue,
-                            scale=(0.9, 0.2, 0.9),
-                            position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
-                            alpha=1.0  # Same transparency as grid
-                        )
-                        # Store in a list for cleanup
-                        if not hasattr(self, 'highlight_entities'):
-                            self.highlight_entities = []
-                        self.highlight_entities.append(highlight)
-    
+        target_highlight_magic_range_no_clear(self, unit)
+
     def _highlight_talent_range_no_clear(self, unit, talent_type: str, highlight_color):
         """Highlight the talent-specific range around the unit (without clearing existing highlights)."""
-        if not unit:
-            return
-        
-        # Get talent-specific range or fall back to type default
-        talent_config = get_talent_type_config()
-        talent_range = getattr(unit, '_talent_magic_range', talent_config.get_default_range(talent_type))
-        
-        for x in range(self.grid.width):
-            for y in range(self.grid.height):
-                # Calculate Manhattan distance from unit to tile
-                distance = abs(x - unit.x) + abs(y - unit.y)
-                
-                # Highlight tiles within talent range (excluding unit's own tile)
-                if distance <= talent_range and distance > 0:
-                    # Check if tile is within grid bounds
-                    if 0 <= x < self.grid.width and 0 <= y < self.grid.height:
-                        # Create highlight overlay entity with type-specific color
-                        highlight = Entity(
-                            model='cube',
-                            color=highlight_color,
-                            scale=(0.9, 0.2, 0.9),
-                            position=(x + 0.5, 0, y + 0.5),  # Same height as grid tiles
-                            alpha=1.0  # Same transparency as standard highlighting
-                        )
-                        # Store in a list for cleanup
-                        if not hasattr(self, 'highlight_entities'):
-                            self.highlight_entities = []
-                        self.highlight_entities.append(highlight)
+        target_highlight_talent_range_no_clear(self, unit, talent_type, highlight_color)
