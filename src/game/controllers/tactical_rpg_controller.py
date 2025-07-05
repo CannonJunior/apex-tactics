@@ -51,6 +51,7 @@ from game.utils.effects.apply_targeted_effects import apply_targeted_effects
 from game.utils.effects.talents import execute_specific_talent, execute_talent_effects, talent_requires_targeting, build_spell_params_from_effects, apply_immediate_effects, setup_talent_magic_mode, restore_original_magic_properties, handle_talent, highlight_talent_range
 from game.utils.ui_bars import util_update_health_bar, util_hide_health_bar, util_refresh_health_bar, util_on_unit_hp_changed, util_update_resource_bar, util_hide_resource_bar, util_refresh_resource_bar, util_on_unit_resource_changed
 from game.utils.targets import target_update_targeted_unit_bars, target_hide_targeted_unit_bars, target_refresh_targeted_unit_bars, target_highlight_magic_range_no_clear, target_highlight_talent_range_no_clear
+from game.utils.setters import setters_setup_battle, setters_set_active_unit, setters_clear_active_unit, setters_equip_demo_weapons
 
 class TacticalRPG:
     """
@@ -225,110 +226,10 @@ class TacticalRPG:
     
     def setup_battle(self):
         """Initialize the battle with units and systems."""
-        # Initialize ECS systems
-        try:
-            from systems.stat_system import StatSystem
-            from systems.movement_system import MovementSystem
-            from systems.combat_system import CombatSystem
-            
-            # Add systems to world
-            self.world.add_system(StatSystem())
-            self.world.add_system(MovementSystem())
-            self.world.add_system(CombatSystem())
-            
-            print("✓ ECS systems initialized successfully")
-        except ImportError as e:
-            print(f"⚠ Could not import all ECS systems: {e}")
-            print("  Continuing with legacy components...")
-        
-        # Create grid tiles for mouse interaction
-        for x in range(self.grid.width):
-            for y in range(self.grid.height):
-                self.tile_entities.append(GridTile(x, y, self))
-        
-        print(f"✓ Created {len(self.tile_entities)} grid tiles for mouse interaction")
-        
-        # Create units from configuration
-        player_units = []
-        enemy_units = []
-        
-        # Load player units from config
-        for unit_config in self.battlefield_config.get('units', {}).get('player_units', []):
-            unit_type = getattr(UnitType, unit_config.get('type', 'HEROMANCER'))
-            player_units.append(Unit(
-                unit_config.get('name', 'Player'),
-                unit_type,
-                unit_config.get('start_x', 1),
-                unit_config.get('start_y', 1)
-            ))
-        
-        # Load enemy units from config  
-        for unit_config in self.battlefield_config.get('units', {}).get('enemy_units', []):
-            unit_type = getattr(UnitType, unit_config.get('type', 'UBERMENSCH'))
-            enemy_units.append(Unit(
-                unit_config.get('name', 'Enemy'),
-                unit_type,
-                unit_config.get('start_x', 6),
-                unit_config.get('start_y', 6)
-            ))
-        
-        # Fallback to hard-coded units if config is empty
-        if not player_units:
-            player_units = [
-                Unit("Hero", UnitType.HEROMANCER, 1, 1),
-                Unit("Sage", UnitType.MAGI, 2, 1)
-            ]
-        if not enemy_units:
-            enemy_units = [
-                Unit("Orc", UnitType.UBERMENSCH, 6, 6),
-                Unit("Spirit", UnitType.REALM_WALKER, 5, 6)
-            ]
-        
-        self.units = player_units + enemy_units
-        
-        # Equip weapons for demonstration
-        self.equip_demo_weapons()
-        
-        # Add units to both legacy and ECS systems
-        for unit in self.units:
-            # Set game controller reference for HP change notifications
-            unit._game_controller = self
-            self.grid.add_unit(unit)
-            self.unit_entities.append(UnitEntity(unit))
-            
-            # Add unit to TacticalGrid for obstacle tracking
-            if self.tactical_grid:
-                unit_pos = Vector2Int(unit.x, unit.y)
-                # Use unit name and position as unique identifier
-                unit_id = f"{unit.name}_{unit.x}_{unit.y}"
-                self.tactical_grid.occupy_cell(unit_pos, unit_id)
-            
-            # Register unit entity with ECS world entity manager
-            try:
-                # Skip ECS registration for now since Unit class doesn't have entity attribute
-                # TODO: Add proper ECS integration when Unit class is updated
-                # self.world.entity_manager._register_entity(unit.entity)
-                print(f"✓ Unit {unit.name} prepared for ECS (registration skipped)")
-            except Exception as e:
-                print(f"⚠ Could not register {unit.name} with ECS World: {e}")
-        
-        self.turn_manager = TurnManager(self.units)
-        self.refresh_all_ap()
-        
-        # Now that turn_manager exists, create the unit carousel
-        if hasattr(self.control_panel, 'create_unit_carousel'):
-            self.control_panel.create_unit_carousel()
-        
-        # Auto-activate the first unit in turn order
-        first_unit = self.turn_manager.current_unit()
-        if first_unit:
-            # Use centralized method for consistent behavior
-            self.set_active_unit(first_unit, update_highlights=True, update_ui=True)
-            print(f"✓ Auto-selected first unit: {first_unit.name} (Speed: {first_unit.speed})")
-        
-        print(f"✓ Battle setup complete: {len(self.units)} units, ECS World with {self.world.entity_count} entities")
-    
+        setters_setup_battle(self)
+
     def set_active_unit(self, unit: Optional[Unit], update_highlights: bool = True, update_ui: bool = True):
+        setters_set_active_unit(self, unit, update_highlights, update_ui)
         """
         Centralized method to set the active unit with full integration.
         
@@ -343,76 +244,7 @@ class TacticalRPG:
             update_highlights: Whether to update visual highlights
             update_ui: Whether to update UI elements (health bars, control panel)
         """
-        # Store the new active unit
-        self.active_unit = unit
-        
-        if unit is not None:
-            # === Unit Selected ===
-            
-            # Reset path and cursor for new unit
-            self.current_path = []
-            self.path_cursor = (unit.x, unit.y)
-            self.current_mode = None
-            
-            # Update character state manager with selected character
-            if hasattr(unit, 'character_instance_id'):
-                self.character_state_manager.set_active_character(unit.character_instance_id)
-            else:
-                # Create character instance for legacy units without instance IDs
-                try:
-                    character_instance = self.character_state_manager.create_character_instance(
-                        unit.type, f"legacy_{unit.name}_{id(unit)}"
-                    )
-                    unit.character_instance_id = character_instance.instance_id
-                    self.character_state_manager.set_active_character(character_instance.instance_id)
-                except Exception as e:
-                    print(f"Warning: Could not create character instance for {unit.name}: {e}")
-                    self.character_state_manager.set_active_character(None)
-            
-            # Update visual highlights if requested
-            if update_highlights:
-                self.update_path_highlights()
-            
-            # Update UI elements if requested
-            if update_ui:
-                # Update control panel with selected unit info
-                if self.control_panel:
-                    try:
-                        self.control_panel.update_unit_info(unit)
-                    except Exception as e:
-                        print(f"⚠ Error updating control panel: {e}")
-                
-                # Create/update health bar and resource bar for selected unit
-                self.update_health_bar(unit)
-                self.update_resource_bar(unit)
-                
-                # Update hotkey slots for selected character
-                self.update_hotkey_slots()
-        
-        else:
-            # === Unit Deselected ===
-            
-            # Clear path and mode
-            self.current_path = []
-            self.path_cursor = None
-            self.current_mode = None
-            
-            # Clear character state manager active character
-            self.character_state_manager.set_active_character(None)
-            
-            # Hide UI elements if requested
-            if update_ui:
-                self.hide_health_bar()
-                self.hide_resource_bar()
-                self.hide_hotkey_slots()
-                
-                # Clear control panel unit info
-                if self.control_panel:
-                    try:
-                        self.control_panel.update_unit_info(None)
-                    except Exception as e:
-                        print(f"⚠ Error updating control panel: {e}")
-    
+
     def clear_active_unit(self):
         """
         Clear the active unit selection.
@@ -422,30 +254,76 @@ class TacticalRPG:
     
     def equip_demo_weapons(self):
         """Equip demonstration weapons to show range/area effects"""
-        demo_weapons_config = self.battlefield_config.get('demo_weapons', {})
-        
-        # Load weapon data from data manager
-        from core.assets.data_manager import get_data_manager
-        data_manager = get_data_manager()
-        
-        # Equip weapons based on configuration
-        for unit in self.units:
-            weapon_id = demo_weapons_config.get(unit.name)
-            if weapon_id:
-                weapon_data = data_manager.get_item(weapon_id)
-                if weapon_data:
-                    unit.equip_weapon(weapon_data)
-                    print(f"🔥 {unit.name} equipped {weapon_data.name} - Range: {unit.attack_range}, Area: {unit.attack_effect_area}")
-                else:
-                    print(f"⚠️ Weapon '{weapon_id}' not found for {unit.name}")
+        setters_equip_demo_weapons(self)
+
+    def update_hotkey_slot_ability_data(self, slot_index: int, ability_data: Dict[str, Any]):
+        """Update the ability_data for a specific hotkey slot."""
+        if not hasattr(self, 'hotkey_slots') or not self.hotkey_slots:
+            print(f"❌ No hotkey slots available")
+            return False
             
-        print("\n📋 Test Instructions:")
-        print("1. Click on Hero - notice spear gives Range 2, Area 2")
-        print("2. Click Attack - see red tiles show 2-tile attack range")
-        print("3. Click target - see yellow area effect covering 2-tile radius")
-        print("4. Try same with Sage - bow has Range 3, Area 1")
-        print("5. Compare the different weapon effects!")
-        print("✅ Demo weapons equipped for testing")
+        if slot_index < 0 or slot_index >= len(self.hotkey_slots):
+            print(f"❌ Invalid slot index {slot_index}. Valid range: 0-{len(self.hotkey_slots)-1}")
+            return False
+            
+        slot = self.hotkey_slots[slot_index]
+        
+        # Store the old ability data for logging
+        old_ability = getattr(slot, 'ability_data', None)
+        old_name = old_ability.get('name', 'Empty') if old_ability else 'Empty'
+        
+        # Update the slot's ability data
+        slot.ability_data = ability_data.copy()  # Create a copy to avoid reference issues
+        
+        # Update the slot's visual appearance if needed
+        if hasattr(slot, 'color') and ability_data:
+            try:
+                # Get color based on action type
+                action_type = ability_data.get('action_type', 'Attack')
+                slot.color = self._get_talent_action_color(action_type)
+            except Exception as e:
+                print(f"⚠️ Could not update slot color: {e}")
+        
+        # Log the change
+        new_name = ability_data.get('name', 'Unknown') if ability_data else 'Empty'
+        print(f"🔄 Hotkey slot {slot_index + 1}: '{old_name}' → '{new_name}'")
+        
+        # Update character state manager if available
+        if hasattr(self, 'character_state_manager') and self.character_state_manager:
+            try:
+                active_character = self.character_state_manager.get_active_character()
+                if active_character:
+                    # Update the character's hotkey abilities list
+                    if not hasattr(active_character, 'hotkey_abilities'):
+                        active_character.hotkey_abilities = [None] * len(self.hotkey_slots)
+                    
+                    # Ensure the list is long enough
+                    while len(active_character.hotkey_abilities) <= slot_index:
+                        active_character.hotkey_abilities.append(None)
+                    
+                    # Update the specific slot
+                    active_character.hotkey_abilities[slot_index] = ability_data.copy() if ability_data else None
+                    
+                    print(f"✅ Updated character's hotkey ability {slot_index + 1}")
+            except Exception as e:
+                print(f"⚠️ Could not update character state: {e}")
+        
+        return True
+    
+    def get_hotkey_slot_ability_data(self, slot_index: int) -> Optional[Dict[str, Any]]:
+        """Get the ability_data for a specific hotkey slot."""
+        if not hasattr(self, 'hotkey_slots') or not self.hotkey_slots:
+            return None
+            
+        if slot_index < 0 or slot_index >= len(self.hotkey_slots):
+            return None
+            
+        slot = self.hotkey_slots[slot_index]
+        return getattr(slot, 'ability_data', None)
+    
+    def clear_hotkey_slot(self, slot_index: int):
+        """Clear the ability_data for a specific hotkey slot."""
+        return self.update_hotkey_slot_ability_data(slot_index, None)
     
     def _get_highlight_style(self, style_name: str, fallback_color=None):
         """Get highlight style from configuration."""
