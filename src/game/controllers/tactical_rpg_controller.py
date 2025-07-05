@@ -52,6 +52,7 @@ from game.utils.effects.talents import execute_specific_talent, execute_talent_e
 from game.utils.ui_bars import util_update_health_bar, util_hide_health_bar, util_refresh_health_bar, util_on_unit_hp_changed, util_update_resource_bar, util_hide_resource_bar, util_refresh_resource_bar, util_on_unit_resource_changed
 from game.utils.targets import target_update_targeted_unit_bars, target_hide_targeted_unit_bars, target_refresh_targeted_unit_bars, target_highlight_magic_range_no_clear, target_highlight_talent_range_no_clear
 from game.utils.setters import setters_setup_battle, setters_set_active_unit, setters_clear_active_unit, setters_equip_demo_weapons
+from game.utils.movement import
 
 class TacticalRPG:
     """
@@ -500,6 +501,7 @@ class TacticalRPG:
     
     def handle_path_movement(self, direction: str):
         """Handle path movement and confirmation."""
+        # movement_handle_path_movement(self, direction: str):
         if not self.active_unit or not self.path_cursor:
             return
             

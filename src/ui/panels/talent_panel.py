@@ -20,7 +20,7 @@ except ImportError:
 
 
 class DraggableTalentIcon(Draggable):
-    """Draggable talent icon that creates a copy when dragged."""
+    """Draggable talent icon that can be assigned to hotkey slots."""
     
     def __init__(self, talent_data: Dict[str, Any], talent_panel, **kwargs):
         if not URSINA_AVAILABLE:
@@ -28,8 +28,6 @@ class DraggableTalentIcon(Draggable):
             
         self.talent_data = talent_data
         self.talent_panel = talent_panel
-        self.is_copy = kwargs.pop('is_copy', False)
-        self.original_icon = kwargs.pop('original_icon', None)  # Reference to original icon
         
         # Handle parent parameter properly
         parent = kwargs.pop('parent', camera.ui)
@@ -52,9 +50,8 @@ class DraggableTalentIcon(Draggable):
         self.tooltip = Tooltip(tooltip_text)
         self.tooltip.background.color = color.hsv(0, 0, 0, .8)
         
-        # Store original position for snap-back
-        self.original_position = (self.x, self.y, self.z)
-        self.drag_copy = None  # Reference to dragged copy
+        # Store original position for drag operations (like inventory items)
+        self.org_pos = None
     
     def _get_icon_scale(self):
         """Get icon scale from unified action item configuration."""
@@ -91,59 +88,55 @@ class DraggableTalentIcon(Draggable):
             return color_map.get(action_type, color.white)
     
     def drag(self):
-        """Called when dragging starts - create a copy if this is the original."""
-        if not self.is_copy:
-            # Create a copy for dragging at the current mouse position
-            self.drag_copy = DraggableTalentIcon(
-                self.talent_data,
-                self.talent_panel,
-                position=(mouse.x, mouse.y, -0.01),
-                is_copy=True,
-                original_icon=self  # Store reference to original
-            )
-            print(f"Created drag copy for {self.talent_data['name']}")
-        else:
-            # This is a copy being dragged
-            self.z -= 0.01  # Bring to front during drag
+        """Called when talent starts being dragged."""
+        self.org_pos = (self.x, self.y)
+        self.z -= .01  # Move talent forward visually
+        print(f"Dragging {self.talent_data['name']}")
     
     def drop(self):
-        """Called when dropping - handle drop zones and cleanup."""
-        if not self.is_copy:
-            # This is the original - restore its visibility
-            self.color = self._get_talent_color()
-            return
-            
-        # This is a copy being dropped
-        # Store position before any cleanup operations
-        drop_x, drop_y = self.x, self.y
+        """Called when talent is dropped."""
+        self.x = round(self.x, 3)
+        self.y = round(self.y, 3)
+        self.z += .01  # Move talent back
         
-        # Restore z-position
-        self.z += 0.01
-            
         # Check if dropped on valid hotkey slot
-        dropped_on_slot = self._check_hotkey_slot_drop()
+        dropped_on_slot, target_slot = self._check_hotkey_slot_drop()
         
-        print(f"Dropping talent copy {self.talent_data['name']} at ({drop_x:.3f}, {drop_y:.3f})")
+        print(f"Dropping talent {self.talent_data['name']} at ({self.x:.3f}, {self.y:.3f})")
         
         if dropped_on_slot is not None:
-            # Valid drop - place talent in hotkey slot
-            print(f"✅ Valid drop on hotkey slot {dropped_on_slot + 1}")
+            # Valid drop - snap to the hotkey slot position first
+            self._snap_to_slot_position(target_slot)
+            
+            # Let the user see the snap for a brief moment
+            print(f"✅ Valid drop on hotkey slot {dropped_on_slot + 1} - snapped to position")
+            
+            # Then place talent in hotkey slot
             self._place_talent_in_slot(dropped_on_slot)
+            
+            # Return talent icon to original position after a brief delay
+            # Import and use invoke for a delayed return
+            try:
+                from ursina import invoke
+                invoke(self._return_to_original_position, delay=0.3)  # 0.3 second delay
+            except ImportError:
+                # Fallback: immediate return if invoke not available
+                self.position = self.org_pos
         else:
-            # Invalid drop location
-            print(f"❌ Invalid drop location for {self.talent_data['name']}")
-        
-        # Always remove the dragged copy from UI after any drop
-        self._cleanup_copy()
+            # Invalid drop location - return to original position immediately
+            print(f"❌ Invalid drop location for {self.talent_data['name']} - returning to original position")
+            self.position = self.org_pos
     
     def _check_hotkey_slot_drop(self):
-        """Check if dropped on a valid hotkey slot."""
+        """Check if dropped on a valid hotkey slot. Returns (slot_index, slot_object) or (None, None)."""
         # Get reference to tactical RPG controller with hotkey slots
         if hasattr(self.talent_panel, 'game_reference') and self.talent_panel.game_reference:
             tactical_controller = self.talent_panel.game_reference
-            if hasattr(tactical_controller, 'hotkey_slots'):
+            
+            # Access hotkey slots through UI manager
+            if hasattr(tactical_controller, 'ui_manager') and hasattr(tactical_controller.ui_manager, 'hotkey_slots'):
                 # Check each hotkey slot for proximity
-                for i, slot in enumerate(tactical_controller.hotkey_slots):
+                for i, slot in enumerate(tactical_controller.ui_manager.hotkey_slots):
                     # Use slot position directly
                     slot_x = getattr(slot, 'x', 0)
                     slot_y = getattr(slot, 'y', 0)
@@ -152,39 +145,59 @@ class DraggableTalentIcon(Draggable):
                     distance = ((self.x - slot_x)**2 + (self.y - slot_y)**2)**0.5
                     if distance < 0.12:  # Generous drop zone
                         print(f"🎯 Dropped near hotkey slot {i + 1} (distance: {distance:.3f})")
-                        return i
+                        return i, slot
+            # Fallback: check if controller has direct hotkey_slots attribute (legacy compatibility)
+            elif hasattr(tactical_controller, 'hotkey_slots'):
+                for i, slot in enumerate(tactical_controller.hotkey_slots):
+                    slot_x = getattr(slot, 'x', 0)
+                    slot_y = getattr(slot, 'y', 0)
+                    
+                    distance = ((self.x - slot_x)**2 + (self.y - slot_y)**2)**0.5
+                    if distance < 0.12:
+                        print(f"🎯 Dropped near hotkey slot {i + 1} (distance: {distance:.3f}) [legacy path]")
+                        return i, slot
         
         print(f"📍 Dropped at position ({self.x:.3f}, {self.y:.3f}) - no valid hotkey slot nearby")
-        return None
+        return None, None
     
-    def _cleanup_copy(self):
-        """Remove this copy and clean up resources."""
-        if hasattr(self, 'tooltip') and self.tooltip:
-            destroy(self.tooltip)
-        
-        # Restore original icon visibility if this is a copy
-        if self.is_copy:
-            if self.original_icon and hasattr(self.original_icon, 'color'):
-                self.original_icon.color = self.original_icon._get_talent_color()
-            destroy(self)
-        else:
-            print("⚠️ Attempted to cleanup original talent icon - this should not happen!")
+    def _snap_to_slot_position(self, target_slot):
+        """Snap the talent icon to the exact position of the target hotkey slot."""
+        if target_slot:
+            # Snap to the exact slot position (similar to inventory grid snapping)
+            self.x = round(target_slot.x, 3)
+            self.y = round(target_slot.y, 3)
+            print(f"📌 Snapped talent icon to slot position ({self.x:.3f}, {self.y:.3f})")
+    
+    def _return_to_original_position(self):
+        """Return the talent icon to its original position."""
+        if hasattr(self, 'org_pos') and self.org_pos:
+            self.position = self.org_pos
+            print(f"🔄 Returned {self.talent_data['name']} to original position")
+    
     
     def _place_talent_in_slot(self, slot_index: int):
         """Place this talent in the specified hotkey slot."""
         if not self.talent_panel.game_reference:
             return
             
-        # Get hotkey slots from game reference
-        if not hasattr(self.talent_panel.game_reference, 'hotkey_slots'):
+        tactical_controller = self.talent_panel.game_reference
+        
+        # Get hotkey slots from UI manager or direct reference
+        hotkey_slots = None
+        if hasattr(tactical_controller, 'ui_manager') and hasattr(tactical_controller.ui_manager, 'hotkey_slots'):
+            hotkey_slots = tactical_controller.ui_manager.hotkey_slots
+        elif hasattr(tactical_controller, 'hotkey_slots'):
+            hotkey_slots = tactical_controller.hotkey_slots
+            
+        if not hotkey_slots:
             print("❌ No hotkey slots found")
             return
             
-        if slot_index >= len(self.talent_panel.game_reference.hotkey_slots):
+        if slot_index >= len(hotkey_slots):
             print(f"❌ Invalid slot index {slot_index}")
             return
             
-        target_slot = self.talent_panel.game_reference.hotkey_slots[slot_index]
+        target_slot = hotkey_slots[slot_index]
         
         # Remove any existing talent icons in this slot (fix the cleanup issue)
         children_to_remove = []
