@@ -1,2 +1,0 @@
-[console_scripts]
-blender-mcp-client = blender_mcp_client.cli:main
