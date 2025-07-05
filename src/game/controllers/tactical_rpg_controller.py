@@ -52,7 +52,7 @@ from game.utils.effects.talents import execute_specific_talent, execute_talent_e
 from game.utils.ui_bars import util_update_health_bar, util_hide_health_bar, util_refresh_health_bar, util_on_unit_hp_changed, util_update_resource_bar, util_hide_resource_bar, util_refresh_resource_bar, util_on_unit_resource_changed
 from game.utils.targets import target_update_targeted_unit_bars, target_hide_targeted_unit_bars, target_refresh_targeted_unit_bars, target_highlight_magic_range_no_clear, target_highlight_talent_range_no_clear
 from game.utils.setters import setters_setup_battle, setters_set_active_unit, setters_clear_active_unit, setters_equip_demo_weapons
-from game.utils.movement import
+from game.utils.movement import movement_handle_path_movement, movement_handle_mouse_movement
 
 class TacticalRPG:
     """
@@ -501,70 +501,8 @@ class TacticalRPG:
     
     def handle_path_movement(self, direction: str):
         """Handle path movement and confirmation."""
-        # movement_handle_path_movement(self, direction: str):
-        if not self.active_unit or not self.path_cursor:
-            return
-            
-        if direction == 'enter':
-            # Show confirmation modal for movement
-            self.show_movement_confirmation()
-            return
-            
-        # Calculate new cursor position based on direction
-        x, y = self.path_cursor
-        if direction == 'w':  # Forward/Up
-            new_pos = (x, y - 1)
-        elif direction == 's':  # Backward/Down
-            new_pos = (x, y + 1)
-        elif direction == 'a':  # Right (swapped)
-            new_pos = (x + 1, y)
-        elif direction == 'd':  # Left (swapped)
-            new_pos = (x - 1, y)
-        else:
-            return
-            
-        # Check if new position is valid (within movement range)
-        if self.is_valid_move_destination(new_pos[0], new_pos[1]):
-            # Calculate the distance from unit's starting position to the new position
-            total_distance = abs(new_pos[0] - self.active_unit.x) + abs(new_pos[1] - self.active_unit.y)
-            
-            # Don't allow path to exceed movement points
-            if total_distance > self.active_unit.current_move_points:
-                return
-            
-            # Update path cursor
-            self.path_cursor = new_pos
-            
-            # Calculate complete path from unit position to cursor using pathfinder (like mouse movement)
-            if self.pathfinder:
-                try:
-                    start_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
-                    end_pos = Vector2Int(new_pos[0], new_pos[1])
-                    
-                    calculated_path = self.pathfinder.calculate_movement_path(
-                        start_pos, 
-                        end_pos, 
-                        float(self.active_unit.current_move_points)
-                    )
-                    
-                    if calculated_path and len(calculated_path) > 1:
-                        # Convert Vector2Int path back to tuple format (excluding start position)
-                        self.current_path = [(pos.x, pos.y) for pos in calculated_path[1:]]
-                    else:
-                        # Fallback: direct path if pathfinder fails
-                        self.current_path = [new_pos]
-                        
-                except Exception as e:
-                    print(f"⚠ Pathfinding failed for keyboard movement: {e}")
-                    # Fallback: simple direct path
-                    self.current_path = [new_pos]
-            else:
-                # Fallback: simple direct path if no pathfinder
-                self.current_path = [new_pos]
-            
-            # Update highlights
-            self.update_path_highlights()
-    
+        movement_handle_path_movement(self, direction)
+
     def handle_mouse_movement(self, clicked_tile: Tuple[int, int]) -> bool:
         """
         Handle mouse click for movement path creation.
@@ -575,6 +513,7 @@ class TacticalRPG:
         Returns:
             True if click was handled, False otherwise
         """
+        #movement_handle_mouse_movement(self, clicked_tile)
         if not self.active_unit or self.current_mode != "move":
             return False
         
@@ -654,7 +593,7 @@ class TacticalRPG:
         except Exception as e:
             print(f"⚠ Error calculating path: {e}")
             return False
-    
+
     def show_action_modal(self, unit):
         """Show modal with available actions for the selected unit."""
         if not unit:

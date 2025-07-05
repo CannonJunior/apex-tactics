@@ -91,6 +91,10 @@ class DraggableTalentIcon(Draggable):
         """Called when talent starts being dragged."""
         self.org_pos = (self.x, self.y)
         self.z -= .01  # Move talent forward visually
+        
+        # Disable camera movement during drag
+        self._set_camera_drag_state(True, "talent icon")
+        
         print(f"Dragging {self.talent_data['name']}")
     
     def drop(self):
@@ -98,6 +102,9 @@ class DraggableTalentIcon(Draggable):
         self.x = round(self.x, 3)
         self.y = round(self.y, 3)
         self.z += .01  # Move talent back
+        
+        # Re-enable camera movement after drag
+        self._set_camera_drag_state(False, "talent icon")
         
         # Check if dropped on valid hotkey slot
         dropped_on_slot, target_slot = self._check_hotkey_slot_drop()
@@ -145,6 +152,9 @@ class DraggableTalentIcon(Draggable):
                     distance = ((self.x - slot_x)**2 + (self.y - slot_y)**2)**0.5
                     if distance < 0.12:  # Generous drop zone
                         print(f"🎯 Dropped near hotkey slot {i + 1} (distance: {distance:.3f})")
+                        print(f"   Drop position: ({self.x:.3f}, {self.y:.3f})")
+                        print(f"   Slot position: ({slot_x:.3f}, {slot_y:.3f})")
+                        print(f"   Returning slot index: {i} (0-based)")
                         return i, slot
             # Fallback: check if controller has direct hotkey_slots attribute (legacy compatibility)
             elif hasattr(tactical_controller, 'hotkey_slots'):
@@ -174,6 +184,19 @@ class DraggableTalentIcon(Draggable):
             self.position = self.org_pos
             print(f"🔄 Returned {self.talent_data['name']} to original position")
     
+    def _set_camera_drag_state(self, is_dragging: bool, source: str):
+        """Set camera drag state through game reference."""
+        try:
+            # Access camera controller through talent panel's game reference
+            if (hasattr(self.talent_panel, 'game_reference') and
+                hasattr(self.talent_panel.game_reference, 'camera_controller')):
+                camera_controller = self.talent_panel.game_reference.camera_controller
+                camera_controller.set_ui_dragging(is_dragging, source)
+            else:
+                print(f"⚠️ Could not access camera controller for {source} drag state")
+        except Exception as e:
+            print(f"⚠️ Error setting camera drag state: {e}")
+    
     
     def _place_talent_in_slot(self, slot_index: int):
         """Place this talent in the specified hotkey slot."""
@@ -198,6 +221,9 @@ class DraggableTalentIcon(Draggable):
             return
             
         target_slot = hotkey_slots[slot_index]
+        
+        print(f"🎯 Placing talent in slot {slot_index} (0-based) = hotkey #{slot_index + 1}")
+        print(f"   Target slot position: ({getattr(target_slot, 'x', 'unknown')}, {getattr(target_slot, 'y', 'unknown')})")
         
         # Remove any existing talent icons in this slot (fix the cleanup issue)
         children_to_remove = []
@@ -389,14 +415,25 @@ class TalentPanel:
         tabs = ["Physical", "Magical", "Spiritual"]
         
         for i, tab in enumerate(tabs):
+            # Use proper spacing that prevents overlap
+            x_offset = i * 0.15  # 0.15 spacing to prevent overlap (tab width is 0.08)
+            y_offset = 0.35  # Position above the panel
+            
             btn = Button(
                 text=tab,
-                parent=camera.ui,
+                parent=self.panel,  # Attach to panel so they move together
                 color=color.azure if tab == self.current_tab else color.dark_gray,
                 scale=(0.08, 0.03),
-                position=(0.25 + i * 0.09, 0.4),
+                # Position relative to panel
+                position=(x_offset, y_offset, 0),
                 on_click=lambda t=tab: self.switch_tab(t)
             )
+            
+            # Debug output to verify positioning
+            print(f"🏷️ Created tab '{tab}' at panel-relative position ({x_offset:.2f}, {y_offset:.2f}, 0)")
+            
+            # Start hidden to match panel visibility
+            btn.enabled = False
             self.tab_buttons.append(btn)
     
     def _position_panel(self):
@@ -497,6 +534,11 @@ class TalentPanel:
                 slot_key = str(slot_index + 1)
                 talent_id = talent_data['id']
                 
+                print(f"🔗 Character data assignment:")
+                print(f"   slot_index (0-based): {slot_index}")
+                print(f"   slot_key (1-based): {slot_key}")
+                print(f"   talent_id: {talent_id}")
+                
                 # Update character's hotkey abilities data
                 active_character.template_data['hotkey_abilities'][slot_key] = {
                     'talent_id': talent_id
@@ -540,7 +582,8 @@ class TalentPanel:
         if self.panel:
             self.panel.enabled = not self.panel.enabled
             
-            # Also toggle tab buttons
+            # Tabs are children of panel and should inherit visibility automatically,
+            # but explicitly enable/disable them to ensure proper behavior
             for btn in self.tab_buttons:
                 btn.enabled = self.panel.enabled
             
@@ -551,12 +594,13 @@ class TalentPanel:
                 self._clear_talent_icons()
                 
             status = "shown" if self.panel.enabled else "hidden"
-            print(f"Talent panel {status}")
+            print(f"Talent panel {status} (tabs attached as children)")
     
     def show(self):
         """Show the talent panel."""
         if self.panel:
             self.panel.enabled = True
+            # Ensure tabs are enabled when panel is shown
             for btn in self.tab_buttons:
                 btn.enabled = True
             self._update_display()
@@ -565,6 +609,7 @@ class TalentPanel:
         """Hide the talent panel."""
         if self.panel:
             self.panel.enabled = False
+            # Explicitly disable tabs when panel is hidden
             for btn in self.tab_buttons:
                 btn.enabled = False
             self._clear_talent_icons()
