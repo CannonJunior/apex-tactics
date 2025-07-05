@@ -12,6 +12,10 @@ class CameraController:
         self.move_speed = 0.5
         self.rotation_speed = 50
         
+        # Drag state tracking to disable camera during UI drags
+        self.is_ui_dragging = False
+        self.drag_source = None
+        
     def update_camera(self):
         if self.camera_mode == 0:  # Orbit mode
             rad_y = math.radians(self.camera_angle_y)
@@ -31,8 +35,17 @@ class CameraController:
             camera.position = (self.camera_target.x, 12, self.camera_target.z)
             camera.rotation = (90, 0, 0)
     
+    def set_ui_dragging(self, is_dragging: bool, source: str = None):
+        """Set UI dragging state to disable/enable camera movement."""
+        self.is_ui_dragging = is_dragging
+        self.drag_source = source
+        if is_dragging:
+            print(f"🔒 Camera disabled - {source} drag started")
+        else:
+            print(f"🔓 Camera enabled - {source or 'drag'} ended")
+    
     def handle_input(self, key, control_panel=None):
-        # Camera mode switching
+        # Always allow camera mode switching regardless of drag state
         if key == '1':
             self.camera_mode = 0
             print("Orbit Camera Mode")
@@ -48,6 +61,10 @@ class CameraController:
             print("Top-down Camera Mode")
             if control_panel:
                 control_panel.update_camera_mode(2)
+        
+        # Skip camera movement if UI is being dragged
+        elif self.is_ui_dragging:
+            return  # Ignore all camera movement inputs during UI drag
         
         # Orbit camera controls
         elif self.camera_mode == 0:
@@ -83,6 +100,10 @@ class CameraController:
                 self.camera_target.x += self.move_speed
     
     def handle_mouse_input(self):
+        # Skip all mouse camera controls if UI is being dragged
+        if self.is_ui_dragging:
+            return
+            
         if self.camera_mode == 0:  # Orbit mode
             if held_keys['left mouse']:
                 self.camera_angle_y += mouse.velocity.x * 50

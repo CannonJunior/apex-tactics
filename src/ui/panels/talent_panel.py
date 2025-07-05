@@ -416,14 +416,14 @@ class TalentPanel:
         
         for i, tab in enumerate(tabs):
             # Use proper spacing that prevents overlap
-            x_offset = i * 0.15  # 0.15 spacing to prevent overlap (tab width is 0.08)
+            x_offset = i * 0.3 - 0.3  # 0.15 spacing to prevent overlap (tab width is 0.08)
             y_offset = 0.35  # Position above the panel
             
             btn = Button(
                 text=tab,
                 parent=self.panel,  # Attach to panel so they move together
                 color=color.azure if tab == self.current_tab else color.dark_gray,
-                scale=(0.08, 0.03),
+                scale=(0.2, 0.4),
                 # Position relative to panel
                 position=(x_offset, y_offset, 0),
                 on_click=lambda t=tab: self.switch_tab(t)

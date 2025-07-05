@@ -158,6 +158,9 @@ class InventoryItem(Draggable):
         if self.equipped_border:
             self.equipped_border.z -= .01
         
+        # Disable camera movement during drag
+        self._set_camera_drag_state(True, "inventory item")
+        
         print(f"Dragging {self.item_data['name']}")
     
     def drop(self):
@@ -169,6 +172,9 @@ class InventoryItem(Draggable):
         # Move equipped border back with the item
         if self.equipped_border:
             self.equipped_border.z += .01
+        
+        # Re-enable camera movement after drag
+        self._set_camera_drag_state(False, "inventory item")
         
         # Get inventory dimensions
         inv_width = self.inventory_parent.width
@@ -196,6 +202,43 @@ class InventoryItem(Draggable):
             # Return to original position if dropped outside bounds
             print(f"Item {self.item_data['name']} dropped outside inventory bounds")
             self.position = self.org_pos
+    
+    def _set_camera_drag_state(self, is_dragging: bool, source: str):
+        """Set camera drag state through game reference."""
+        try:
+            # Path: InventoryItem → InteractiveInventory → InventoryPanel → game_reference
+            
+            # Try access through inventory_parent's panel_reference (InventoryPanel)
+            if (hasattr(self.inventory_parent, 'panel_reference') and 
+                hasattr(self.inventory_parent.panel_reference, 'game_reference') and
+                hasattr(self.inventory_parent.panel_reference.game_reference, 'camera_controller')):
+                camera_controller = self.inventory_parent.panel_reference.game_reference.camera_controller
+                camera_controller.set_ui_dragging(is_dragging, source)
+                return
+                
+            # Try through inventory_parent's game_reference directly
+            elif (hasattr(self.inventory_parent, 'game_reference') and
+                  hasattr(self.inventory_parent.game_reference, 'camera_controller')):
+                camera_controller = self.inventory_parent.game_reference.camera_controller
+                camera_controller.set_ui_dragging(is_dragging, source)
+                return
+                
+            # Try through inventory_parent's parent (fallback for any other hierarchy)
+            elif (hasattr(self.inventory_parent, 'parent') and 
+                  hasattr(self.inventory_parent.parent, 'game_reference') and
+                  hasattr(self.inventory_parent.parent.game_reference, 'camera_controller')):
+                camera_controller = self.inventory_parent.parent.game_reference.camera_controller
+                camera_controller.set_ui_dragging(is_dragging, source)
+                return
+                
+            print(f"⚠️ Could not access camera controller for {source} drag state")
+            print(f"   inventory_parent type: {type(self.inventory_parent)}")
+            print(f"   panel_reference exists: {hasattr(self.inventory_parent, 'panel_reference')}")
+            
+        except Exception as e:
+            print(f"⚠️ Error setting camera drag state: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 class InteractiveInventory(Entity):
@@ -323,6 +366,9 @@ class InventoryPanel:
         # Create interactive inventory grid
         self.interactive_inventory = InteractiveInventory(width=6, height=8)
         self.interactive_inventory.enabled = False
+        
+        # Set panel reference for camera controller access (not using Ursina parent)
+        self.interactive_inventory.panel_reference = self
         
         # Create info panel for inventory stats
         self._create_info_panel()

@@ -1,0 +1,41 @@
+{
+  "grid": {
+    "width": 8,
+    "height": 8,
+    "tile_size": 1.0
+  },
+  "units": {
+    "player_units": [
+      {
+        "name": "Hero",
+        "type": "HEROMANCER",
+        "start_x": 1,
+        "start_y": 1
+      },
+      {
+        "name": "Sage", 
+        "type": "MAGI",
+        "start_x": 2,
+        "start_y": 1
+      }
+    ],
+    "enemy_units": [
+      {
+        "name": "Orc",
+        "type": "UBERMENSCH", 
+        "start_x": 6,
+        "start_y": 6
+      },
+      {
+        "name": "Spirit",
+        "type": "REALM_WALKER",
+        "start_x": 5,
+        "start_y": 6
+      }
+    ]
+  },
+  "demo_weapons": {
+    "Hero": "spear",
+    "Sage": "magic_bow"
+  }
+}
