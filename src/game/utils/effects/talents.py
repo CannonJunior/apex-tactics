@@ -29,6 +29,25 @@ def execute_specific_talent(self, talent_data):
     # Execute talent using generalized effect system
     self._execute_talent_effects(talent_data)
 
+    # MCP Integration Hook (Phase 3 - Talent Execution Hook)
+    try:
+        from ...config.feature_flags import FeatureFlags
+        if (FeatureFlags.USE_MCP_TOOLS and 
+            hasattr(self, 'mcp_integration_manager') and 
+            self.mcp_integration_manager):
+            
+            # Notify MCP system of talent execution for learning
+            talent_info = {
+                'id': talent_id,
+                'name': talent_name,
+                'action_type': talent_data.action_type,
+                'effects': effects,
+                'cost': cost
+            }
+            self.mcp_integration_manager.notify_talent_executed(talent_info)
+    except Exception as e:
+        print(f"⚠️ MCP notification failed: {e}")
+
     print(f"   ✅ '{talent_name}' execution completed")
 
 def execute_talent_effects(self, talent_data):

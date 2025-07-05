@@ -1,0 +1,162 @@
+{
+  "mcp_integration": {
+    "enabled": true,
+    "description": "MCP integration configuration for tactical RPG AI capabilities",
+    
+    "gateway": {
+      "url": "http://localhost:8002",
+      "timeout": 10,
+      "retry_attempts": 3,
+      "connection_pool_size": 10
+    },
+    
+    "talent_analysis": {
+      "enabled": true,
+      "ai_recommendations": true,
+      "effectiveness_analysis": true,
+      "synergy_detection": true,
+      "cache_duration": 30,
+      "max_recommendations": 5
+    },
+    
+    "battlefield_integration": {
+      "real_time_analysis": true,
+      "threat_assessment": true,
+      "position_optimization": true,
+      "multi_turn_planning": true,
+      "update_frequency": 1.0
+    },
+    
+    "ai_assistance": {
+      "level": "strategic",
+      "auto_recommendations": false,
+      "learning_mode": true,
+      "confidence_threshold": 0.6,
+      "explanation_detail": "moderate"
+    },
+    
+    "performance": {
+      "async_processing": true,
+      "request_batching": true,
+      "result_caching": true,
+      "background_analysis": false,
+      "max_concurrent_requests": 5
+    },
+    
+    "logging": {
+      "enabled": true,
+      "level": "info",
+      "include_performance_metrics": true,
+      "log_ai_decisions": true,
+      "log_talent_executions": true
+    },
+    
+    "features": {
+      "talent_execution_via_mcp": true,
+      "ai_tactical_analysis": true,
+      "resource_optimization": true,
+      "synergy_planning": true,
+      "outcome_prediction": true,
+      "adaptive_learning": false
+    },
+    
+    "security": {
+      "require_authentication": false,
+      "rate_limiting": {
+        "enabled": true,
+        "requests_per_minute": 60,
+        "burst_limit": 10
+      },
+      "input_validation": true,
+      "output_sanitization": true
+    },
+    
+    "development": {
+      "debug_mode": false,
+      "verbose_logging": false,
+      "mock_responses": false,
+      "performance_monitoring": true,
+      "error_simulation": false
+    }
+  },
+  
+  "talent_specific_config": {
+    "execution_preferences": {
+      "validate_prerequisites": true,
+      "check_resource_costs": true,
+      "verify_target_validity": true,
+      "enforce_cooldowns": true,
+      "apply_range_limits": true
+    },
+    
+    "analysis_parameters": {
+      "consider_battlefield_state": true,
+      "factor_unit_positioning": true,
+      "include_enemy_capabilities": true,
+      "analyze_resource_efficiency": true,
+      "evaluate_risk_reward": true
+    },
+    
+    "recommendation_weights": {
+      "damage_effectiveness": 0.3,
+      "resource_efficiency": 0.2,
+      "tactical_advantage": 0.25,
+      "safety_factor": 0.15,
+      "synergy_potential": 0.1
+    },
+    
+    "learning_parameters": {
+      "track_execution_outcomes": true,
+      "monitor_ai_accuracy": true,
+      "adapt_recommendations": true,
+      "feedback_integration": true,
+      "pattern_recognition": true
+    }
+  },
+  
+  "mcp_tools_config": {
+    "execute_talent_mcp": {
+      "enabled": true,
+      "timeout": 5.0,
+      "validation_level": "strict",
+      "error_handling": "graceful"
+    },
+    
+    "get_available_talents_mcp": {
+      "enabled": true,
+      "include_detailed_info": true,
+      "cache_results": true,
+      "cache_duration": 10
+    },
+    
+    "analyze_talent_effectiveness_mcp": {
+      "enabled": true,
+      "analysis_depth": "comprehensive",
+      "include_alternatives": true,
+      "prediction_accuracy": "high"
+    },
+    
+    "get_talent_synergies_mcp": {
+      "enabled": true,
+      "max_combinations": 10,
+      "planning_horizon": 3,
+      "complexity_limit": "moderate"
+    }
+  },
+  
+  "error_handling": {
+    "fallback_to_default": true,
+    "graceful_degradation": true,
+    "retry_failed_requests": true,
+    "log_all_errors": true,
+    "user_friendly_messages": true
+  },
+  
+  "monitoring": {
+    "track_usage_statistics": true,
+    "monitor_performance_metrics": true,
+    "measure_ai_effectiveness": true,
+    "collect_user_feedback": false,
+    "generate_reports": false
+  }
+}

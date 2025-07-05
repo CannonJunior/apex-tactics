@@ -83,7 +83,10 @@ class TacticalMCPServer:
                         "position_value": self._calculate_position_value(entity),
                         "threat_assessment": self._analyze_threats(entity),
                         "action_opportunities": self._evaluate_opportunities(entity),
-                        "resource_status": self._get_resource_status(entity)
+                        "resource_status": self._get_resource_status(entity),
+                        # Phase 5: AI Enhancement - Add talent analysis
+                        "talent_analysis": self._analyze_available_talents(entity),
+                        "talent_recommendations": self._get_talent_recommendations(entity)
                     }
                 }
                 
@@ -464,6 +467,110 @@ class TacticalMCPServer:
             except Exception as e:
                 Logger.error(f"Error getting unit capabilities: {e}")
                 return json.dumps({"error": str(e)})
+        
+        # Phase 4: MCP Resource Integration - Talent Resources
+        @self.mcp_server.resource("available_talents")
+        def get_available_talents() -> str:
+            """Get talents available to current active character"""
+            try:
+                from ...core.assets.data_manager import get_data_manager
+                
+                data_manager = get_data_manager()
+                all_talents = data_manager.get_all_talents()
+                
+                talents_data = {
+                    "timestamp": time.time(),
+                    "talent_count": len(all_talents),
+                    "talents": []
+                }
+                
+                # Convert talent data to JSON-serializable format
+                for talent in all_talents:
+                    talent_info = {
+                        "id": talent.id,
+                        "name": talent.name,
+                        "action_type": talent.action_type,
+                        "level": talent.level,
+                        "tier": talent.tier,
+                        "description": talent.description,
+                        "cost": talent.cost,
+                        "effects": talent.effects,
+                        "requirements": talent.requirements
+                    }
+                    talents_data["talents"].append(talent_info)
+                
+                return json.dumps(talents_data)
+                
+            except Exception as e:
+                Logger.error(f"Error getting available talents: {e}")
+                return json.dumps({"error": str(e)})
+        
+        @self.mcp_server.resource("talent_details")
+        def get_talent_details(talent_id: str = "") -> str:
+            """Get detailed information about a specific talent"""
+            try:
+                if not talent_id:
+                    return json.dumps({"error": "talent_id parameter required"})
+                
+                from ...core.assets.data_manager import get_data_manager
+                
+                data_manager = get_data_manager()
+                all_talents = data_manager.get_all_talents()
+                
+                # Find the specific talent
+                target_talent = None
+                for talent in all_talents:
+                    if talent.id == talent_id:
+                        target_talent = talent
+                        break
+                
+                if not target_talent:
+                    return json.dumps({"error": f"Talent '{talent_id}' not found"})
+                
+                talent_details = {
+                    "timestamp": time.time(),
+                    "talent": {
+                        "id": target_talent.id,
+                        "name": target_talent.name,
+                        "action_type": target_talent.action_type,
+                        "level": target_talent.level,
+                        "tier": target_talent.tier,
+                        "description": target_talent.description,
+                        "cost": target_talent.cost,
+                        "effects": target_talent.effects,
+                        "requirements": target_talent.requirements
+                    },
+                    "analysis": {
+                        "damage_potential": self._analyze_talent_damage(target_talent),
+                        "resource_efficiency": self._analyze_talent_efficiency(target_talent),
+                        "tactical_value": self._analyze_talent_tactical_value(target_talent)
+                    }
+                }
+                
+                return json.dumps(talent_details)
+                
+            except Exception as e:
+                Logger.error(f"Error getting talent details: {e}")
+                return json.dumps({"error": str(e)})
+        
+        @self.mcp_server.resource("talent_cooldowns")
+        def get_talent_cooldowns() -> str:
+            """Get current talent cooldown status"""
+            try:
+                # Placeholder implementation - in full system would track actual cooldowns
+                cooldown_data = {
+                    "timestamp": time.time(),
+                    "cooldown_system": "placeholder",
+                    "global_cooldown": 0,
+                    "talent_cooldowns": {},
+                    "note": "Cooldown tracking system to be implemented with combat system"
+                }
+                
+                return json.dumps(cooldown_data)
+                
+            except Exception as e:
+                Logger.error(f"Error getting talent cooldowns: {e}")
+                return json.dumps({"error": str(e)})
     
     def start(self):
         """Start the MCP server"""
@@ -517,6 +624,239 @@ class TacticalMCPServer:
             "rage": 0,  # Placeholder
             "kwan": 25  # Placeholder
         }
+    
+    # Phase 4: MCP Resource Integration - Talent Analysis Helpers
+    
+    def _analyze_talent_damage(self, talent) -> float:
+        """Analyze talent damage potential."""
+        try:
+            effects = talent.effects
+            base_damage = 0
+            
+            # Extract damage from various effect types
+            if 'base_damage' in effects:
+                base_damage += effects['base_damage']
+            if 'magical_damage' in effects:
+                base_damage += effects['magical_damage']
+            if 'physical_damage' in effects:
+                base_damage += effects['physical_damage']
+            if 'spiritual_damage' in effects:
+                base_damage += effects['spiritual_damage']
+            
+            return float(base_damage)
+            
+        except Exception as e:
+            Logger.error(f"Error analyzing talent damage: {e}")
+            return 0.0
+    
+    def _analyze_talent_efficiency(self, talent) -> float:
+        """Analyze talent resource efficiency."""
+        try:
+            effects = talent.effects
+            cost = talent.cost
+            
+            # Calculate damage per resource cost
+            total_damage = self._analyze_talent_damage(talent)
+            total_cost = cost.get('mp_cost', 0) + cost.get('ap_cost', 0) + cost.get('rage_cost', 0)
+            
+            if total_cost > 0:
+                efficiency = total_damage / total_cost
+            else:
+                efficiency = total_damage  # No cost abilities are highly efficient
+            
+            return min(efficiency, 10.0)  # Cap at 10.0 for reasonable values
+            
+        except Exception as e:
+            Logger.error(f"Error analyzing talent efficiency: {e}")
+            return 0.0
+    
+    def _analyze_talent_tactical_value(self, talent) -> float:
+        """Analyze tactical value of talent."""
+        try:
+            action_type = talent.action_type
+            effects = talent.effects
+            
+            # Base tactical value by action type
+            tactical_values = {
+                'Attack': 0.7,
+                'Magic': 0.8,
+                'Spirit': 0.6,
+                'Move': 0.5
+            }
+            
+            base_value = tactical_values.get(action_type, 0.5)
+            
+            # Adjust for special effects
+            if 'area_of_effect' in effects and effects['area_of_effect'] > 1:
+                base_value += 0.2  # AOE abilities are more tactically valuable
+            
+            if 'healing_amount' in effects:
+                base_value += 0.15  # Healing adds tactical value
+            
+            if effects.get('range', 1) > 2:
+                base_value += 0.1  # Long range adds tactical value
+            
+            return min(base_value, 1.0)  # Cap at 1.0
+            
+        except Exception as e:
+            Logger.error(f"Error analyzing talent tactical value: {e}")
+            return 0.5
+    
+    # Phase 5: AI Enhancement - Talent Analysis for Battlefield Analysis
+    
+    def _analyze_available_talents(self, entity: Entity) -> Dict[str, Any]:
+        """Analyze available talents for tactical decision making."""
+        try:
+            # Get available talents from data manager
+            from ...core.assets.data_manager import get_data_manager
+            data_manager = get_data_manager()
+            all_talents = data_manager.get_all_talents()
+            
+            # Analyze talent categories
+            talent_analysis = {
+                "total_available": len(all_talents),
+                "by_action_type": {},
+                "damage_potential": 0,
+                "support_capabilities": [],
+                "tactical_options": []
+            }
+            
+            # Categorize talents by action type
+            for talent in all_talents:
+                action_type = talent.action_type
+                if action_type not in talent_analysis["by_action_type"]:
+                    talent_analysis["by_action_type"][action_type] = []
+                
+                talent_info = {
+                    "id": talent.id,
+                    "name": talent.name,
+                    "level": talent.level,
+                    "damage_potential": self._analyze_talent_damage(talent),
+                    "tactical_value": self._analyze_talent_tactical_value(talent)
+                }
+                talent_analysis["by_action_type"][action_type].append(talent_info)
+                
+                # Accumulate damage potential
+                talent_analysis["damage_potential"] += talent_info["damage_potential"]
+                
+                # Identify support capabilities
+                if 'healing_amount' in talent.effects:
+                    talent_analysis["support_capabilities"].append(f"Healing: {talent.name}")
+                
+                # Add tactical options
+                if talent.effects.get('area_of_effect', 1) > 1:
+                    talent_analysis["tactical_options"].append(f"AOE: {talent.name}")
+            
+            return talent_analysis
+            
+        except Exception as e:
+            Logger.error(f"Error analyzing available talents: {e}")
+            return {"error": str(e)}
+    
+    def _get_talent_recommendations(self, entity: Entity) -> List[Dict[str, Any]]:
+        """Get AI talent recommendations for current tactical situation."""
+        try:
+            # Get available talents
+            from ...core.assets.data_manager import get_data_manager
+            data_manager = get_data_manager()
+            all_talents = data_manager.get_all_talents()
+            
+            recommendations = []
+            
+            # Analyze each talent for current situation
+            for talent in all_talents[:5]:  # Limit to top 5 for performance
+                recommendation = {
+                    "talent_id": talent.id,
+                    "talent_name": talent.name,
+                    "confidence": self._calculate_talent_confidence_for_situation(talent, entity),
+                    "reasoning": self._generate_talent_reasoning_for_situation(talent, entity),
+                    "priority": self._calculate_talent_priority(talent, entity)
+                }
+                recommendations.append(recommendation)
+            
+            # Sort by confidence score
+            recommendations.sort(key=lambda x: x["confidence"], reverse=True)
+            
+            return recommendations[:3]  # Return top 3 recommendations
+            
+        except Exception as e:
+            Logger.error(f"Error getting talent recommendations: {e}")
+            return [{"error": str(e)}]
+    
+    def _calculate_talent_confidence_for_situation(self, talent, entity: Entity) -> float:
+        """Calculate confidence score for talent in current situation."""
+        try:
+            base_confidence = 0.5
+            
+            # Adjust based on talent characteristics
+            action_type = talent.action_type
+            if action_type == 'Attack':
+                base_confidence += 0.2  # Offensive actions generally useful
+            elif action_type == 'Magic':
+                base_confidence += 0.3  # Magic often versatile
+            elif action_type == 'Spirit':
+                base_confidence += 0.1  # Support abilities
+            
+            # Adjust based on damage potential
+            damage = self._analyze_talent_damage(talent)
+            if damage > 20:
+                base_confidence += 0.2
+            elif damage > 10:
+                base_confidence += 0.1
+            
+            # Adjust based on resource efficiency
+            efficiency = self._analyze_talent_efficiency(talent)
+            if efficiency > 1.0:
+                base_confidence += 0.1
+            
+            return min(base_confidence, 1.0)
+            
+        except Exception as e:
+            Logger.error(f"Error calculating talent confidence: {e}")
+            return 0.0
+    
+    def _generate_talent_reasoning_for_situation(self, talent, entity: Entity) -> str:
+        """Generate reasoning for talent recommendation."""
+        try:
+            action_type = talent.action_type
+            damage = self._analyze_talent_damage(talent)
+            
+            if action_type == 'Attack' and damage > 15:
+                return f"High damage attack ({damage}) suitable for eliminating threats"
+            elif action_type == 'Magic':
+                aoe = talent.effects.get('area_of_effect', 1)
+                if aoe > 1:
+                    return f"Area effect magic can hit multiple targets (AOE: {aoe})"
+                else:
+                    return "Magical attack provides versatile damage option"
+            elif action_type == 'Spirit':
+                if 'healing_amount' in talent.effects:
+                    healing = talent.effects['healing_amount']
+                    return f"Healing ability ({healing}) for sustaining team"
+                else:
+                    return "Spiritual ability provides tactical support"
+            else:
+                return f"Standard {action_type.lower()} ability with tactical utility"
+                
+        except Exception as e:
+            Logger.error(f"Error generating talent reasoning: {e}")
+            return "Analysis unavailable"
+    
+    def _calculate_talent_priority(self, talent, entity: Entity) -> str:
+        """Calculate priority level for talent."""
+        try:
+            confidence = self._calculate_talent_confidence_for_situation(talent, entity)
+            
+            if confidence >= 0.8:
+                return "high"
+            elif confidence >= 0.6:
+                return "medium"
+            else:
+                return "low"
+                
+        except Exception as e:
+            Logger.error(f"Error calculating talent priority: {e}")
+            return "unknown"
     
     def _calculate_cover_value(self, position: Vector3) -> float:
         """Calculate cover value at position"""

@@ -84,6 +84,18 @@ class TacticalRPG:
         self.unit_data_manager = get_unit_data_manager()
         self.character_state_manager = get_character_state_manager(self.unit_data_manager)
         
+        # Initialize MCP integration (Phase 2 - MCP Integration)
+        self.mcp_integration_manager = None
+        try:
+            from ..config.feature_flags import FeatureFlags
+            if FeatureFlags.USE_MCP_TOOLS:
+                from ..managers.mcp_integration_manager import MCPIntegrationManager
+                self.mcp_integration_manager = MCPIntegrationManager(self)
+                self.mcp_integration_manager.initialize()
+                print("✅ MCP integration enabled")
+        except ImportError as e:
+            print(f"ℹ️ MCP integration not available: {e}")
+        
         # Load battlefield configuration
         config_manager = get_config_manager()
         self.battlefield_config = config_manager.get_value('battlefield_config', {
