@@ -115,8 +115,12 @@ class DraggableTalentIcon(Draggable):
             # Valid drop - snap to the hotkey slot position first
             self._snap_to_slot_position(target_slot)
             
-            # Let the user see the snap for a brief moment
-            print(f"✅ Valid drop on hotkey slot {dropped_on_slot + 1} - snapped to position")
+            # Enhanced logging for talent drop
+            print(f"🎮 TALENT DROP SUCCESS: '{self.talent_data['name']}' dropped onto HOTKEY SLOT #{dropped_on_slot + 1}")
+            print(f"   📍 Drop coordinates: ({self.x:.3f}, {self.y:.3f})")
+            print(f"   🎯 Target slot position: ({target_slot.x:.3f}, {target_slot.y:.3f})")
+            print(f"   🆔 Slot index (0-based): {dropped_on_slot}")
+            print(f"   🎨 Talent type: {self.talent_data.get('action_type', 'Unknown')}")
             
             # Then place talent in hotkey slot
             self._place_talent_in_slot(dropped_on_slot)
@@ -131,7 +135,9 @@ class DraggableTalentIcon(Draggable):
                 self.position = self.org_pos
         else:
             # Invalid drop location - return to original position immediately
-            print(f"❌ Invalid drop location for {self.talent_data['name']} - returning to original position")
+            print(f"❌ INVALID DROP: '{self.talent_data['name']}' not dropped on any hotkey slot")
+            print(f"   📍 Drop position: ({self.x:.3f}, {self.y:.3f})")
+            print(f"   🔄 Returning talent to original position")
             self.position = self.org_pos
     
     def _check_hotkey_slot_drop(self):
@@ -140,31 +146,53 @@ class DraggableTalentIcon(Draggable):
         if hasattr(self.talent_panel, 'game_reference') and self.talent_panel.game_reference:
             tactical_controller = self.talent_panel.game_reference
             
-            # Access hotkey slots through UI manager
-            if hasattr(tactical_controller, 'ui_manager') and hasattr(tactical_controller.ui_manager, 'hotkey_slots'):
-                # Check each hotkey slot for proximity
-                for i, slot in enumerate(tactical_controller.ui_manager.hotkey_slots):
+            # FIXED: Check direct hotkey_slots first (this is the correct path)
+            if hasattr(tactical_controller, 'hotkey_slots') and tactical_controller.hotkey_slots:
+                # DEBUG: Print all hotkey slot positions for analysis
+                print(f"🔍 DEBUG: Checking {len(tactical_controller.hotkey_slots)} hotkey slots for drop at ({self.x:.3f}, {self.y:.3f})")
+                for debug_i, debug_slot in enumerate(tactical_controller.hotkey_slots):
+                    debug_x = getattr(debug_slot, 'x', 0)
+                    debug_y = getattr(debug_slot, 'y', 0)
+                    debug_dist = ((self.x - debug_x)**2 + (self.y - debug_y)**2)**0.5
+                    print(f"   Slot #{debug_i + 1}: pos({debug_x:.3f}, {debug_y:.3f}) dist={debug_dist:.3f}")
+                
+                # FIXED: Find the CLOSEST slot instead of first slot within threshold
+                closest_slot = None
+                closest_distance = float('inf')
+                closest_index = -1
+                
+                for i, slot in enumerate(tactical_controller.hotkey_slots):
                     # Use slot position directly
                     slot_x = getattr(slot, 'x', 0)
                     slot_y = getattr(slot, 'y', 0)
                     
-                    # Calculate distance with generous threshold for easier dropping
+                    # Calculate distance
                     distance = ((self.x - slot_x)**2 + (self.y - slot_y)**2)**0.5
-                    if distance < 0.12:  # Generous drop zone
-                        print(f"🎯 Dropped near hotkey slot {i + 1} (distance: {distance:.3f})")
-                        print(f"   Drop position: ({self.x:.3f}, {self.y:.3f})")
-                        print(f"   Slot position: ({slot_x:.3f}, {slot_y:.3f})")
-                        print(f"   Returning slot index: {i} (0-based)")
-                        return i, slot
-            # Fallback: check if controller has direct hotkey_slots attribute (legacy compatibility)
-            elif hasattr(tactical_controller, 'hotkey_slots'):
-                for i, slot in enumerate(tactical_controller.hotkey_slots):
+                    
+                    # Track the closest slot
+                    if distance < closest_distance:
+                        closest_distance = distance
+                        closest_slot = slot
+                        closest_index = i
+                
+                # Check if closest slot is within threshold
+                if closest_distance < 0.12:  # Generous drop zone
+                    print(f"🎯 HOTKEY SLOT DETECTION: Mouse over HOTKEY #{closest_index + 1}")
+                    print(f"   📏 Distance from slot center: {closest_distance:.3f} (threshold: 0.12)")
+                    print(f"   📍 Talent drop position: ({self.x:.3f}, {self.y:.3f})")
+                    print(f"   📌 Hotkey slot position: ({closest_slot.x:.3f}, {closest_slot.y:.3f})")
+                    print(f"   🔢 Slot index (0-based): {closest_index}")
+                    print(f"   ✅ Valid drop zone detected - USING CLOSEST SLOT LOGIC")
+                    return closest_index, closest_slot
+            # Fallback: check if controller has ui_manager.hotkey_slots (unlikely)
+            elif hasattr(tactical_controller, 'ui_manager') and hasattr(tactical_controller.ui_manager, 'hotkey_slots'):
+                for i, slot in enumerate(tactical_controller.ui_manager.hotkey_slots):
                     slot_x = getattr(slot, 'x', 0)
                     slot_y = getattr(slot, 'y', 0)
                     
                     distance = ((self.x - slot_x)**2 + (self.y - slot_y)**2)**0.5
                     if distance < 0.12:
-                        print(f"🎯 Dropped near hotkey slot {i + 1} (distance: {distance:.3f}) [legacy path]")
+                        print(f"🎯 Dropped near hotkey slot {i + 1} (distance: {distance:.3f}) [ui_manager path]")
                         return i, slot
         
         print(f"📍 Dropped at position ({self.x:.3f}, {self.y:.3f}) - no valid hotkey slot nearby")
@@ -205,12 +233,14 @@ class DraggableTalentIcon(Draggable):
             
         tactical_controller = self.talent_panel.game_reference
         
-        # Get hotkey slots from UI manager or direct reference
+        # FIXED: Get hotkey slots from direct reference first
         hotkey_slots = None
-        if hasattr(tactical_controller, 'ui_manager') and hasattr(tactical_controller.ui_manager, 'hotkey_slots'):
-            hotkey_slots = tactical_controller.ui_manager.hotkey_slots
-        elif hasattr(tactical_controller, 'hotkey_slots'):
+        if hasattr(tactical_controller, 'hotkey_slots') and tactical_controller.hotkey_slots:
             hotkey_slots = tactical_controller.hotkey_slots
+            print(f"🔗 Using direct hotkey_slots (correct path)")
+        elif hasattr(tactical_controller, 'ui_manager') and hasattr(tactical_controller.ui_manager, 'hotkey_slots'):
+            hotkey_slots = tactical_controller.ui_manager.hotkey_slots
+            print(f"🔗 Using ui_manager.hotkey_slots (fallback path)")
             
         if not hotkey_slots:
             print("❌ No hotkey slots found")
@@ -222,8 +252,11 @@ class DraggableTalentIcon(Draggable):
             
         target_slot = hotkey_slots[slot_index]
         
-        print(f"🎯 Placing talent in slot {slot_index} (0-based) = hotkey #{slot_index + 1}")
-        print(f"   Target slot position: ({getattr(target_slot, 'x', 'unknown')}, {getattr(target_slot, 'y', 'unknown')})")
+        print(f"📋 HOTKEY ASSIGNMENT: Assigning '{self.talent_data['name']}' to HOTKEY #{slot_index + 1}")
+        print(f"   🎯 Target hotkey slot: #{slot_index + 1} (0-based index: {slot_index})")
+        print(f"   📌 Slot position: ({getattr(target_slot, 'x', 'unknown')}, {getattr(target_slot, 'y', 'unknown')})")
+        print(f"   🎨 Talent type: {self.talent_data.get('action_type', 'Unknown')}")
+        print(f"   🆔 Talent ID: {self.talent_data.get('id', 'unknown')}")
         
         # Remove any existing talent icons in this slot (fix the cleanup issue)
         children_to_remove = []

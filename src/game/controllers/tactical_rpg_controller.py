@@ -2080,8 +2080,8 @@ class TacticalRPG:
         for i, slot in enumerate(self.hotkey_slots):
             slot.enabled = True  # Show slot
             
-            # hotkey_abilities from character state manager is a list of abilities
-            if isinstance(hotkey_abilities, list) and i < len(hotkey_abilities):
+            # FIXED: Handle sparse list with None values for empty slots
+            if isinstance(hotkey_abilities, list) and i < len(hotkey_abilities) and hotkey_abilities[i] is not None:
                 # Get ability data from the list
                 ability_data = hotkey_abilities[i]
                 slot.ability_data = ability_data
@@ -2102,7 +2102,7 @@ class TacticalRPG:
                 slot.tooltip = Tooltip(tooltip_text)
                 slot.tooltip.background.color = color.hsv(0, 0, 0, .8)
             else:
-                # Empty slot
+                # Empty slot (None value or out of bounds)
                 slot.ability_data = None
                 slot.color = empty_color
                 

@@ -222,10 +222,10 @@ class CharacterInstance:
         """Get hotkey abilities in slot order for the Character Interface."""
         hotkey_abilities_data = self.template_data.get('hotkey_abilities', {})
         
-        # Convert to ordered list based on slot numbers
+        # Convert to ordered list based on slot numbers (FIXED: sparse list with None for empty slots)
         abilities_list = []
         
-        # Process slots 1-8 (or max configured slots)
+        # Process slots 1-8 (or max configured slots) - maintain slot-to-index mapping
         for i in range(1, 9):  # Slots 1-8
             slot_key = str(i)
             if slot_key in hotkey_abilities_data:
@@ -310,6 +310,9 @@ class CharacterInstance:
                 ability['on_cooldown'] = False
                 ability['cooldown_remaining'] = 0
                 abilities_list.append(ability)
+            else:
+                # FIXED: Add None for empty slots to maintain index alignment
+                abilities_list.append(None)
         
         return abilities_list
     
@@ -321,6 +324,10 @@ class CharacterInstance:
             return False
         
         ability = hotkey_abilities[slot_index]
+        
+        # FIXED: Check if slot is empty (None value)
+        if ability is None:
+            return False
         
         # Check if ability is available
         if not ability.get('available', False) or ability.get('on_cooldown', False):
