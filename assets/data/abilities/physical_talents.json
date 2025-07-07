@@ -18,7 +18,8 @@
         "accuracy_bonus": 10
       },
       "cost": {
-        "talent_points": 1
+        "talent_points": 1,
+        "ap_cost": 1
       }
     },
     {
@@ -37,7 +38,8 @@
         "attack_speed": 0.8
       },
       "cost": {
-        "talent_points": 1
+        "talent_points": 1,
+        "ap_cost": 2
       }
     },
     {
@@ -56,7 +58,8 @@
         "weapon_damage_bonus": 20
       },
       "cost": {
-        "talent_points": 2
+        "talent_points": 2,
+        "ap_cost": 3
       }
     },
     {
@@ -77,7 +80,8 @@
       },
       "cost": {
         "talent_points": 2,
-        "rage_cost": 20
+        "rage_cost": 20,
+        "ap_cost": 3
       }
     },
     {
@@ -98,7 +102,7 @@
       },
       "cost": {
         "talent_points": 3,
-        "action_points": 2
+        "ap_cost": 2
       }
     },
     {
@@ -119,7 +123,7 @@
       },
       "cost": {
         "talent_points": 4,
-        "action_points": 3
+        "ap_cost": 3
       }
     }
   ]

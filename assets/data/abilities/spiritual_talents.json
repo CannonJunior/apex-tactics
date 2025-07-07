@@ -20,7 +20,8 @@
       },
       "cost": {
         "talent_points": 1,
-        "kwan_cost": 5
+        "kwan_cost": 5,
+        "ap_cost": 1
       }
     },
     {
@@ -42,7 +43,8 @@
       },
       "cost": {
         "talent_points": 1,
-        "kwan_cost": 10
+        "kwan_cost": 10,
+        "ap_cost": 2
       }
     },
     {
@@ -63,7 +65,8 @@
       },
       "cost": {
         "talent_points": 2,
-        "kwan_cost": 15
+        "kwan_cost": 15,
+        "ap_cost": 2
       }
     },
     {
@@ -84,7 +87,8 @@
       },
       "cost": {
         "talent_points": 2,
-        "kwan_cost": 20
+        "kwan_cost": 20,
+        "ap_cost": 3
       }
     },
     {
@@ -106,7 +110,8 @@
       },
       "cost": {
         "talent_points": 3,
-        "kwan_cost": 30
+        "kwan_cost": 30,
+        "ap_cost": 4
       }
     },
     {
@@ -128,7 +133,8 @@
       },
       "cost": {
         "talent_points": 4,
-        "kwan_cost": 50
+        "kwan_cost": 50,
+        "ap_cost": 5
       }
     }
   ]

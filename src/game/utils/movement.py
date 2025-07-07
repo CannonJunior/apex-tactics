@@ -92,8 +92,29 @@ def execute_movement(self):
     old_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
     new_pos = Vector2Int(self.path_cursor[0], self.path_cursor[1])
 
+    # Calculate movement distance and AP cost
+    distance = abs(new_pos.x - old_pos.x) + abs(new_pos.y - old_pos.y)
+    
+    # Import action costs and calculate AP required
+    from ..config.action_costs import ACTION_COSTS
+    ap_cost = ACTION_COSTS.get_movement_cost(distance)
+    
+    # Check if unit has enough AP for movement
+    if hasattr(self.active_unit, 'ap') and ap_cost > 0:
+        if self.active_unit.ap < ap_cost:
+            print(f"❌ Not enough AP for movement! Need {ap_cost}, have {self.active_unit.ap}")
+            return
+    
     # Move unit to cursor position
     if self.grid.move_unit(self.active_unit, self.path_cursor[0], self.path_cursor[1]):
+        # Consume AP for successful movement
+        if hasattr(self.active_unit, 'ap') and ap_cost > 0:
+            self.active_unit.ap -= ap_cost
+            print(f"   🏃 Movement consumed {ap_cost} AP (remaining: {self.active_unit.ap})")
+            # Update AP bar immediately
+            if hasattr(self, 'refresh_action_points_bar'):
+                self.refresh_action_points_bar()
+        
         # Update TacticalGrid positions
         if self.tactical_grid:
             self.tactical_grid.free_cell(old_pos)

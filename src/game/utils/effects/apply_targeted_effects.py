@@ -53,6 +53,10 @@ def apply_targeted_effects(self, effects, target_units: List, spell_params: dict
                     target_unit.hp = min(target_unit.max_hp, target_unit.hp + healing)
                     actual_healing = target_unit.hp - old_hp
                     print(f"  {target_unit.name} healed for {actual_healing} HP (now {target_unit.hp}/{target_unit.max_hp})")
+                    # FIXED: Update health bar if this is the active unit
+                    if (hasattr(self, 'active_unit') and target_unit == self.active_unit and 
+                        hasattr(self, 'refresh_health_bar')):
+                        self.refresh_health_bar()
 
     # MP restoration effects
     if 'mp_restoration' in effects:
@@ -63,6 +67,10 @@ def apply_targeted_effects(self, effects, target_units: List, spell_params: dict
                 target_unit.mp = min(target_unit.max_mp, target_unit.mp + mp_restore)
                 actual_restoration = target_unit.mp - old_mp
                 print(f"  {target_unit.name} restored {actual_restoration} MP (now {target_unit.mp}/{target_unit.max_mp})")
+                # FIXED: Update resource bar if this is the active unit
+                if (hasattr(self, 'active_unit') and target_unit == self.active_unit and 
+                    hasattr(self, 'refresh_resource_bar')):
+                    self.refresh_resource_bar()
 
     # Buff effects (stat bonuses, damage reduction, etc.)
     if 'stat_bonus' in effects:
@@ -79,6 +87,10 @@ def apply_targeted_effects(self, effects, target_units: List, spell_params: dict
                 target_unit.mp = min(target_unit.max_mp, target_unit.mp + mp_restore)
                 actual_restoration = target_unit.mp - old_mp
                 print(f"  {target_unit.name} restored {actual_restoration} MP (now {target_unit.mp}/{target_unit.max_mp})")
+                # FIXED: Update resource bar if this is the active unit
+                if (hasattr(self, 'active_unit') and target_unit == self.active_unit and 
+                    hasattr(self, 'refresh_resource_bar')):
+                    self.refresh_resource_bar()
 
     # Buff effects (stat bonuses, damage reduction, etc.)
     if 'stat_bonus' in effects:

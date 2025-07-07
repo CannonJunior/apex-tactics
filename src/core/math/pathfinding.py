@@ -142,8 +142,8 @@ class AStarPathfinder:
             closed_set.add(current_pos)
             nodes_explored += 1
             
-            # Explore neighbors
-            for neighbor_pos in self.grid.get_neighbors(current_pos):
+            # Explore neighbors (Manhattan distance only - no diagonal movement)
+            for neighbor_pos in self.grid.get_neighbors(current_pos, include_diagonals=False):
                 if neighbor_pos in closed_set:
                     continue
                 
@@ -253,8 +253,8 @@ class AStarPathfinder:
             visited.add(current_pos)
             reachable.append(current_pos)
             
-            # Explore neighbors
-            for neighbor_pos in self.grid.get_neighbors(current_pos):
+            # Explore neighbors (Manhattan distance only - no diagonal movement)
+            for neighbor_pos in self.grid.get_neighbors(current_pos, include_diagonals=False):
                 if neighbor_pos in visited:
                     continue
                 

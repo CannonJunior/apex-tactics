@@ -20,7 +20,8 @@
       },
       "cost": {
         "talent_points": 2,
-        "mp_cost": 15
+        "mp_cost": 15,
+        "ap_cost": 3
       }
     },
     {

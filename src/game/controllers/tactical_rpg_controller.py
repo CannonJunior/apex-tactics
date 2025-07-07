@@ -49,7 +49,7 @@ from ui.core.ui_style_manager import get_ui_style_manager
 # Utility imports
 from game.utils.effects.apply_targeted_effects import apply_targeted_effects
 from game.utils.effects.talents import execute_specific_talent, execute_talent_effects, talent_requires_targeting, build_spell_params_from_effects, apply_immediate_effects, setup_talent_magic_mode, restore_original_magic_properties, handle_talent, highlight_talent_range
-from game.utils.ui_bars import util_update_health_bar, util_hide_health_bar, util_refresh_health_bar, util_on_unit_hp_changed, util_update_resource_bar, util_hide_resource_bar, util_refresh_resource_bar, util_on_unit_resource_changed
+from game.utils.ui_bars import util_update_health_bar, util_hide_health_bar, util_refresh_health_bar, util_on_unit_hp_changed, util_update_resource_bar, util_hide_resource_bar, util_refresh_resource_bar, util_on_unit_resource_changed, util_update_action_points_bar, util_hide_action_points_bar, util_refresh_action_points_bar, util_on_unit_action_points_changed
 from game.utils.targets import target_update_targeted_unit_bars, target_hide_targeted_unit_bars, target_refresh_targeted_unit_bars, target_highlight_magic_range_no_clear, target_highlight_talent_range_no_clear
 from game.utils.setters import setters_setup_battle, setters_set_active_unit, setters_clear_active_unit, setters_equip_demo_weapons
 from game.utils.movement import movement_handle_path_movement, movement_handle_mouse_movement
@@ -137,6 +137,8 @@ class TacticalRPG:
         self.health_bar_label: Optional[Any] = None  # Health bar label
         self.resource_bar: Optional[HealthBar] = None  # Resource bar for active unit
         self.resource_bar_label: Optional[Any] = None  # Resource bar label
+        self.action_points_bar: Optional[HealthBar] = None  # Action points bar for active unit
+        self.action_points_bar_label: Optional[Any] = None  # Action points bar label
         
         # Hotkey ability slots
         self.hotkey_slots: List[Button] = []  # Hotkey ability buttons
@@ -659,6 +661,18 @@ class TacticalRPG:
         """Handle the selected action for a unit."""
         print(f"{unit.name} selected action: {action_name}")
         
+        # FIXED: Reset cancellation flag when new action is selected
+        self.talent_cancelled = False
+        
+        # Check if unit has enough AP for the action
+        from ..config.action_costs import ACTION_COSTS
+        required_ap = ACTION_COSTS.get_action_cost(action_name.lower())
+        
+        if required_ap > 0 and hasattr(unit, 'ap'):
+            if unit.ap < required_ap:
+                print(f"❌ Not enough AP for {action_name}! Need {required_ap}, have {unit.ap}")
+                return
+        
         if action_name == "Move":
             # Enter movement mode - user can now use WASD to plan movement
             self.current_mode = "move"
@@ -704,6 +718,10 @@ class TacticalRPG:
         # Check if this is a double-click on the same tile while attack modal is open
         if (from_double_click and self.attack_modal and self.attack_modal.enabled and 
             self.attack_target_tile == (x, y)):
+            # FIXED: Check if talent was cancelled to prevent double-click confirmation
+            if getattr(self, 'talent_cancelled', False):
+                print(f"🚫 Double-click ignored - talent was cancelled")
+                return
             # Auto-confirm the attack on double-click
             print(f"🖱️  Double-click confirming attack on ({x}, {y})")
             self._confirm_current_attack()
@@ -863,6 +881,10 @@ class TacticalRPG:
         # Check if this is a double-click on the same tile while magic modal is open
         if (from_double_click and self.magic_modal and self.magic_modal.enabled and 
             self.magic_target_tile == (x, y)):
+            # FIXED: Check if talent was cancelled to prevent double-click confirmation
+            if getattr(self, 'talent_cancelled', False):
+                print(f"🚫 Double-click ignored - talent was cancelled")
+                return
             # Auto-confirm the magic on double-click
             print(f"🖱️  Double-click confirming magic on ({x}, {y})")
             self._confirm_current_magic()
@@ -1369,6 +1391,14 @@ class TacticalRPG:
         # Handle hotkey number keys (1-8) to activate abilities
         if key in ['1', '2', '3', '4', '5', '6', '7', '8']:
             slot_index = int(key) - 1  # Convert to 0-based index
+            
+            # Check if unit has sufficient AP before processing hotkey
+            if self.active_unit:
+                current_ap = getattr(self.active_unit, 'ap', 0)
+                if current_ap <= 0:
+                    print(f"❌ Cannot use hotkey {key}: No AP remaining ({current_ap})")
+                    return True
+            
             self._handle_hotkey_activation(slot_index)
             return True
         
@@ -1388,10 +1418,64 @@ class TacticalRPG:
         target_y = attack_data['target_y'] 
         unit_list = attack_data['affected_units']
         
+        # FIXED: Check if this is a talent-based attack and consume MP/AP
+        talent_data = getattr(self, 'current_talent_data', None)
+        
+        # Handle talent-based attacks
+        if talent_data and talent_data.cost:
+            mp_cost = talent_data.cost.get('mp_cost', 0)
+            ap_cost = talent_data.cost.get('ap_cost', 0)
+            
+            # Check MP availability
+            if mp_cost > 0:
+                if self.active_unit.mp >= mp_cost:
+                    self.active_unit.mp -= mp_cost
+                    print(f"   💙 Consumed {mp_cost} MP (remaining: {self.active_unit.mp})")
+                    # FIXED: Update resource bar immediately after MP consumption
+                    self.refresh_resource_bar()
+                else:
+                    print(f"❌ Not enough MP! Need {mp_cost}, have {self.active_unit.mp}")
+                    return
+            
+            # Check AP availability and consume
+            if ap_cost > 0:
+                if hasattr(self.active_unit, 'ap') and self.active_unit.ap >= ap_cost:
+                    self.active_unit.ap -= ap_cost
+                    print(f"   🏃 Consumed {ap_cost} AP (remaining: {self.active_unit.ap})")
+                    # Update action points bar immediately after AP consumption
+                    self.refresh_action_points_bar()
+                else:
+                    ap_available = getattr(self.active_unit, 'ap', 0)
+                    print(f"❌ Not enough AP! Need {ap_cost}, have {ap_available}")
+                    return
+        else:
+            # Handle generic (non-talent) attacks - consume default AP cost
+            from ..config.action_costs import ACTION_COSTS
+            ap_cost = ACTION_COSTS.get_action_cost('attack')
+            
+            if ap_cost > 0:
+                if hasattr(self.active_unit, 'ap') and self.active_unit.ap >= ap_cost:
+                    self.active_unit.ap -= ap_cost
+                    print(f"   🏃 Attack consumed {ap_cost} AP (remaining: {self.active_unit.ap})")
+                    # Update action points bar immediately after AP consumption
+                    self.refresh_action_points_bar()
+                else:
+                    ap_available = getattr(self.active_unit, 'ap', 0)
+                    print(f"❌ Not enough AP for attack! Need {ap_cost}, have {ap_available}")
+                    return
+        
         print(f"{self.active_unit.name} attacks tile ({target_x}, {target_y})!")
         
         # Apply damage to each unit in unit_list
-        attack_damage = self.active_unit.physical_attack
+        # Use talent damage if available, otherwise use unit's physical attack
+        if talent_data and talent_data.effects:
+            effects = talent_data.effects
+            attack_damage = (effects.get('base_damage', 0) or 
+                           effects.get('physical_damage', 0) or 
+                           self.active_unit.physical_attack)
+        else:
+            attack_damage = self.active_unit.physical_attack
+            
         for target_unit in unit_list:
             print(f"  {target_unit.name} takes {attack_damage} physical damage!")
             target_unit.take_damage(attack_damage, AttackType.PHYSICAL)
@@ -1408,6 +1492,26 @@ class TacticalRPG:
                         destroy(entity)
                         self.unit_entities.remove(entity)
                         break
+        
+        # FIXED: MCP notification for talent-based attacks on successful execution
+        if talent_data:
+            try:
+                from ..config.feature_flags import FeatureFlags
+                if (FeatureFlags.USE_MCP_TOOLS and 
+                    hasattr(self, 'mcp_integration_manager') and 
+                    self.mcp_integration_manager):
+                    
+                    talent_info = {
+                        'id': talent_data.id,
+                        'name': talent_data.name,
+                        'action_type': talent_data.action_type,
+                        'effects': talent_data.effects,
+                        'cost': talent_data.cost
+                    }
+                    self.mcp_integration_manager.notify_talent_executed(talent_info)
+                    print(f"📡 MCP notified: talent {talent_data.name} executed")
+            except Exception as e:
+                print(f"⚠️ MCP notification failed: {e}")
         
         # Clean up modal and reset state
         if self.attack_modal:
@@ -1428,6 +1532,18 @@ class TacticalRPG:
     
     def _cancel_current_attack(self):
         """Cancel the current attack and return to attack mode."""
+        # FIXED: Set cancellation flag to prevent double-click confirmation
+        self.talent_cancelled = True
+        
+        # FIXED: Check for MP restoration on talent-based attacks
+        talent_data = getattr(self, 'current_talent_data', None)
+        if talent_data and talent_data.cost:
+            mp_cost = talent_data.cost.get('mp_cost', 0)
+            if mp_cost > 0:
+                # Note: MP was not consumed yet, so no restoration needed
+                # This message confirms proper cancellation behavior
+                print(f"   💙 Attack cancelled - no MP consumed ({self.active_unit.mp} MP remaining)")
+        
         # Return to attack mode without attacking
         self.clear_highlights()
         self.highlight_active_unit()
@@ -1472,11 +1588,59 @@ class TacticalRPG:
         talent_data = self.current_talent_data
         spell_name = spell_params.get('spell_name', 'Talent Spell')
         
+        # FIXED: Consume MP/AP here during actual execution, not activation
+        if talent_data and talent_data.cost:
+            mp_cost = talent_data.cost.get('mp_cost', 0)
+            ap_cost = talent_data.cost.get('ap_cost', 0)
+            
+            # Check MP availability and consume
+            if mp_cost > 0:
+                if self.active_unit.mp >= mp_cost:
+                    self.active_unit.mp -= mp_cost
+                    print(f"   💙 Consumed {mp_cost} MP (remaining: {self.active_unit.mp})")
+                    # FIXED: Update resource bar immediately after MP consumption
+                    self.refresh_resource_bar()
+                else:
+                    print(f"❌ Not enough MP! Need {mp_cost}, have {self.active_unit.mp}")
+                    return
+            
+            # Check AP availability and consume
+            if ap_cost > 0:
+                if hasattr(self.active_unit, 'ap') and self.active_unit.ap >= ap_cost:
+                    self.active_unit.ap -= ap_cost
+                    print(f"   🏃 Consumed {ap_cost} AP (remaining: {self.active_unit.ap})")
+                    # Update action points bar immediately after AP consumption
+                    self.refresh_action_points_bar()
+                else:
+                    ap_available = getattr(self.active_unit, 'ap', 0)
+                    print(f"❌ Not enough AP! Need {ap_cost}, have {ap_available}")
+                    return
+        
         print(f"{self.active_unit.name} casts {spell_name} on tile ({target_x}, {target_y})!")
         
         # Apply multiple effects from talent data
         effects = talent_data.effects if talent_data else {}
         self._apply_targeted_effects(effects, unit_list, spell_params)
+        
+        # FIXED: MCP notification here on successful execution
+        if talent_data:
+            try:
+                from ..config.feature_flags import FeatureFlags
+                if (FeatureFlags.USE_MCP_TOOLS and 
+                    hasattr(self, 'mcp_integration_manager') and 
+                    self.mcp_integration_manager):
+                    
+                    talent_info = {
+                        'id': talent_data.id,
+                        'name': talent_data.name,
+                        'action_type': talent_data.action_type,
+                        'effects': talent_data.effects,
+                        'cost': talent_data.cost
+                    }
+                    self.mcp_integration_manager.notify_talent_executed(talent_info)
+                    print(f"📡 MCP notified: talent {talent_data.name} executed")
+            except Exception as e:
+                print(f"⚠️ MCP notification failed: {e}")
         
         # Restore original magic properties after execution
         self._restore_original_magic_properties()
@@ -1564,6 +1728,23 @@ class TacticalRPG:
         # Consume MP
         self.active_unit.mp -= mp_cost
         print(f"{self.active_unit.name} consumes {mp_cost} MP (remaining: {self.active_unit.mp})")
+        # FIXED: Update resource bar immediately after MP consumption
+        self.refresh_resource_bar()
+        
+        # Consume AP for generic magic
+        from ..config.action_costs import ACTION_COSTS
+        ap_cost = ACTION_COSTS.get_action_cost('magic')
+        
+        if ap_cost > 0:
+            if hasattr(self.active_unit, 'ap') and self.active_unit.ap >= ap_cost:
+                self.active_unit.ap -= ap_cost
+                print(f"   🏃 Magic consumed {ap_cost} AP (remaining: {self.active_unit.ap})")
+                # Update action points bar immediately after AP consumption
+                self.refresh_action_points_bar()
+            else:
+                ap_available = getattr(self.active_unit, 'ap', 0)
+                print(f"❌ Not enough AP for magic! Need {ap_cost}, have {ap_available}")
+                return
         
         # Get magic spell name
         magic_spell_name = self.active_unit.magic_spell_name if hasattr(self.active_unit, 'magic_spell_name') else "Magic Spell"
@@ -1616,6 +1797,19 @@ class TacticalRPG:
     
     def _cancel_current_magic(self):
         """Cancel the current magic and return to magic mode."""
+        # FIXED: Set cancellation flag to prevent double-click confirmation
+        self.talent_cancelled = True
+        
+        # FIXED: Restore MP if talent was cancelled before execution
+        # Since we no longer consume MP at activation, this ensures no MP loss on cancellation
+        talent_data = getattr(self, 'current_talent_data', None)
+        if talent_data and talent_data.cost:
+            mp_cost = talent_data.cost.get('mp_cost', 0)
+            if mp_cost > 0:
+                # Note: MP was not consumed yet, so no restoration needed
+                # This message confirms proper cancellation behavior
+                print(f"   💙 Magic cancelled - no MP consumed ({self.active_unit.mp} MP remaining)")
+        
         # If this was talent magic, restore original properties
         if hasattr(self, 'current_spell_params') and self.current_spell_params:
             self._restore_original_magic_properties()
@@ -1728,6 +1922,53 @@ class TacticalRPG:
     def on_unit_resource_changed(self, unit):
         """Called when a unit's resource changes to update resource bar if it's the selected unit"""
         util_on_unit_resource_changed(self, unit)
+    
+    def update_action_points_bar(self, unit):
+        """Create or update action points bar for the selected unit"""
+        util_update_action_points_bar(self, unit)
+    
+    def hide_action_points_bar(self):
+        """Hide the action points bar when no unit is selected"""
+        util_hide_action_points_bar(self)
+    
+    def refresh_action_points_bar(self):
+        """Refresh action points bar to match selected unit's current AP"""
+        util_refresh_action_points_bar(self)
+        # Update hotkey slots when AP changes
+        self.update_hotkey_slots()
+    
+    def on_unit_action_points_changed(self, unit):
+        """Called when a unit's action points change to update AP bar if it's the selected unit"""
+        util_on_unit_action_points_changed(self, unit)
+        # Update hotkey slots when any unit's AP changes
+        if unit == self.active_unit:
+            self.update_hotkey_slots()
+    
+    def can_unit_perform_action(self, unit, action_name: str) -> bool:
+        """Check if a unit can perform a specific action based on AP requirements."""
+        if not unit or not hasattr(unit, 'ap'):
+            return True  # If no AP system, allow action
+        
+        from ..config.action_costs import ACTION_COSTS
+        required_ap = ACTION_COSTS.get_action_cost(action_name.lower())
+        
+        return unit.ap >= required_ap
+    
+    def get_action_ap_info(self, unit, action_name: str) -> dict:
+        """Get AP information for an action including current AP, required AP, and availability."""
+        if not unit or not hasattr(unit, 'ap'):
+            return {'available': True, 'current_ap': 100, 'required_ap': 0, 'reason': 'No AP system'}
+        
+        from ..config.action_costs import ACTION_COSTS
+        required_ap = ACTION_COSTS.get_action_cost(action_name.lower())
+        current_ap = unit.ap
+        
+        return {
+            'available': current_ap >= required_ap,
+            'current_ap': current_ap,
+            'required_ap': required_ap,
+            'reason': f"Need {required_ap} AP, have {current_ap}" if current_ap < required_ap else "Available"
+        }
     
     # Hotkey Ability Slot Management Methods
     
@@ -1899,6 +2140,11 @@ class TacticalRPG:
         ability_data = slot.ability_data
         
         if ability_data:
+            # Check if slot is available (not disabled due to insufficient AP)
+            if slot.disabled:
+                print(f"🚫 Hotkey {slot_index + 1} unavailable (insufficient AP)")
+                return
+            
             # Get ability name for feedback (try talent resolution first)
             ability_name = "Unknown"
             talent_id = ability_data.get('talent_id')
@@ -1929,6 +2175,8 @@ class TacticalRPG:
         if talent_id:
             # New format: execute specific talent
             from src.core.assets.data_manager import get_data_manager
+            from game.config.action_costs import ACTION_COSTS
+            
             data_manager = get_data_manager()
             talent_data = data_manager.get_talent(talent_id)
             
@@ -1936,17 +2184,35 @@ class TacticalRPG:
                 print(f"❌ Talent '{talent_id}' not found")
                 return
             
+            # Check AP requirement
+            required_ap = ACTION_COSTS.get_talent_cost(talent_data)
+            current_ap = getattr(self.active_unit, 'ap', 0)
+            
+            if current_ap < required_ap:
+                print(f"❌ Insufficient AP for {talent_data.name}: {current_ap}/{required_ap}")
+                return
+            
             ability_name = talent_data.name
             action_type = talent_data.action_type
             
-            print(f"🔥 Executing specific talent: {ability_name} (ID: {talent_id})")
+            print(f"🔥 Executing specific talent: {ability_name} (ID: {talent_id}, AP: {current_ap}/{required_ap})")
             self._execute_specific_talent(talent_data)
         else:
             # Legacy format: use generic action triggers
+            from game.config.action_costs import ACTION_COSTS
+            
             ability_name = ability_data.get('name', 'Unknown Ability')
             action_type = ability_data.get('action_type', 'Attack')
             
-            print(f"🔥 Activating legacy ability: {ability_name} (Action: {action_type})")
+            # Check AP requirement for legacy abilities
+            required_ap = ACTION_COSTS.get_action_cost(action_type)
+            current_ap = getattr(self.active_unit, 'ap', 0)
+            
+            if current_ap < required_ap:
+                print(f"❌ Insufficient AP for {ability_name}: {current_ap}/{required_ap}")
+                return
+            
+            print(f"🔥 Activating legacy ability: {ability_name} (Action: {action_type}, AP: {current_ap}/{required_ap})")
             
             # Map talent action type to Unit Action
             if action_type == "Attack":
@@ -2036,6 +2302,8 @@ class TacticalRPG:
     
     def _setup_talent_magic_mode(self, talent_data, spell_params):
         """Set up magic mode with talent-specific parameters."""
+        # FIXED: Reset cancellation flag when new talent is activated
+        self.talent_cancelled = False
         setup_talent_magic_mode(self, talent_data, spell_params)
     
     def _restore_original_magic_properties(self):
@@ -2051,7 +2319,7 @@ class TacticalRPG:
         highlight_talent_range(self, unit, talent_type, highlight_color)
     
     def update_hotkey_slots(self):
-        """Update hotkey slots with current active character's abilities."""
+        """Update hotkey slots with current active character's abilities and AP availability."""
         if not self.hotkey_slots:
             return
         
@@ -2071,10 +2339,15 @@ class TacticalRPG:
         
         # Get data manager for talent resolution
         from src.core.assets.data_manager import get_data_manager
+        from game.config.action_costs import ACTION_COSTS
         data_manager = get_data_manager()
         
         # Colors
         empty_color = self._hex_to_color(visual_settings.get('empty_slot_color', '#404040'))
+        disabled_color = self._hex_to_color('#202020')  # Darker gray for insufficient AP
+        
+        # Get current unit's AP
+        current_ap = getattr(self.active_unit, 'ap', 0) if self.active_unit else 0
         
         # Update each slot
         for i, slot in enumerate(self.hotkey_slots):
@@ -2086,18 +2359,40 @@ class TacticalRPG:
                 ability_data = hotkey_abilities[i]
                 slot.ability_data = ability_data
                 
-                # Set slot color based on talent action type
-                action_type = ability_data.get('action_type', 'Unknown')
-                slot.color = self._get_talent_action_color(action_type)
+                # Check AP requirement
+                required_ap = 0
+                talent_id = ability_data.get('talent_id')
                 
-                # Create tooltip with ability data
+                if talent_id:
+                    # New format: get talent-specific AP cost
+                    talent_data = data_manager.get_talent(talent_id)
+                    if talent_data:
+                        required_ap = ACTION_COSTS.get_talent_cost(talent_data)
+                else:
+                    # Legacy format: get action type AP cost
+                    action_type = ability_data.get('action_type', 'Attack')
+                    required_ap = ACTION_COSTS.get_action_cost(action_type)
+                
+                # Set slot color and availability based on AP
+                if current_ap >= required_ap:
+                    # Sufficient AP - normal color
+                    action_type = ability_data.get('action_type', 'Unknown')
+                    slot.color = self._get_talent_action_color(action_type)
+                    slot.disabled = False
+                else:
+                    # Insufficient AP - darker color and disabled
+                    slot.color = disabled_color
+                    slot.disabled = True
+                
+                # Create tooltip with ability data and AP info
                 if hasattr(slot, 'tooltip') and slot.tooltip:
                     destroy(slot.tooltip)
                 
                 ability_name = ability_data.get('name', 'Unknown Ability')
                 ability_description = ability_data.get('description', 'No description available')
                 action_type = ability_data.get('action_type', 'Unknown')
-                tooltip_text = f"{ability_name}\n{ability_description}\nAction: {action_type}\nHotkey: {i + 1}"
+                
+                tooltip_text = f"{ability_name}\n{ability_description}\nAction: {action_type}\nAP Cost: {required_ap}\nHotkey: {i + 1}"
                 
                 slot.tooltip = Tooltip(tooltip_text)
                 slot.tooltip.background.color = color.hsv(0, 0, 0, .8)
@@ -2105,6 +2400,7 @@ class TacticalRPG:
                 # Empty slot (None value or out of bounds)
                 slot.ability_data = None
                 slot.color = empty_color
+                slot.disabled = False
                 
                 # Remove tooltip if exists
                 if hasattr(slot, 'tooltip') and slot.tooltip:

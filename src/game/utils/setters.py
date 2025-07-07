@@ -171,9 +171,10 @@ def setters_set_active_unit(self, unit: Optional[Unit], update_highlights: bool 
                 except Exception as e:
                     print(f"⚠ Error updating control panel: {e}")
                 
-            # Create/update health bar and resource bar for selected unit
+            # Create/update health bar, resource bar, and action points bar for selected unit
             self.update_health_bar(unit)
             self.update_resource_bar(unit)
+            self.update_action_points_bar(unit)
                 
             # Update hotkey slots for selected character
             self.update_hotkey_slots()
@@ -193,6 +194,7 @@ def setters_set_active_unit(self, unit: Optional[Unit], update_highlights: bool 
         if update_ui:
             self.hide_health_bar()
             self.hide_resource_bar()
+            self.hide_action_points_bar()
             self.hide_hotkey_slots()
                 
             # Clear control panel unit info

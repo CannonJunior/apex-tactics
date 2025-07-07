@@ -77,6 +77,10 @@ class UIStyleManager:
                     "rage": {"color": {"r": 1.0, "g": 0.0, "b": 0.0, "a": 1.0}, "label": "RAGE"},
                     "mp": {"color": {"r": 0.0, "g": 0.0, "b": 1.0, "a": 1.0}, "label": "MP"},
                     "kwan": {"color": {"r": 1.0, "g": 1.0, "b": 0.0, "a": 1.0}, "label": "KWAN"}
+                },
+                "action_points_bar": {
+                    "color": {"r": 1.0, "g": 0.5, "b": 0.0, "a": 1.0},
+                    "background_color": {"r": 0.2, "g": 0.2, "b": 0.2, "a": 1.0}
                 }
             },
             "inventory": {
@@ -206,6 +210,14 @@ class UIStyleManager:
     def get_bar_label_color(self) -> Any:
         """Get bar label text color from styles."""
         return self.get_color('labels.bar_labels.color', (1.0, 1.0, 1.0, 1.0))
+    
+    def get_action_points_bar_color(self) -> Any:
+        """Get action points bar foreground color from styles."""
+        return self.get_color('bars.action_points_bar.color', (1.0, 0.5, 0.0, 1.0))  # Orange
+    
+    def get_action_points_bar_bg_color(self) -> Any:
+        """Get action points bar background color from styles."""
+        return self.get_color('bars.action_points_bar.background_color', (0.2, 0.2, 0.2, 1.0))
     
     def get_highlight_color(self, highlight_type: str) -> Any:
         """

@@ -17,38 +17,23 @@ def execute_specific_talent(self, talent_data):
 
     print(f"💫 Executing '{talent_name}' with specific effects:")
 
-    # Check costs and apply them
+    # FIXED: Only check MP availability but don't consume yet
+    # MP will be consumed when talent is actually executed, not just activated
     mp_cost = cost.get('mp_cost', 0)
     if mp_cost > 0:
         if self.active_unit.mp < mp_cost:
             print(f"❌ Not enough MP! Need {mp_cost}, have {self.active_unit.mp}")
             return
-        self.active_unit.mp -= mp_cost
-        print(f"   💙 Consumed {mp_cost} MP (remaining: {self.active_unit.mp})")
+        # Store MP cost for later consumption, don't consume here
+        print(f"   💙 MP cost: {mp_cost} (will be consumed on execution)")
 
     # Execute talent using generalized effect system
     self._execute_talent_effects(talent_data)
 
-    # MCP Integration Hook (Phase 3 - Talent Execution Hook)
-    try:
-        from ...config.feature_flags import FeatureFlags
-        if (FeatureFlags.USE_MCP_TOOLS and 
-            hasattr(self, 'mcp_integration_manager') and 
-            self.mcp_integration_manager):
-            
-            # Notify MCP system of talent execution for learning
-            talent_info = {
-                'id': talent_id,
-                'name': talent_name,
-                'action_type': talent_data.action_type,
-                'effects': effects,
-                'cost': cost
-            }
-            self.mcp_integration_manager.notify_talent_executed(talent_info)
-    except Exception as e:
-        print(f"⚠️ MCP notification failed: {e}")
-
-    print(f"   ✅ '{talent_name}' execution completed")
+    # FIXED: MCP notifications moved to actual execution methods
+    # No longer notify here during activation, only on successful execution
+    
+    print(f"   ✅ '{talent_name}' activation completed")
 
 def execute_talent_effects(self, talent_data):
     """Execute talent using generalized effect system supporting multiple effects."""
@@ -136,6 +121,9 @@ def apply_immediate_effects(self, talent_data):
         self.active_unit.mp = min(self.active_unit.max_mp, self.active_unit.mp + mp_restore)
         actual_restoration = self.active_unit.mp - old_mp
         print(f"   💙 Restored {actual_restoration} MP (now {self.active_unit.mp}/{self.active_unit.max_mp})")
+        # FIXED: Update resource bar immediately after MP restoration
+        if hasattr(self, 'refresh_resource_bar'):
+            self.refresh_resource_bar()
 
     # HP restoration (self-healing)
     if 'hp_restoration' in effects:
@@ -144,6 +132,9 @@ def apply_immediate_effects(self, talent_data):
         self.active_unit.hp = min(self.active_unit.max_hp, self.active_unit.hp + hp_restore)
         actual_restoration = self.active_unit.hp - old_hp
         print(f"   ❤️  Restored {actual_restoration} HP (now {self.active_unit.hp}/{self.active_unit.max_hp})")
+        # FIXED: Update health bar immediately after HP restoration
+        if hasattr(self, 'refresh_health_bar'):
+            self.refresh_health_bar()
 
     # Stat bonuses (temporary buffs)
     if 'stat_bonus' in effects:

@@ -16,6 +16,7 @@ except ImportError:
 
 from core.ecs.entity import Entity as GameEntity
 from components.stats.attributes import AttributeStats
+from game.config.action_costs import ACTION_COSTS
 
 
 class CombatInterface:
@@ -198,7 +199,7 @@ class CombatInterface:
                 )
     
     def _update_available_actions(self):
-        """Update which action buttons are available"""
+        """Update which action buttons are available based on AP"""
         if not self.selected_unit:
             # Disable all buttons
             for button in self.action_buttons:
@@ -206,17 +207,66 @@ class CombatInterface:
                 button.disabled = True
             return
         
-        # Enable all buttons for now (would check actual availability)
+        # Get unit's current AP
+        attributes = self.selected_unit.get_component(AttributeStats)
+        current_ap = getattr(attributes, 'ap', 0) if attributes else 0
+        
+        # Check each action button for AP availability
         for button in self.action_buttons:
-            button.color = color.Color(0.3, 0.3, 0.35, 1.0)
-            button.disabled = False
+            action_text = button.text.lower()
+            
+            # Map button text to action costs
+            if action_text == 'move':
+                required_ap = ACTION_COSTS.MOVEMENT_MODE_ENTER
+            elif action_text == 'attack':
+                required_ap = ACTION_COSTS.BASIC_ATTACK
+            elif action_text == 'ability':
+                required_ap = ACTION_COSTS.BASIC_MAGIC  # Default for abilities
+            elif action_text == 'guard':
+                required_ap = ACTION_COSTS.GUARD
+            elif action_text == 'wait':
+                required_ap = ACTION_COSTS.WAIT
+            else:
+                required_ap = 0  # End Turn and other actions
+            
+            # Enable/disable button based on AP availability
+            if current_ap >= required_ap:
+                button.color = color.Color(0.3, 0.3, 0.35, 1.0)
+                button.disabled = False
+            else:
+                button.color = color.Color(0.15, 0.15, 0.15, 1.0)  # Darker gray for insufficient AP
+                button.disabled = True
     
     def _on_action_click(self, action: str):
         """Handle action button click"""
         if not self.selected_unit:
             return
         
-        print(f"Action selected: {action}")
+        # Get unit's current AP
+        attributes = self.selected_unit.get_component(AttributeStats)
+        current_ap = getattr(attributes, 'ap', 0) if attributes else 0
+        
+        # Check AP requirement for the action
+        action_text = action.lower()
+        if action_text == 'move':
+            required_ap = ACTION_COSTS.MOVEMENT_MODE_ENTER
+        elif action_text == 'attack':
+            required_ap = ACTION_COSTS.BASIC_ATTACK
+        elif action_text == 'ability':
+            required_ap = ACTION_COSTS.BASIC_MAGIC
+        elif action_text == 'guard':
+            required_ap = ACTION_COSTS.GUARD
+        elif action_text == 'wait':
+            required_ap = ACTION_COSTS.WAIT
+        else:
+            required_ap = 0
+        
+        # Validate AP before executing action
+        if current_ap < required_ap:
+            print(f"❌ Insufficient AP for {action}: {current_ap}/{required_ap}")
+            return
+        
+        print(f"✅ Action selected: {action} (AP: {current_ap}/{required_ap})")
         
         # This would trigger the appropriate game logic
         # For now, just print the action

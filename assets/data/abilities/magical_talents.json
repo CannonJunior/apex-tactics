@@ -21,7 +21,8 @@
       },
       "cost": {
         "talent_points": 1,
-        "mp_cost": 5
+        "mp_cost": 5,
+        "ap_cost": 1
       }
     },
     {
@@ -42,7 +43,8 @@
       },
       "cost": {
         "talent_points": 1,
-        "mp_cost": 8
+        "mp_cost": 8,
+        "ap_cost": 2
       }
     },
     {
@@ -64,7 +66,8 @@
       },
       "cost": {
         "talent_points": 2,
-        "mp_cost": 15
+        "mp_cost": 15,
+        "ap_cost": 2
       }
     },
     {
@@ -86,7 +89,8 @@
       },
       "cost": {
         "talent_points": 2,
-        "mp_cost": 20
+        "mp_cost": 20,
+        "ap_cost": 3
       }
     },
     {
@@ -107,7 +111,8 @@
       },
       "cost": {
         "talent_points": 3,
-        "mp_cost": 25
+        "mp_cost": 25,
+        "ap_cost": 3
       }
     },
     {
@@ -130,7 +135,8 @@
       },
       "cost": {
         "talent_points": 4,
-        "mp_cost": 50
+        "mp_cost": 50,
+        "ap_cost": 4
       }
     },
     {
@@ -156,7 +162,8 @@
       },
       "cost": {
         "talent_points": 5,
-        "mp_cost": 40
+        "mp_cost": 40,
+        "ap_cost": 4
       }
     },
     {
@@ -184,7 +191,8 @@
       },
       "cost": {
         "talent_points": 6,
-        "mp_cost": 60
+        "mp_cost": 60,
+        "ap_cost": 5
       }
     }
   ]

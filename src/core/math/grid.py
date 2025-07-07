@@ -302,11 +302,13 @@ class TacticalGrid:
         # Additional cost from height difference
         height_cost = from_cell.get_height_difference_cost(to_cell)
         
-        # Diagonal movement costs more
+        # Note: Only Manhattan distance movement allowed (no diagonals)
+        # Adjacent cells only (distance should always be 1 for valid moves)
         distance = from_pos.manhattan_distance_to(to_pos)
-        diagonal_multiplier = 1.414 if distance > 1 else 1.0
+        if distance != 1:
+            return float('inf')  # Only allow movement to adjacent cells (no diagonals)
         
-        return (base_cost + height_cost) * diagonal_multiplier
+        return base_cost + height_cost
     
     def get_line_of_sight(self, from_pos: Vector2Int, to_pos: Vector2Int) -> bool:
         """
