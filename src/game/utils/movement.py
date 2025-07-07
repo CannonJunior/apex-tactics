@@ -85,7 +85,9 @@ def calculate_path_cost(self) -> int:
 
 def execute_movement(self):
     """Execute the planned movement."""
+    print("🚀 EXECUTE_MOVEMENT FUNCTION CALLED! 🚀")
     if not self.path_cursor or not self.active_unit:
+        print("❌ Movement execution cancelled - no path cursor or active unit")
         return
 
     # Store old position for TacticalGrid update
@@ -98,6 +100,8 @@ def execute_movement(self):
     # Import action costs and calculate AP required
     from ..config.action_costs import ACTION_COSTS
     ap_cost = ACTION_COSTS.get_movement_cost(distance)
+    print(f"🏃 Movement from ({old_pos.x}, {old_pos.y}) to ({new_pos.x}, {new_pos.y})")
+    print(f"   📏 Distance: {distance}, AP cost: {ap_cost}")
     
     # Check if unit has enough AP for movement
     if hasattr(self.active_unit, 'ap') and ap_cost > 0:
@@ -105,15 +109,29 @@ def execute_movement(self):
             print(f"❌ Not enough AP for movement! Need {ap_cost}, have {self.active_unit.ap}")
             return
     
+    # Consume AP before attempting movement (movement should always cost AP)
+    if hasattr(self.active_unit, 'ap') and ap_cost > 0:
+        old_ap = self.active_unit.ap
+        self.active_unit.ap -= ap_cost
+        print(f"   🏃 Movement consumed {ap_cost} AP (was: {old_ap}, now: {self.active_unit.ap})")
+        
+        # Update AP bar immediately - try multiple methods
+        if hasattr(self, 'refresh_action_points_bar'):
+            self.refresh_action_points_bar()
+            print("   📊 Called refresh_action_points_bar()")
+        elif hasattr(self, 'util_refresh_action_points_bar'):
+            self.util_refresh_action_points_bar()
+            print("   📊 Called util_refresh_action_points_bar()")
+        else:
+            print("   ⚠️ No AP bar refresh method found")
+    else:
+        print(f"   ⚠️ AP consumption skipped - hasattr(ap): {hasattr(self.active_unit, 'ap')}, ap_cost: {ap_cost}")
+    
     # Move unit to cursor position
-    if self.grid.move_unit(self.active_unit, self.path_cursor[0], self.path_cursor[1]):
-        # Consume AP for successful movement
-        if hasattr(self.active_unit, 'ap') and ap_cost > 0:
-            self.active_unit.ap -= ap_cost
-            print(f"   🏃 Movement consumed {ap_cost} AP (remaining: {self.active_unit.ap})")
-            # Update AP bar immediately
-            if hasattr(self, 'refresh_action_points_bar'):
-                self.refresh_action_points_bar()
+    movement_successful = self.grid.move_unit(self.active_unit, self.path_cursor[0], self.path_cursor[1])
+    print(f"🏃 Grid movement result: {movement_successful}")
+    
+    if movement_successful:
         
         # Update TacticalGrid positions
         if self.tactical_grid:
@@ -147,7 +165,7 @@ def execute_movement(self):
         print(f"Unit moved successfully. Press END TURN when ready.")
 
 def is_valid_move_destination(self, x: int, y: int) -> bool:
-    """Check if a position is within the unit's movement range."""
+    """Check if a position is within the unit's movement range and AP limit."""
     if not self.active_unit:
         return False
 
@@ -157,6 +175,13 @@ def is_valid_move_destination(self, x: int, y: int) -> bool:
     # Check if within movement points and valid grid position
     if total_distance > self.active_unit.current_move_points:
         return False
+    
+    # Check if unit has enough AP for this movement
+    if hasattr(self.active_unit, 'ap'):
+        from ..config.action_costs import ACTION_COSTS
+        ap_cost = ACTION_COSTS.get_movement_cost(total_distance)
+        if self.active_unit.ap < ap_cost:
+            return False
 
     if not (0 <= x < self.grid.width and 0 <= y < self.grid.height):
         return False
@@ -214,10 +239,15 @@ def movement_handle_path_movement(self, direction: str):
                 start_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
                 end_pos = Vector2Int(new_pos[0], new_pos[1])
                     
+                # Calculate effective movement limit considering both movement points and AP
+                from ..config.action_costs import ACTION_COSTS
+                max_ap_distance = getattr(self.active_unit, 'ap', 0)  # 1 AP per tile
+                effective_movement_limit = min(self.active_unit.current_move_points, max_ap_distance)
+                
                 calculated_path = self.pathfinder.calculate_movement_path(
                     start_pos, 
                     end_pos, 
-                    float(self.active_unit.current_move_points)
+                    float(effective_movement_limit)
                 )
                     
                 if calculated_path and len(calculated_path) > 1:
@@ -263,10 +293,16 @@ def movement_handle_mouse_movement(self, clicked_tile: Tuple[int, int]) -> bool:
     if start_pos.x == end_pos.x and start_pos.y == end_pos.y:
         return True
         
-    # Validate that clicked tile is within unit's movement range
+    # Validate that clicked tile is within unit's movement range and AP limit
     distance = abs(end_pos.x - start_pos.x) + abs(end_pos.y - start_pos.y)
+    max_ap_distance = getattr(self.active_unit, 'ap', 0)  # 1 AP per tile
+    
     if distance > self.active_unit.current_move_points:
         print(f"Target tile ({end_pos.x}, {end_pos.y}) is too far. Distance: {distance}, Movement points: {self.active_unit.current_move_points}")
+        return True  # Handle the click but don't move
+    
+    if distance > max_ap_distance:
+        print(f"Target tile ({end_pos.x}, {end_pos.y}) requires too much AP. Distance: {distance}, AP available: {max_ap_distance}")
         return True  # Handle the click but don't move
         
     # Check if target tile is occupied (blocked by another unit)
@@ -278,10 +314,14 @@ def movement_handle_mouse_movement(self, clicked_tile: Tuple[int, int]) -> bool:
         
     # Calculate path using pathfinder
     try:
+        # Calculate effective movement limit considering both movement points and AP
+        max_ap_distance = getattr(self.active_unit, 'ap', 0)  # 1 AP per tile
+        effective_movement_limit = min(self.active_unit.current_move_points, max_ap_distance)
+        
         calculated_path = self.pathfinder.calculate_movement_path(
             start_pos, 
             end_pos, 
-            float(self.active_unit.current_move_points)
+            float(effective_movement_limit)
         )
             
         if calculated_path and len(calculated_path) > 1:
@@ -298,7 +338,7 @@ def movement_handle_mouse_movement(self, clicked_tile: Tuple[int, int]) -> bool:
             # No valid path found - try to get as close as possible
             reachable_positions = self.pathfinder.find_reachable_positions(
                 start_pos, 
-                float(self.active_unit.current_move_points)
+                float(effective_movement_limit)
             )
                 
             if reachable_positions:
@@ -310,7 +350,7 @@ def movement_handle_mouse_movement(self, clicked_tile: Tuple[int, int]) -> bool:
                 closest_path = self.pathfinder.calculate_movement_path(
                     start_pos,
                     closest_pos,
-                    float(self.active_unit.current_move_points)
+                    float(effective_movement_limit)
                 )
                     
                 if closest_path and len(closest_path) > 1:

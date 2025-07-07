@@ -484,7 +484,7 @@ class TacticalRPG:
                     break
     
     def highlight_movement_range(self):
-        """Highlight all tiles the selected unit can move to."""
+        """Highlight all tiles the selected unit can move to based on movement points and AP."""
         if not self.active_unit:
             return
         
@@ -492,11 +492,21 @@ class TacticalRPG:
         self.clear_highlights()
         
         highlight_count = 0
+        # Get AP-based movement limit
+        from game.config.action_costs import ACTION_COSTS
+        current_ap = getattr(self.active_unit, 'ap', 0)
+        max_ap_distance = current_ap  # Since movement costs 1 AP per tile
+        
         # Create highlight entities for movement range
         for x in range(self.grid.width):
             for y in range(self.grid.height):
                 distance = abs(x - self.active_unit.x) + abs(y - self.active_unit.y)
-                if distance <= self.active_unit.current_move_points and self.grid.is_valid(x, y):
+                
+                # Check both movement points and AP limits
+                within_move_points = distance <= self.active_unit.current_move_points
+                within_ap_limit = distance <= max_ap_distance
+                
+                if within_move_points and within_ap_limit and self.grid.is_valid(x, y):
                     if distance == 0:
                         # Current position - different color
                         highlight_color = self._get_highlight_style('selection', color.white)
@@ -1139,6 +1149,28 @@ class TacticalRPG:
         # Store old position for TacticalGrid update
         old_pos = Vector2Int(self.active_unit.x, self.active_unit.y)
         new_pos = Vector2Int(self.path_cursor[0], self.path_cursor[1])
+        
+        # Calculate movement distance and AP cost
+        distance = abs(new_pos.x - old_pos.x) + abs(new_pos.y - old_pos.y)
+        
+        # Import action costs and calculate AP required
+        from ..config.action_costs import ACTION_COSTS
+        ap_cost = ACTION_COSTS.get_movement_cost(distance)
+        
+        # Check if unit has enough AP for movement
+        if hasattr(self.active_unit, 'ap') and ap_cost > 0:
+            if self.active_unit.ap < ap_cost:
+                print(f"❌ Not enough AP for movement! Need {ap_cost}, have {self.active_unit.ap}")
+                return
+        
+        # Consume AP before attempting movement
+        if hasattr(self.active_unit, 'ap') and ap_cost > 0:
+            old_ap = self.active_unit.ap
+            self.active_unit.ap -= ap_cost
+            print(f"🏃 Movement consumed {ap_cost} AP (was: {old_ap}, now: {self.active_unit.ap})")
+            
+            # Update AP bar immediately
+            self.refresh_action_points_bar()
         
         # Move unit to cursor position
         if self.grid.move_unit(self.active_unit, self.path_cursor[0], self.path_cursor[1]):
