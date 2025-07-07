@@ -1,0 +1,155 @@
+{
+  "version": "1.0",
+  "description": "AI behavior configuration for tactical combat",
+  
+  "difficulty_levels": {
+    "SCRIPTED": {
+      "description": "Basic rule-based AI with predictable patterns",
+      "reaction_time_ms": 1500,
+      "planning_depth": 1,
+      "uses_mcp_tools": false,
+      "decision_randomness": 0.3,
+      "learning_enabled": false,
+      "adaptation_rate": 0.0,
+      "threat_assessment_accuracy": 0.6,
+      "tactical_analysis_depth": "basic"
+    },
+    "STRATEGIC": {
+      "description": "Tactical AI with lookahead planning and positioning",
+      "reaction_time_ms": 800,
+      "planning_depth": 2,
+      "uses_mcp_tools": true,
+      "decision_randomness": 0.15,
+      "learning_enabled": false,
+      "adaptation_rate": 0.1,
+      "threat_assessment_accuracy": 0.8,
+      "tactical_analysis_depth": "standard"
+    },
+    "ADAPTIVE": {
+      "description": "AI that adapts to player patterns and strategies",
+      "reaction_time_ms": 500,
+      "planning_depth": 3,
+      "uses_mcp_tools": true,
+      "decision_randomness": 0.08,
+      "learning_enabled": true,
+      "adaptation_rate": 0.3,
+      "threat_assessment_accuracy": 0.9,
+      "tactical_analysis_depth": "advanced"
+    },
+    "LEARNING": {
+      "description": "Machine learning AI that improves over time",
+      "reaction_time_ms": 300,
+      "planning_depth": 4,
+      "uses_mcp_tools": true,
+      "decision_randomness": 0.03,
+      "learning_enabled": true,
+      "adaptation_rate": 0.5,
+      "threat_assessment_accuracy": 0.95,
+      "tactical_analysis_depth": "expert"
+    }
+  },
+  
+  "behavior_patterns": {
+    "aggressive": {
+      "description": "Focuses on offense and direct confrontation",
+      "prefers_attack": 0.8,
+      "risk_tolerance": 0.7,
+      "positioning_weight": 0.3,
+      "movement_preference": 0.7,
+      "ability_usage_rate": 0.8,
+      "retreat_threshold": 0.2,
+      "focus_fire_tendency": 0.9
+    },
+    "defensive": {
+      "description": "Emphasizes protection and area control",
+      "prefers_attack": 0.4,
+      "risk_tolerance": 0.2,
+      "positioning_weight": 0.8,
+      "movement_preference": 0.4,
+      "ability_usage_rate": 0.5,
+      "retreat_threshold": 0.6,
+      "focus_fire_tendency": 0.4
+    },
+    "balanced": {
+      "description": "Balanced approach adapting to situation",
+      "prefers_attack": 0.6,
+      "risk_tolerance": 0.5,
+      "positioning_weight": 0.5,
+      "movement_preference": 0.6,
+      "ability_usage_rate": 0.6,
+      "retreat_threshold": 0.4,
+      "focus_fire_tendency": 0.6
+    },
+    "opportunistic": {
+      "description": "Exploits weaknesses and positioning errors",
+      "prefers_attack": 0.7,
+      "risk_tolerance": 0.6,
+      "positioning_weight": 0.7,
+      "movement_preference": 0.8,
+      "ability_usage_rate": 0.7,
+      "retreat_threshold": 0.3,
+      "focus_fire_tendency": 0.8
+    }
+  },
+  
+  "tactical_priorities": {
+    "target_selection": {
+      "low_health_weight": 0.3,
+      "high_threat_weight": 0.4,
+      "proximity_weight": 0.2,
+      "tactical_value_weight": 0.1
+    },
+    "positioning": {
+      "cover_preference": 0.6,
+      "flanking_preference": 0.7,
+      "formation_maintenance": 0.5,
+      "retreat_path_consideration": 0.8
+    },
+    "resource_management": {
+      "mp_conservation": 0.6,
+      "ap_efficiency": 0.8,
+      "ability_timing": 0.7,
+      "save_for_opportunity": 0.5
+    }
+  },
+  
+  "mcp_tool_weights": {
+    "battlefield_analysis": 1.0,
+    "threat_assessment": 0.9,
+    "action_outcome_analysis": 0.8,
+    "timeline_preview": 0.6,
+    "unit_details": 0.7
+  },
+  
+  "learning_parameters": {
+    "pattern_recognition_window": 10,
+    "adaptation_decay_rate": 0.95,
+    "minimum_sample_size": 5,
+    "confidence_threshold": 0.7,
+    "learning_rate": 0.1
+  },
+  
+  "coordination_settings": {
+    "leader_influence_radius": 3,
+    "formation_cohesion_weight": 0.6,
+    "synchronized_attack_preference": 0.7,
+    "support_unit_priority": 0.5,
+    "tactical_communication_range": 4
+  },
+  
+  "fallback_behavior": {
+    "simple_ai_enabled": true,
+    "random_action_probability": 0.1,
+    "default_move_preference": 0.5,
+    "basic_attack_preference": 0.7,
+    "wait_probability": 0.2
+  },
+  
+  "performance_settings": {
+    "max_decision_time_ms": 3000,
+    "analysis_timeout_ms": 2000,
+    "mcp_call_timeout_ms": 1000,
+    "enable_decision_caching": true,
+    "cache_expiry_turns": 3
+  }
+}
