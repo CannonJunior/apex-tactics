@@ -12,6 +12,71 @@ try:
 except ImportError:
     URSINA_AVAILABLE = False
 
+def hotkey_update_hotkey_slot_ability_data(self, slot_index: int, ability_data: Dict[str, Any]):
+    """Update the ability_data for a specific hotkey slot."""
+    if not hasattr(self, 'hotkey_slots') or not self.hotkey_slots:
+        print(f"❌ No hotkey slots available")
+        return False
+
+    if slot_index < 0 or slot_index >= len(self.hotkey_slots):
+        print(f"❌ Invalid slot index {slot_index}. Valid range: 0-{len(self.hotkey_slots)-1}")
+        return False
+
+    slot = self.hotkey_slots[slot_index]
+
+    # Store the old ability data for logging
+    old_ability = getattr(slot, 'ability_data', None)
+    old_name = old_ability.get('name', 'Empty') if old_ability else 'Empty'
+
+    # Update the slot's ability data
+    slot.ability_data = ability_data.copy()  # Create a copy to avoid reference issues
+
+    # Update the slot's visual appearance if needed
+    if hasattr(slot, 'color') and ability_data:
+        try:
+            # Get color based on action type
+            action_type = ability_data.get('action_type', 'Attack')
+            slot.color = self._get_talent_action_color(action_type)
+        except Exception as e:
+            print(f"⚠️ Could not update slot color: {e}")
+
+    # Log the change
+    new_name = ability_data.get('name', 'Unknown') if ability_data else 'Empty'
+    print(f"🔄 Hotkey slot {slot_index + 1}: '{old_name}' → '{new_name}'")
+
+    # Update character state manager if available
+    if hasattr(self, 'character_state_manager') and self.character_state_manager:
+        try:
+            active_character = self.character_state_manager.get_active_character()
+            if active_character:
+                # Update the character's hotkey abilities list
+                if not hasattr(active_character, 'hotkey_abilities'):
+                    active_character.hotkey_abilities = [None] * len(self.hotkey_slots)
+
+                # Ensure the list is long enough
+                while len(active_character.hotkey_abilities) <= slot_index:
+                    active_character.hotkey_abilities.append(None)
+
+                # Update the specific slot
+                active_character.hotkey_abilities[slot_index] = ability_data.copy() if ability_data else None
+
+                print(f"✅ Updated character's hotkey ability {slot_index + 1}")
+        except Exception as e:
+            print(f"⚠️ Could not update character state: {e}")
+
+    return True
+
+def hotkey_get_hotkey_slot_ability_data(self, slot_index: int) -> Optional[Dict[str, Any]]:
+    """Get the ability_data for a specific hotkey slot."""
+    if not hasattr(self, 'hotkey_slots') or not self.hotkey_slots:
+        return None
+
+    if slot_index < 0 or slot_index >= len(self.hotkey_slots):
+        return None
+
+    slot = self.hotkey_slots[slot_index]
+    return getattr(slot, 'ability_data', None)
+
 def create_hotkey_slots(self):
     """Create hotkey ability slots positioned below the resource bar."""
     if not URSINA_AVAILABLE or not self.hotkey_config:
