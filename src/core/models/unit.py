@@ -54,6 +54,9 @@ class Unit:
         self.equipped_armor = None
         self.equipped_accessory = None
         
+        # Target tracking - stores what unit this unit is currently targeting
+        self.target_unit = None
+        
         # Default action options using configuration
         self.action_options = config.get_value('units.unit_generation.default_action_options', ["Move", "Attack", "Spirit", "Magic", "Inventory"])
         

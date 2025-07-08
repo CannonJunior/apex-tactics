@@ -689,6 +689,14 @@ class TacticalRPG:
             self.attack_target_tile = (x, y)
             self.attack_modal_from_double_click = from_double_click
             
+            # Save target unit if there's a unit on the targeted tile
+            if (x, y) in self.grid.units:
+                target_unit = self.grid.units[(x, y)]
+                self.set_unit_target(self.active_unit, target_unit)
+            else:
+                # Clear target if attacking empty tile
+                self.set_unit_target(self.active_unit, None)
+            
             # Clear highlights and show attack effect area
             self.clear_highlights()
             self.highlight_active_unit()
@@ -852,6 +860,14 @@ class TacticalRPG:
             # Valid magic target tile
             self.magic_target_tile = (x, y)
             self.magic_modal_from_double_click = from_double_click
+            
+            # Save target unit if there's a unit on the targeted tile
+            if (x, y) in self.grid.units:
+                target_unit = self.grid.units[(x, y)]
+                self.set_unit_target(self.active_unit, target_unit)
+            else:
+                # Clear target if casting magic on empty tile
+                self.set_unit_target(self.active_unit, None)
             
             # Clear highlights and show magic effect area
             self.clear_highlights()
@@ -2189,3 +2205,81 @@ class TacticalRPG:
     def _highlight_talent_range_no_clear(self, unit, talent_type: str, highlight_color):
         """Highlight the talent-specific range around the unit (without clearing existing highlights)."""
         target_highlight_talent_range_no_clear(self, unit, talent_type, highlight_color)
+    
+    # Target Management Methods
+    
+    def _restore_unit_target(self, unit, target_unit):
+        """Restore a unit's target selection when the unit is reactivated"""
+        try:
+            if target_unit and hasattr(target_unit, 'x') and hasattr(target_unit, 'y'):
+                # Use target_set_targeted_units to properly set the target
+                from game.utils.targets import target_set_targeted_units
+                
+                # Set the target unit as a targeted unit (creates health bars, etc.)
+                target_set_targeted_units(self, [target_unit])
+                
+                # Also restore visual highlighting for the target
+                if hasattr(self, 'clear_highlights'):
+                    self.clear_highlights()
+                
+                # Highlight the unit itself
+                if hasattr(self, 'highlight_active_unit'):
+                    self.highlight_active_unit()
+                
+                # Highlight the target
+                self._highlight_target_unit(target_unit)
+                
+                print(f"✅ Target restored with targeting system: {unit.name} → {target_unit.name}")
+                
+        except Exception as e:
+            print(f"⚠️ Failed to restore target: {e}")
+            # Clear invalid target
+            unit.target_unit = None
+    
+    def _highlight_target_unit(self, target_unit):
+        """Add special highlighting for a targeted unit"""
+        try:
+            if hasattr(self, 'highlight_entities'):
+                # Create a target highlight overlay
+                target_highlight = Entity(
+                    model='cube',
+                    color=color.orange,  # Orange color for targets
+                    scale=(0.9, 0.2, 0.9),
+                    position=(target_unit.x + 0.5, 0.1, target_unit.y + 0.5),  # Slightly above ground
+                    alpha=0.8
+                )
+                
+                # Store in highlight entities for cleanup
+                if not hasattr(self, 'highlight_entities'):
+                    self.highlight_entities = []
+                self.highlight_entities.append(target_highlight)
+                
+                print(f"🎯 Highlighted target: {target_unit.name} at ({target_unit.x}, {target_unit.y})")
+                
+        except Exception as e:
+            print(f"⚠️ Failed to highlight target: {e}")
+    
+    def set_unit_target(self, unit, target_unit):
+        """Set a unit's target and store it for persistence"""
+        try:
+            if hasattr(unit, 'target_unit'):
+                unit.target_unit = target_unit
+                if target_unit:
+                    print(f"🎯 {unit.name} now targets {target_unit.name}")
+                    self._highlight_target_unit(target_unit)
+                else:
+                    print(f"🎯 {unit.name} target cleared")
+            
+        except Exception as e:
+            print(f"⚠️ Failed to set unit target: {e}")
+    
+    def clear_unit_target(self, unit):
+        """Clear a unit's target"""
+        try:
+            if hasattr(unit, 'target_unit'):
+                if unit.target_unit:
+                    print(f"🎯 Clearing target for {unit.name}")
+                unit.target_unit = None
+                
+        except Exception as e:
+            print(f"⚠️ Failed to clear unit target: {e}")

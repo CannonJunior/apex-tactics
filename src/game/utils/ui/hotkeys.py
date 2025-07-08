@@ -337,7 +337,6 @@ def hotkey_update_hotkey_slots(self):
             if current_ap >= required_ap:
                 # Sufficient AP - normal color
                 action_type = ability_data.get('action_type', 'Unknown')
-                print(vars(self))
                 #slot.color = self._get_talent_action_color(action_type)
                 slot.color = get_talent_action_color(self, action_type)
                 slot.disabled = False

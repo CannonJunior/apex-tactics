@@ -142,6 +142,11 @@ def setters_set_active_unit(self, unit: Optional[Unit], update_highlights: bool 
         self.current_path = []
         self.path_cursor = (unit.x, unit.y)
         self.current_mode = None
+        
+        # Restore target if this unit had a previous target
+        if hasattr(unit, 'target_unit') and unit.target_unit is not None:
+            print(f"🎯 Restoring target for {unit.name}: {unit.target_unit.name}")
+            self._restore_unit_target(unit, unit.target_unit)
             
         # Update character state manager with selected character
         if hasattr(unit, 'character_instance_id'):
