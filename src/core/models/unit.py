@@ -57,6 +57,9 @@ class Unit:
         # Target tracking - stores what unit this unit is currently targeting
         self.target_unit = None
         
+        # Enemy unit identification - True if this unit is controlled by AI
+        self.is_enemy_unit = False
+        
         # Default action options using configuration
         self.action_options = config.get_value('units.unit_generation.default_action_options', ["Move", "Attack", "Spirit", "Magic", "Inventory"])
         
@@ -130,8 +133,13 @@ class Unit:
         # Add weapon range bonus
         if self.equipped_weapon and isinstance(self.equipped_weapon, dict) and 'stats' in self.equipped_weapon:
             weapon_range = self.equipped_weapon['stats'].get('attack_range', 0)
-            return max(base_range, weapon_range)  # Use higher value
+            final_range = max(base_range, weapon_range)  # Use higher value
+            
+            # Debug output for attack range calculation
+            print(f"📏 {self.name} attack_range: base={base_range}, weapon={weapon_range}, final={final_range}")
+            return final_range
         
+        print(f"📏 {self.name} attack_range: base={base_range} (no weapon)")
         return base_range
     
     @property

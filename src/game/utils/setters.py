@@ -54,12 +54,15 @@ def setters_setup_battle(self):
     # Load enemy units from config  
     for unit_config in self.battlefield_config.get('units', {}).get('enemy_units', []):
         unit_type = getattr(UnitType, unit_config.get('type', 'UBERMENSCH'))
-        enemy_units.append(Unit(
+        enemy_unit = Unit(
             unit_config.get('name', 'Enemy'),
             unit_type,
             unit_config.get('start_x', 6),
             unit_config.get('start_y', 6)
-        ))
+        )
+        # Mark as enemy unit for AI control
+        enemy_unit.is_enemy_unit = True
+        enemy_units.append(enemy_unit)
         
     # Fallback to hard-coded units if config is empty
     if not player_units:
@@ -68,10 +71,20 @@ def setters_setup_battle(self):
             Unit("Sage", UnitType.MAGI, 2, 1)
         ]
     if not enemy_units:
-        enemy_units = [
-            Unit("Orc", UnitType.UBERMENSCH, 6, 6),
-            Unit("Spirit", UnitType.REALM_WALKER, 5, 6)
-        ]
+        orc = Unit("Orc", UnitType.UBERMENSCH, 6, 6)
+        orc.is_enemy_unit = True
+        spirit = Unit("Spirit", UnitType.REALM_WALKER, 5, 6)
+        spirit.is_enemy_unit = True
+        enemy_units = [orc, spirit]
+        
+        # Debug coordinate system mapping
+        print(f"🗺️  Coordinate System Debug:")
+        print(f"   Hero unit position: ({player_units[0].x}, {player_units[0].y})")
+        print(f"   Sage unit position: ({player_units[1].x}, {player_units[1].y})")
+        print(f"   Orc unit position: ({orc.x}, {orc.y})")
+        print(f"   Spirit unit position: ({spirit.x}, {spirit.y})")
+        print(f"   Grid dimensions: {self.grid.width}x{self.grid.height}")
+        print(f"   Expected tile ranges: x(0-{self.grid.width-1}), y(0-{self.grid.height-1})")
         
     self.units = player_units + enemy_units
         

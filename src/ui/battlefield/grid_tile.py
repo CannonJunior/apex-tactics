@@ -40,6 +40,12 @@ class GridTile(Entity):
             print(f"🖱️  Double-click detected at: ({self.grid_x}, {self.grid_y})")
         else:
             print(f"Tile clicked at: ({self.grid_x}, {self.grid_y})")
+            # Debug coordinate mapping
+            if self.game_controller and hasattr(self.game_controller, 'units'):
+                for unit in self.game_controller.units:
+                    if unit.x == self.grid_x and unit.y == self.grid_y:
+                        print(f"  → Unit found at this position: {unit.name}")
+                        break
         
         if self.game_controller:
             # Don't handle tile clicks if there's an active modal dialog

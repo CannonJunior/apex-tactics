@@ -20,3 +20,12 @@ class BattleGrid:
             self.units[(x, y)] = unit
             return True
         return False
+    
+    def get_unit_at(self, x, y):
+        """Get the unit at the specified position."""
+        return self.units.get((x, y))
+    
+    def remove_unit(self, unit):
+        """Remove a unit from the grid."""
+        if (unit.x, unit.y) in self.units:
+            del self.units[(unit.x, unit.y)]

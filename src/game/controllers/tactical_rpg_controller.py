@@ -356,6 +356,90 @@ class TacticalRPG:
                         print(f"⚠ Error updating control panel: {e}")
                 
                 print(f"Turn ended. Now it's {current_unit.name}'s turn (Auto-selected).")
+                
+                # Check if this is an enemy unit and trigger AI agent
+                if hasattr(current_unit, 'is_enemy_unit') and current_unit.is_enemy_unit:
+                    self._trigger_ai_agent_turn(current_unit)
+                    
+    def _trigger_ai_agent_turn(self, unit):
+        """Trigger AI agent to control enemy unit turn using only MCP tools."""
+        try:
+            # Check if MCP tools are enabled
+            from ..config.feature_flags import FeatureFlags
+            if not FeatureFlags.USE_MCP_TOOLS:
+                print(f"⚠️ MCP tools disabled, skipping AI turn for {unit.name}")
+                return
+            
+            # Check if MCP integration manager is available
+            if not hasattr(self, 'mcp_integration_manager') or not self.mcp_integration_manager:
+                print(f"⚠️ MCP integration manager not available, skipping AI turn for {unit.name}")
+                return
+                
+            print(f"🤖 AI Agent controlling {unit.name}'s turn...")
+            
+            # Import AI agent controller and simplified MCP tools
+            from ai.unit_ai_controller import UnitAIController, AIPersonality, AISkillLevel
+            from ai.simple_mcp_tools import SimpleMCPToolRegistry
+            
+            # Create simplified MCP tool registry for this AI controller
+            tool_registry = SimpleMCPToolRegistry(self)
+            
+            # Create AI controller for this unit
+            ai_controller = UnitAIController(
+                unit_id=f"{unit.name}_{id(unit)}",
+                tool_registry=tool_registry,
+                personality=AIPersonality.TACTICAL,  # Default to tactical personality
+                skill_level=AISkillLevel.STRATEGIC,  # Default to strategic skill level
+            )
+            
+            # Start AI agent turn - this will use only MCP tools
+            ai_controller.execute_turn(unit, self._get_game_state_for_ai())
+            
+        except Exception as e:
+            print(f"❌ AI Agent turn failed for {unit.name}: {e}")
+            print(f"   Falling back to ending turn immediately")
+            # Fallback: end the turn immediately if AI fails
+            self.end_current_turn()
+            
+    def _get_game_state_for_ai(self):
+        """Get current game state data for AI agent decision making."""
+        try:
+            # Collect all units and their states
+            units_data = []
+            for unit in self.units:
+                units_data.append({
+                    'name': unit.name,
+                    'x': unit.x,
+                    'y': unit.y,
+                    'hp': unit.hp,
+                    'max_hp': unit.max_hp,
+                    'ap': getattr(unit, 'ap', 0),
+                    'max_ap': getattr(unit, 'max_ap', 0),
+                    'is_enemy': getattr(unit, 'is_enemy_unit', False),
+                    'alive': unit.alive,
+                    'attack_range': unit.attack_range,
+                    'physical_attack': unit.physical_attack,
+                    'magical_attack': unit.magical_attack,
+                    'physical_defense': unit.physical_defense,
+                    'magical_defense': unit.magical_defense
+                })
+            
+            # Return game state data
+            return {
+                'units': units_data,
+                'grid_width': self.grid.width,
+                'grid_height': self.grid.height,
+                'current_turn': self.turn_manager.current_turn if self.turn_manager else 0
+            }
+            
+        except Exception as e:
+            print(f"⚠️ Error getting game state for AI: {e}")
+            return {
+                'units': [],
+                'grid_width': 8,
+                'grid_height': 8,
+                'current_turn': 0
+            }
     
     def handle_tile_click(self, x: int, y: int):
         """Handle clicks on grid tiles."""
@@ -1895,6 +1979,27 @@ class TacticalRPG:
     def refresh_health_bar(self):
         """Refresh health bar to match selected unit's current HP"""
         util_refresh_health_bar(self)
+    
+    def update_unit_visual_position(self, unit: Unit):
+        """Update the visual position of a unit entity to match its data model coordinates."""
+        try:
+            # Find the corresponding unit entity
+            unit_entity = None
+            for entity in self.unit_entities:
+                if entity.unit == unit:
+                    unit_entity = entity
+                    break
+            
+            if unit_entity:
+                # Update the visual position
+                old_pos = (unit_entity.position[0] - 0.5, unit_entity.position[2] - 0.5)
+                unit_entity.update_position(unit.x, unit.y)
+                print(f"🎯 Visual sync: {unit.name} moved from {old_pos} to ({unit.x}, {unit.y})")
+                print(f"   📍 Ursina position: {unit_entity.position}")
+            else:
+                print(f"⚠️ Could not find visual entity for unit {unit.name}")
+        except Exception as e:
+            print(f"❌ Error updating visual position for {unit.name}: {e}")
     
     def on_unit_hp_changed(self, unit):
         """Called when a unit's HP changes to update health bar if it's the selected unit"""
