@@ -11,7 +11,6 @@ import time
 
 from .entity import Entity
 from .component import BaseComponent
-from ..events import EventBus
 
 class BaseSystem(ABC):
     """
@@ -172,7 +171,7 @@ class SystemManager:
     Handles system registration, update ordering, and performance monitoring.
     """
     
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus=None):
         self.event_bus = event_bus
         self._systems: List[BaseSystem] = []
         self._systems_by_name: Dict[str, BaseSystem] = {}

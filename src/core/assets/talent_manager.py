@@ -178,6 +178,15 @@ class TalentManager:
         """
         return self.talent_lookup.get(talent_id)
     
+    def get_all_talents(self) -> List[Dict[str, Any]]:
+        """
+        Get all talents from all trees.
+        
+        Returns:
+            List of all talent data dictionaries
+        """
+        return list(self.talent_lookup.values())
+    
     def get_available_trees(self) -> List[str]:
         """
         Get list of available talent tree names.

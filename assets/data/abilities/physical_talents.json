@@ -14,8 +14,11 @@
         "prerequisites": []
       },
       "effects": {
+        "physical_damage": 10,
         "attack_bonus": 5,
-        "accuracy_bonus": 10
+        "accuracy_bonus": 10,
+        "range": 1,
+        "area_of_effect": 1
       },
       "cost": {
         "talent_points": 1,
@@ -34,8 +37,33 @@
         "prerequisites": ["basic_strike"]
       },
       "effects": {
+        "physical_damage": 15,
         "damage_multiplier": 1.5,
-        "attack_speed": 0.8
+        "attack_speed": 0.8,
+        "range": 1,
+        "area_of_effect": 1
+      },
+      "cost": {
+        "talent_points": 1,
+        "ap_cost": 2
+      }
+    },
+    {
+      "id": "throwing_strike",
+      "name": "Throwing Strike",
+      "level": 2,
+      "tier": "Novice",
+      "description": "Ranged physical attack using thrown weapon or projectile",
+      "action_type": "Attack",
+      "requirements": {
+        "level": 2,
+        "prerequisites": ["basic_strike"]
+      },
+      "effects": {
+        "physical_damage": 12,
+        "range": 3,
+        "area_of_effect": 1,
+        "accuracy_bonus": 5
       },
       "cost": {
         "talent_points": 1,

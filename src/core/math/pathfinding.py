@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from .vector import Vector2Int
 from .grid import TacticalGrid
-from core.utils.object_pool import get_pathnode_pool
+from ..utils.object_pool import get_pathnode_pool
 
 @dataclass
 class PathNode:

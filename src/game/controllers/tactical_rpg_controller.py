@@ -719,9 +719,33 @@ class TacticalRPG:
             self.update_path_highlights()
             print("Movement mode activated. Use WASD to plan movement, Enter to confirm. Tactical")
         elif action_name == "Attack":
-            # Enter attack mode
-            self.current_mode = "attack"
-            self.handle_attack(unit)
+            # DEPRECATED: Basic attack - redirect to talent system
+            print("⚠️ Basic Attack action is deprecated - using talent system instead")
+            
+            # Try to find a basic physical attack talent
+            from src.core.assets.data_manager import get_data_manager
+            data_manager = get_data_manager()
+            
+            # Look for a basic physical attack talent (prefer "basic_strike")
+            basic_attack_talent = None
+            
+            # First try to find "basic_strike" specifically
+            basic_attack_talent = data_manager.get_talent("basic_strike")
+            
+            # If not found, look for any basic physical attack talent
+            if not basic_attack_talent:
+                for talent in data_manager.get_all_talents():
+                    if talent.action_type == "Attack" and "basic" in talent.name.lower():
+                        basic_attack_talent = talent
+                        break
+            
+            if basic_attack_talent:
+                print(f"🔄 Redirecting to talent: {basic_attack_talent.name}")
+                self._execute_specific_talent(basic_attack_talent)
+            else:
+                print("❌ No basic attack talent found - falling back to legacy attack mode")
+                self.current_mode = "attack"
+                self.handle_attack(unit)
         elif action_name == "Spirit":
             print("Spirit action selected - functionality to be implemented")
             # TODO: Implement spirit abilities
@@ -739,8 +763,14 @@ class TacticalRPG:
         """Handle attack action - highlight attack range."""
         if not unit:
             return
-            
-        print(f"{unit.name} entering attack mode. Attack range: {unit.attack_range}")
+        
+        # Check if we're in talent mode with specific range
+        if hasattr(unit, '_talent_magic_range'):
+            attack_range = unit._talent_magic_range
+            print(f"{unit.name} entering attack mode (talent). Talent range: {attack_range}")
+        else:
+            attack_range = unit.attack_range
+            print(f"{unit.name} entering attack mode. Attack range: {attack_range}")
         
         # Clear existing highlights and show attack range
         self.clear_highlights()
@@ -766,9 +796,14 @@ class TacticalRPG:
             self._confirm_current_attack()
             return
             
-        # Check if clicked tile is within attack range
+        # Check if clicked tile is within attack range (use talent range if available)
         distance = abs(x - self.active_unit.x) + abs(y - self.active_unit.y)
-        if distance <= self.active_unit.attack_range and distance > 0:
+        if hasattr(self.active_unit, '_talent_magic_range'):
+            attack_range = self.active_unit._talent_magic_range
+        else:
+            attack_range = self.active_unit.attack_range
+        
+        if distance <= attack_range and distance > 0:
             # Valid attack target tile
             self.attack_target_tile = (x, y)
             self.attack_modal_from_double_click = from_double_click
@@ -1331,13 +1366,19 @@ class TacticalRPG:
         # Clear existing highlights first
         self.clear_highlights()
         
+        # Use talent range if available, otherwise use weapon-based range
+        if hasattr(unit, '_talent_magic_range'):
+            attack_range = unit._talent_magic_range
+        else:
+            attack_range = unit.attack_range
+        
         for x in range(self.grid.width):
             for y in range(self.grid.height):
                 # Calculate Manhattan distance from unit to tile
                 distance = abs(x - unit.x) + abs(y - unit.y)
                 
                 # Highlight tiles within attack range (excluding unit's own tile)
-                if distance <= unit.attack_range and distance > 0:
+                if distance <= attack_range and distance > 0:
                     # Check if tile is within grid bounds
                     if 0 <= x < self.grid.width and 0 <= y < self.grid.height:
                         # Create highlight overlay entity
@@ -1596,8 +1637,8 @@ class TacticalRPG:
             destroy(self.attack_modal)
             self.attack_modal = None
         
-        # Clear targeted units
-        self.clear_targeted_units()
+        # Keep targeted units visible after action completion
+        # self.clear_targeted_units()  # Commented out to maintain target bars after actions
         
         # Return to normal mode
         self.current_mode = None
@@ -1632,8 +1673,8 @@ class TacticalRPG:
             destroy(self.attack_modal)
             self.attack_modal = None
         
-        # Clear targeted units
-        self.clear_targeted_units()
+        # Keep targeted units visible after action completion
+        # self.clear_targeted_units()  # Commented out to maintain target bars after actions
         
         # Clear attack data
         self.attack_modal_from_double_click = False
@@ -1861,8 +1902,8 @@ class TacticalRPG:
             destroy(self.magic_modal)
             self.magic_modal = None
         
-        # Clear targeted units
-        self.clear_targeted_units()
+        # Keep targeted units visible after action completion
+        # self.clear_targeted_units()  # Commented out to maintain target bars after actions
         
         # Return to normal mode
         self.current_mode = None
@@ -1902,8 +1943,8 @@ class TacticalRPG:
             destroy(self.magic_modal)
             self.magic_modal = None
         
-        # Clear targeted units
-        self.clear_targeted_units()
+        # Keep targeted units visible after action completion
+        # self.clear_targeted_units()  # Commented out to maintain target bars after actions
         
         # Clear magic data
         self.magic_modal_from_double_click = False
@@ -1933,8 +1974,8 @@ class TacticalRPG:
         if hasattr(self, '_current_attack_data'):
             self._current_attack_data = None
         
-        # Clear targeted units
-        self.clear_targeted_units()
+        # Keep targeted units visible after canceling attack mode
+        # self.clear_targeted_units()  # Commented out to maintain target bars after actions
         
         # Return to normal mode while keeping unit selected
         self.current_mode = None
@@ -1953,8 +1994,8 @@ class TacticalRPG:
         if hasattr(self, '_current_magic_data'):
             self._current_magic_data = None
         
-        # Clear targeted units
-        self.clear_targeted_units()
+        # Keep targeted units visible after canceling magic mode
+        # self.clear_targeted_units()  # Commented out to maintain target bars after actions
         
         # Return to normal mode while keeping unit selected
         self.current_mode = None
@@ -2004,6 +2045,10 @@ class TacticalRPG:
     def on_unit_hp_changed(self, unit):
         """Called when a unit's HP changes to update health bar if it's the selected unit"""
         util_on_unit_hp_changed(self, unit)
+        
+        # Also refresh targeted unit bars if this unit is targeted
+        if hasattr(self, 'targeted_units') and unit in self.targeted_units:
+            self.refresh_targeted_unit_bars()
     
     def update_resource_bar(self, unit):
         """Create or update resource bar for the selected unit"""

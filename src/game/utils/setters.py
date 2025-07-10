@@ -145,6 +145,12 @@ def setters_set_active_unit(self, unit: Optional[Unit], update_highlights: bool 
         update_highlights: Whether to update visual highlights
         update_ui: Whether to update UI elements (health bars, control panel)
     """
+    # Clear targeted unit bars when switching to a different unit
+    previous_unit = getattr(self, 'active_unit', None)
+    if previous_unit != unit:
+        if hasattr(self, 'clear_targeted_units'):
+            self.clear_targeted_units()
+    
     # Store the new active unit
     self.active_unit = unit
         

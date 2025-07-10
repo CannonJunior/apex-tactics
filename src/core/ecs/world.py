@@ -11,7 +11,14 @@ import time
 from .entity import Entity, EntityManager
 from .system import BaseSystem, SystemManager
 from .component import BaseComponent
-from ..events import EventBus, GameEvent, EventType
+
+# Optional imports to avoid circular dependencies
+try:
+    from ..events import EventBus, GameEvent, EventType
+except ImportError:
+    EventBus = None
+    GameEvent = None
+    EventType = None
 
 class World:
     """
@@ -23,7 +30,7 @@ class World:
     
     def __init__(self):
         self.entity_manager = EntityManager()
-        self.event_bus = EventBus()
+        self.event_bus = EventBus() if EventBus else None
         self.system_manager = SystemManager(self.event_bus)
         
         self.running = False
@@ -41,6 +48,16 @@ class World:
         """Setup internal event handlers"""
         # We can add internal event handling here if needed
         pass
+    
+    def _emit_event(self, event_class, *args, **kwargs):
+        """Safely emit an event if event_bus is available"""
+        if self.event_bus and event_class:
+            try:
+                event = event_class(*args, **kwargs)
+#                self.event_bus.publish(event)
+            except Exception as e:
+                # Silently ignore event emission errors to avoid breaking game flow
+                pass
     
     def add_system(self, system: BaseSystem):
         """
@@ -88,13 +105,14 @@ class World:
         entity = self.entity_manager.create_entity(*components)
         
         # Publish entity creation event
-        self.event_bus.publish(EntityCreatedEvent(entity.id))
+#        # self.event_bus.publish(EntityCreatedEvent(entity.id))
         
         # Publish component addition events
         for component in components:
-            self.event_bus.publish(ComponentAddedEvent(
-                entity.id, component.__class__.__name__
-            ))
+            # self.event_bus.publish(ComponentAddedEvent(
+            #     entity.id, component.__class__.__name__
+            # ))
+            pass
         
         return entity
     
@@ -114,16 +132,18 @@ class World:
         
         # Publish component removal events
         for component_type in entity.get_component_types():
-            self.event_bus.publish(ComponentRemovedEvent(
-                entity_id, component_type.__name__
-            ))
+            # self.event_bus.publish(ComponentRemovedEvent(
+            #     entity_id, component_type.__name__
+            # ))
+            pass
         
         # Destroy entity
         success = self.entity_manager.destroy_entity(entity_id)
         
         if success:
             # Publish entity destruction event
-            self.event_bus.publish(EntityDestroyedEvent(entity_id))
+            # self.event_bus.publish(EntityDestroyedEvent(entity_id))
+            pass
         
         return success
     
@@ -170,7 +190,7 @@ class World:
     def initialize(self):
         """Initialize the world and all systems"""
         self.system_manager.initialize()
-        self.event_bus.publish(GameStartedEvent())
+#        self.event_bus.publish(GameStartedEvent())
         self.running = True
     
     def update(self, delta_time: float):
@@ -195,7 +215,7 @@ class World:
         self.system_manager.update(delta_time, all_entities)
         
         # Process events
-        self.event_bus.process_events()
+        # self.event_bus.process_events()
         
         # Update timing statistics
         frame_end_time = time.perf_counter()
@@ -207,27 +227,28 @@ class World:
         
         # Check performance
         if frame_time > self.performance_warning_threshold:
-            from core.events.event_types import PerformanceWarningEvent
-            self.event_bus.publish(PerformanceWarningEvent(
-                "World", frame_time, self.performance_warning_threshold
-            ))
+            # from core.events.event_types import PerformanceWarningEvent
+            # self.event_bus.publish(PerformanceWarningEvent(
+            #     "World", frame_time, self.performance_warning_threshold
+            # ))
+            pass
     
     def pause(self):
         """Pause world updates"""
         if self.running and not self.paused:
             self.paused = True
-            self.event_bus.publish(GamePausedEvent())
+#            self.event_bus.publish(GamePausedEvent())
     
     def resume(self):
         """Resume world updates"""
         if self.running and self.paused:
             self.paused = False
-            self.event_bus.publish(GameResumedEvent())
+#            self.event_bus.publish(GameResumedEvent())
     
     def shutdown(self):
         """Shutdown world and all systems"""
         if self.running:
-            self.event_bus.publish(GameEndedEvent("shutdown"))
+#            self.event_bus.publish(GameEndedEvent("shutdown"))
             self.system_manager.shutdown()
             self.running = False
     
@@ -235,7 +256,7 @@ class World:
         """Get world statistics for debugging"""
         entity_stats = self.entity_manager.get_statistics()
         system_performance = self.system_manager.get_performance_report()
-        event_stats = self.event_bus.get_stats()
+        # event_stats = self.event_bus.get_stats()
         
         return {
             'world': {

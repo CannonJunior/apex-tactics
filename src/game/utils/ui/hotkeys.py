@@ -197,7 +197,7 @@ def activate_ability(self, ability_data: Dict[str, Any]):
     talent_id = ability_data.get('talent_id')
 
     if talent_id:
-        # New format: execute specific talent
+        # New format: execute specific talent using unified system
         from src.core.assets.data_manager import get_data_manager
         from game.config.action_costs import ACTION_COSTS
 
@@ -219,41 +219,67 @@ def activate_ability(self, ability_data: Dict[str, Any]):
         ability_name = talent_data.name
         action_type = talent_data.action_type
 
-        print(f"🔥 Executing specific talent: {ability_name} (ID: {talent_id}, AP: {current_ap}/{required_ap})")
+        print(f"🔥 Executing unified talent: {ability_name} (ID: {talent_id}, Type: {action_type}, AP: {current_ap}/{required_ap})")
         self._execute_specific_talent(talent_data)
     else:
-        # Legacy format: use generic action triggers
+        # Try to find talent by name in the data manager (fallback for legacy without talent_id)
+        from src.core.assets.data_manager import get_data_manager
         from game.config.action_costs import ACTION_COSTS
 
         ability_name = ability_data.get('name', 'Unknown Ability')
         action_type = ability_data.get('action_type', 'Attack')
+        
+        # First attempt to find matching talent by name and action type
+        data_manager = get_data_manager()
+        matching_talent = None
+        
+        for talent in data_manager.get_all_talents():
+            if talent.name == ability_name and talent.action_type == action_type:
+                matching_talent = talent
+                break
+        
+        if matching_talent:
+            print(f"🔄 Found matching talent '{ability_name}' - using unified system")
+            
+            # Check AP requirement using talent system
+            required_ap = ACTION_COSTS.get_talent_cost(matching_talent)
+            current_ap = getattr(self.active_unit, 'ap', 0)
 
-        # Check AP requirement for legacy abilities
-        required_ap = ACTION_COSTS.get_action_cost(action_type)
-        current_ap = getattr(self.active_unit, 'ap', 0)
+            if current_ap < required_ap:
+                print(f"❌ Insufficient AP for {matching_talent.name}: {current_ap}/{required_ap}")
+                return
 
-        if current_ap < required_ap:
-            print(f"❌ Insufficient AP for {ability_name}: {current_ap}/{required_ap}")
-            return
-
-        print(f"🔥 Activating legacy ability: {ability_name} (Action: {action_type}, AP: {current_ap}/{required_ap})")
-
-        # Map talent action type to Unit Action
-        if action_type == "Attack":
-            self.handle_action_selection("Attack", self.active_unit)
-        elif action_type == "Magic":
-            self.handle_action_selection("Magic", self.active_unit)
-        elif action_type == "Spirit":
-            self.handle_action_selection("Spirit", self.active_unit)
-        elif action_type == "Move":
-            self.handle_action_selection("Move", self.active_unit)
-        elif action_type == "Inventory":
-            self.handle_action_selection("Inventory", self.active_unit)
+            print(f"🔥 Executing unified talent (fallback): {matching_talent.name} (Type: {action_type}, AP: {current_ap}/{required_ap})")
+            self._execute_specific_talent(matching_talent)
         else:
-            print(f"❌ Unknown action type: {action_type}")
-            return
+            # Final fallback: use legacy action system (should be deprecated)
+            print(f"⚠️ Using legacy action system for {ability_name} - consider adding talent_id")
+            
+            required_ap = ACTION_COSTS.get_action_cost(action_type)
+            current_ap = getattr(self.active_unit, 'ap', 0)
 
-        print(f"   ✅ Unit Action '{action_type}' triggered for {self.active_unit.name}")
+            if current_ap < required_ap:
+                print(f"❌ Insufficient AP for {ability_name}: {current_ap}/{required_ap}")
+                return
+
+            print(f"🔥 Activating legacy ability: {ability_name} (Action: {action_type}, AP: {current_ap}/{required_ap})")
+
+            # Map talent action type to Unit Action
+            if action_type == "Attack":
+                self.handle_action_selection("Attack", self.active_unit)
+            elif action_type == "Magic":
+                self.handle_action_selection("Magic", self.active_unit)
+            elif action_type == "Spirit":
+                self.handle_action_selection("Spirit", self.active_unit)
+            elif action_type == "Move":
+                self.handle_action_selection("Move", self.active_unit)
+            elif action_type == "Inventory":
+                self.handle_action_selection("Inventory", self.active_unit)
+            else:
+                print(f"❌ Unknown action type: {action_type}")
+                return
+
+            print(f"   ✅ Unit Action '{action_type}' triggered for {self.active_unit.name}")
 
 def talent_requires_targeting(self, talent_data):
     """Determine if a talent requires target selection."""
