@@ -844,6 +844,9 @@ class UnitAIController:
             target_pos = decision.target_positions[0]  # Use first target position
             print(f"⚔️ Action #{action_number} - Attempting to attack from {unit.name} to ({target_pos['x']}, {target_pos['y']})")
             
+            # Track the target unit for AI targeting system
+            self._set_ai_target(unit, target_pos)
+            
             result = self.tool_registry.execute_tool(
                 'attack_unit',
                 attacker_id=self.unit_id,
@@ -875,6 +878,9 @@ class UnitAIController:
                 
             target_pos = decision.target_positions[0]  # Use first target position
             print(f"✨ Action #{action_number} - Attempting to cast spell from {unit.name} to ({target_pos['x']}, {target_pos['y']})")
+            
+            # Track the target unit for AI targeting system
+            self._set_ai_target(unit, target_pos)
             
             result = self.tool_registry.execute_tool(
                 'cast_spell',
@@ -940,6 +946,9 @@ class UnitAIController:
             if decision.target_positions and len(decision.target_positions) > 0:
                 target_pos = decision.target_positions[0]
                 print(f"   Action #{action_number} - Targeting ({target_pos['x']}, {target_pos['y']})")
+                
+                # Track the target unit for AI targeting system
+                self._set_ai_target(unit, target_pos)
                 
                 result = self.tool_registry.execute_tool(
                     'execute_hotkey_talent',
@@ -1082,13 +1091,36 @@ class UnitAIController:
             return "weapon_lookup_failed"
     
     def _get_contextual_ability_name(self, target: str) -> str:
-        """Get a contextual ability name based on the situation."""
-        # Simple contextual mapping based on common spell types
-        # This could be enhanced with more sophisticated logic
-        spell_options = [
-            'fire_bolt', 'ice_shard', 'lightning_bolt', 'magic_missile', 
-            'heal', 'shield', 'fireball', 'frost_bolt', 'power_blast'
-        ]
+        """Get a contextual ability name based on the unit's actual talents."""
+        talent_options = []
+        
+        try:
+            # Get the unit and its talents
+            unit = self.tool_registry._find_unit_by_id(self.unit_id)
+            if unit and hasattr(unit, 'character_instance_id'):
+                character = self.tool_registry.get_character_by_id(unit.character_instance_id)
+                
+                if character and hasattr(character, 'hotkey_abilities'):
+                    hotkey_abilities = character.hotkey_abilities
+                    
+                    if isinstance(hotkey_abilities, list):
+                        for ability_data in hotkey_abilities:
+                            if ability_data is not None:
+                                talent_name = ability_data.get('name', ability_data.get('talent_id', ''))
+                                if talent_name:
+                                    # Clean up talent name for consistent formatting
+                                    clean_name = talent_name.lower().replace(' ', '_').replace("'", "").replace('-', '_')
+                                    talent_options.append(clean_name)
+        
+        except Exception as e:
+            print(f"⚠️ Error getting unit talents for contextual name: {e}")
+        
+        # Fallback to hardcoded options if no talents found
+        if not talent_options:
+            talent_options = [
+                'fire_bolt', 'ice_shard', 'lightning_bolt', 'magic_missile', 
+                'heal', 'shield', 'fireball', 'frost_bolt', 'power_blast'
+            ]
         
         # Use a simple hash of the unit name and target to get consistent ability names
         # This ensures the same unit will use the same spell type consistently
@@ -1096,6 +1128,43 @@ class UnitAIController:
         unit_name = self.unit_id.replace('_', '')
         hash_input = f"{unit_name}_{target}".encode()
         hash_value = int(hashlib.md5(hash_input).hexdigest(), 16)
-        spell_index = hash_value % len(spell_options)
+        spell_index = hash_value % len(talent_options)
         
-        return spell_options[spell_index]
+        return talent_options[spell_index]
+    
+    def _set_ai_target(self, unit, target_pos: Dict[str, int]):
+        """Set and track the target unit for AI-controlled units."""
+        try:
+            # Find the target unit at the specified position
+            target_unit = None
+            for other_unit in self.tool_registry.game_controller.units:
+                if other_unit.x == target_pos['x'] and other_unit.y == target_pos['y']:
+                    target_unit = other_unit
+                    break
+            
+            if target_unit:
+                # Store the target on the AI unit (similar to player units)
+                unit.target_unit = target_unit
+                print(f"🎯 AI {unit.name} now targeting {target_unit.name} at ({target_unit.x}, {target_unit.y})")
+                
+                # If this AI unit is currently active, update the targeting display
+                active_unit = getattr(self.tool_registry.game_controller, 'active_unit', None)
+                if active_unit == unit:
+                    self._update_ai_target_display(unit, target_unit)
+            else:
+                print(f"⚠️ No target unit found at position ({target_pos['x']}, {target_pos['y']})")
+                
+        except Exception as e:
+            print(f"⚠️ Error setting AI target: {e}")
+    
+    def _update_ai_target_display(self, unit, target_unit):
+        """Update the targeting display for AI-controlled units."""
+        try:
+            # Use the same targeting system as player units
+            game_controller = self.tool_registry.game_controller
+            if hasattr(game_controller, 'set_targeted_units'):
+                game_controller.set_targeted_units([target_unit])
+                print(f"✅ AI target display updated: {unit.name} → {target_unit.name}")
+            
+        except Exception as e:
+            print(f"⚠️ Error updating AI target display: {e}")
