@@ -54,6 +54,9 @@ class Unit:
         self.equipped_armor = None
         self.equipped_accessory = None
         
+        # Assign default weapon based on unit type
+        self._assign_default_weapon()
+        
         # Target tracking - stores what unit this unit is currently targeting
         self.target_unit = None
         
@@ -350,3 +353,81 @@ class Unit:
             return self.max_kwan
         else:  # mp
             return self.max_mp
+    
+    def _assign_default_weapon(self):
+        """Assign default weapon based on unit type and character data."""
+        try:
+            # Import here to avoid circular imports
+            from src.core.assets.data_manager import get_data_manager
+            
+            # First try to get weapon from character data
+            character_weapon = self._get_character_default_weapon()
+            if character_weapon:
+                self.equip_weapon(character_weapon)
+                return
+            
+            # Fallback to unit type-based default weapons
+            unit_type_weapons = {
+                UnitType.HEROMANCER: "iron_sword",
+                UnitType.UBERMENSCH: "steel_fists", 
+                UnitType.SOUL_LINKED: "spirit_staff",
+                UnitType.REALM_WALKER: "void_blade",
+                UnitType.WARGI: "war_staff",
+                UnitType.MAGI: "arcane_staff"
+            }
+            
+            weapon_id = unit_type_weapons.get(self.type, "iron_sword")
+            data_manager = get_data_manager()
+            weapon_data = data_manager.get_item(weapon_id)
+            
+            if weapon_data:
+                # Convert to inventory format for equip_weapon
+                weapon_inventory_format = weapon_data.to_inventory_format(equipped_by=self.name, quantity=1)
+                self.equip_weapon(weapon_inventory_format)
+            else:
+                print(f"⚠️ Warning: Default weapon '{weapon_id}' not found for {self.name}")
+                
+        except Exception as e:
+            print(f"⚠️ Warning: Could not assign default weapon to {self.name}: {e}")
+    
+    def _get_character_default_weapon(self):
+        """Get default weapon from character data if available."""
+        try:
+            # Import here to avoid circular imports
+            from src.core.assets.data_manager import get_data_manager
+            
+            # Try to get character data based on unit type
+            unit_type_str = self.type.value.lower()
+            data_manager = get_data_manager()
+            
+            # Check if we have character data file
+            try:
+                # Try to load character data (this might not exist in all cases)
+                from src.core.assets.asset_loader import get_asset_loader
+                asset_loader = get_asset_loader()
+                character_data = asset_loader.load_data("characters/all_characters.json")
+                
+                if character_data and 'character_types' in character_data:
+                    unit_char_data = character_data['character_types'].get(unit_type_str)
+                    
+                    if unit_char_data and 'inventory' in unit_char_data:
+                        starting_items = unit_char_data['inventory'].get('starting_items', [])
+                        
+                        # Find equipped weapon
+                        for item in starting_items:
+                            if (item.get('equipped', False) and 
+                                item.get('slot') == 'weapon' and 
+                                'item_id' in item):
+                                
+                                weapon_data = data_manager.get_item(item['item_id'])
+                                if weapon_data:
+                                    return weapon_data.to_inventory_format(equipped_by=self.name, quantity=1)
+                                    
+            except Exception:
+                # Character data might not exist, that's OK
+                pass
+                
+        except Exception as e:
+            print(f"⚠️ Warning: Error getting character default weapon: {e}")
+        
+        return None

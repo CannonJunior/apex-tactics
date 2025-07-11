@@ -116,7 +116,13 @@ class SimpleMCPToolRegistry:
                     'physical_attack': unit.physical_attack,
                     'magical_attack': unit.magical_attack,
                     'physical_defense': unit.physical_defense,
-                    'magical_defense': unit.magical_defense
+                    'magical_defense': unit.magical_defense,
+                    'equipped_weapon': getattr(unit, 'equipped_weapon', None),
+                    'equipment': {
+                        'weapon': getattr(unit.equipped_weapon, 'name', None) if getattr(unit, 'equipped_weapon', None) else None,
+                        'armor': getattr(unit.equipped_armor, 'name', None) if getattr(unit, 'equipped_armor', None) else None,
+                        'accessory': getattr(unit.equipped_accessory, 'name', None) if getattr(unit, 'equipped_accessory', None) else None
+                    }
                 }
             )
         except Exception as e:
@@ -1091,13 +1097,22 @@ class SimpleMCPToolRegistry:
                 )
                 
                 # Create combination entry
+                best_action = max(damage_options, key=lambda x: x['total_damage']) if damage_options else None
+                
+                # Debug: Uncomment for talent debugging
+                # if best_action and len(damage_options) > 1:
+                #     talent_options_in_list = [opt for opt in damage_options if opt.get('action_type') == 'talent']
+                #     if talent_options_in_list:
+                #         print(f"🔍 Best action selected: {best_action.get('action_type')} (talent options available: {len(talent_options_in_list)})")
+                #         print(f"🔍 Damage comparison - Best: {best_action.get('total_damage')}, Talents: {[opt.get('total_damage') for opt in talent_options_in_list]}")
+                
                 combination = {
                     'move_to': move_pos,
                     'move_ap_cost': move_ap_cost,
                     'ap_after_move': ap_after_move,
                     'damage_options': damage_options,
                     'max_damage': max([opt['total_damage'] for opt in damage_options] + [0]),
-                    'best_action': max(damage_options, key=lambda x: x['total_damage']) if damage_options else None
+                    'best_action': best_action
                 }
                 
                 combinations.append(combination)
@@ -1169,8 +1184,18 @@ class SimpleMCPToolRegistry:
                         'can_kill': attack_damage >= enemy['hp']
                     })
                 
-                # Magic ability option
-                if distance <= magic_range and available_ap >= 2:
+                # Get talent options first
+                talent_options = self._get_talent_damage_options(unit, enemy, distance, available_ap)
+                has_combat_talents = len(talent_options) > 0
+                
+                # Debug talent detection (comment out when not needed)
+                # if has_combat_talents:
+                #     print(f"🔍 {unit.name} has {len(talent_options)} combat talents vs {enemy['name']}")
+                # else:
+                #     print(f"🔍 {unit.name} has NO combat talents vs {enemy['name']}, creating generic ability")
+                
+                # Magic ability option (only if no combat talents are available)
+                if distance <= magic_range and available_ap >= 2 and not has_combat_talents:
                     magic_damage = max(1, magical_attack - enemy['magical_defense'])
                     damage_options.append({
                         'action_type': 'ability',
@@ -1182,8 +1207,7 @@ class SimpleMCPToolRegistry:
                         'can_kill': magic_damage >= enemy['hp']
                     })
                 
-                # Talent options
-                talent_options = self._get_talent_damage_options(unit, enemy, distance, available_ap)
+                # Add talent options
                 damage_options.extend(talent_options)
             
             # Sort by total damage
@@ -1211,38 +1235,56 @@ class SimpleMCPToolRegistry:
                                 talent_id = ability_data.get('talent_id', f'talent_{slot_index + 1}')
                                 talent_name = ability_data.get('name', 'Unknown Talent')
                                 
-                                # Get talent costs
+                                # Get talent costs - handle both old and new format
                                 cost_data = ability_data.get('cost', {})
-                                ap_cost = cost_data.get('ap', 1)
+                                ap_cost = cost_data.get('ap_cost', cost_data.get('ap', 1))
+                                
+                                # Get talent range (default to magic range)
+                                talent_range = ability_data.get('range', getattr(unit, 'magic_range', 2))
                                 
                                 # Check if we can afford this talent
                                 if ap_cost > available_ap:
                                     continue
                                 
-                                # Get talent range (default to magic range)
-                                talent_range = ability_data.get('range', getattr(unit, 'magic_range', 2))
-                                
                                 # Check if enemy is in range
-                                if distance <= talent_range:
-                                    action_type = ability_data.get('action_type', 'attack').lower()
+                                if distance > talent_range:
+                                    continue
+                                
+                                action_type = ability_data.get('action_type', 'attack').lower()
+                                
+                                # Only create damage options for offensive talents
+                                # Combat talents typically have these action types or damage effects
+                                is_combat_talent = (
+                                    action_type in ['attack', 'ability', 'spell', 'magic', 'combat'] or
+                                    'damage' in str(ability_data.get('effects', {})).lower() or
+                                    'attack' in talent_name.lower() or
+                                    'strike' in talent_name.lower() or
+                                    'blast' in talent_name.lower() or
+                                    'bolt' in talent_name.lower()
+                                )
+                                
+                                if is_combat_talent:
+                                    # Calculate talent damage - use the higher of physical or magical attack
+                                    physical_damage = max(1, getattr(unit, 'physical_attack', 10) - enemy['physical_defense'])
+                                    magical_damage = max(1, getattr(unit, 'magical_attack', 8) - enemy['magical_defense'])
+                                    base_talent_damage = max(physical_damage, magical_damage)
                                     
-                                    # Calculate damage based on talent type
-                                    if action_type == 'attack':
-                                        # Use magical attack for talent damage
-                                        talent_damage = max(1, getattr(unit, 'magical_attack', 8) - enemy['magical_defense'])
-                                        
-                                        talent_options.append({
-                                            'action_type': 'talent',
-                                            'talent_id': talent_id,
-                                            'talent_name': talent_name,
-                                            'slot_index': slot_index,
-                                            'target': enemy['name'],
-                                            'target_position': enemy['position'],
-                                            'ap_cost': ap_cost,
-                                            'damage': talent_damage,
-                                            'total_damage': talent_damage,
-                                            'can_kill': talent_damage >= enemy['hp']
-                                        })
+                                    # Boost talent damage significantly to make them competitive with basic attacks
+                                    talent_damage = int(base_talent_damage * 1.5)  # 50% bonus for talents
+                                    
+                                    talent_option = {
+                                        'action_type': 'talent',
+                                        'talent_id': talent_id,
+                                        'talent_name': talent_name,
+                                        'slot_index': slot_index,
+                                        'target': enemy['name'],
+                                        'target_position': enemy['position'],
+                                        'ap_cost': ap_cost,
+                                        'damage': talent_damage,
+                                        'total_damage': talent_damage,
+                                        'can_kill': talent_damage >= enemy['hp']
+                                    }
+                                    talent_options.append(talent_option)
         
         except Exception as e:
             print(f"⚠️ Error getting talent options: {e}")

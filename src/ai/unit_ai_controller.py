@@ -159,7 +159,7 @@ class UnitAIController:
                 return None
             
             print(f"🔍 AI Agent {self.unit_id}: Context gathered - {len(context.available_actions)} actions available")
-            print(f"🔍 Available action types: {[action.get('type', 'unknown') for action in context.available_actions]}")
+            print(f"🔍 Available action types: {[action.get('type', 'undefined_action') for action in context.available_actions]}")
             
             # Make decision based on skill level
             decision = self._make_skill_based_decision(context, time_limit_ms)
@@ -240,8 +240,55 @@ class UnitAIController:
                 best_action = combination.get('best_action')
                 
                 if best_action:
+                    # Determine the display type based on action type
+                    action_type = best_action.get('action_type', 'unknown')
+                    
+                    # Check if this has talent information (regardless of action_type)
+                    if 'talent_id' in best_action:
+                        # Use talent_id with target for specific talent identification
+                        talent_id = best_action.get('talent_id', 'unknown_talent')
+                        target = best_action.get('target', 'unknown_target')
+                        display_type = f"{talent_id}_vs_{target}"
+                    elif 'talent_name' in best_action:
+                        # Use talent_name with target for specific talent identification
+                        talent_name = best_action.get('talent_name', 'unknown_talent')
+                        target = best_action.get('target', 'unknown_target')
+                        # Clean up talent name for consistent formatting
+                        clean_talent_name = talent_name.lower().replace(' ', '_').replace("'", "").replace('-', '_')
+                        display_type = f"{clean_talent_name}_vs_{target}"
+                    elif action_type == 'talent':
+                        # Fallback for talents without specific ID/name
+                        target = best_action.get('target', 'unknown_target')
+                        display_type = f"unknown_talent_vs_{target}"
+                    elif action_type == 'attack':
+                        # For basic attacks, include weapon information
+                        weapon_name = self._get_unit_weapon_name()
+                        display_type = f"{weapon_name}_attack" if weapon_name else "basic_attack"
+                    elif action_type == 'ability':
+                        # Check if this ability has hidden talent information
+                        target = best_action.get('target', 'unknown_target')
+                        
+                        # Try multiple ways to get the actual ability/talent name
+                        ability_name = (
+                            best_action.get('talent_id') or
+                            best_action.get('talent_name') or
+                            best_action.get('ability_id') or
+                            best_action.get('spell_id') or
+                            best_action.get('ability_name') or
+                            best_action.get('spell_name') or
+                            self._get_contextual_ability_name(target) or
+                            'magic_ability'
+                        )
+                        
+                        # Clean up ability name
+                        clean_ability_name = ability_name.lower().replace(' ', '_').replace("'", "").replace('-', '_')
+                        display_type = f"{clean_ability_name}_vs_{target}"
+                    else:
+                        display_type = action_type
+                    
                     action = {
-                        'type': best_action.get('action_type', 'unknown'),
+                        'type': display_type,
+                        'action_type': action_type,  # Keep original for compatibility
                         'move_to': move_to,
                         'target': best_action.get('target'),
                         'target_position': best_action.get('target_position'),
@@ -249,7 +296,7 @@ class UnitAIController:
                         'damage': best_action.get('damage', 0),
                         'can_kill': best_action.get('can_kill', False),
                         'total_damage': best_action.get('total_damage', 0),
-                        'description': f"Move to ({move_to.get('x', 0)}, {move_to.get('y', 0)}) and {best_action.get('action_type', 'act')} {best_action.get('target', 'target')} for {best_action.get('damage', 0)} damage"
+                        'description': f"Move to ({move_to.get('x', 0)}, {move_to.get('y', 0)}) and {display_type} {best_action.get('target', 'target')} for {best_action.get('damage', 0)} damage"
                     }
                     
                     # Add talent-specific information if it's a talent action
@@ -322,11 +369,14 @@ class UnitAIController:
         target_position = best_action.get('target_position', {})
         
         # Determine action type for execution
-        action_type = best_action.get('type', 'unknown')
-        if action_type == 'talent':
-            action_id = best_action.get('talent_id', 'unknown_talent')
+        # Use the original action_type for routing, but preserve talent info
+        original_action_type = best_action.get('action_type', 'unknown')
+        display_type = best_action.get('type', 'unknown')
+        
+        if original_action_type == 'talent':
+            action_id = best_action.get('talent_id', display_type)
         else:
-            action_id = action_type
+            action_id = original_action_type
         
         # Calculate confidence based on damage potential
         damage = best_action.get('damage', 0)
@@ -346,8 +396,12 @@ class UnitAIController:
             alternative_actions=[action.get('type', 'unknown') for action in context.available_actions[1:3]]
         )
         
-        # Add move information to the decision object
+        # Add move information and talent info to the decision object
         decision.move_to = move_to
+        decision.original_action_type = original_action_type
+        decision.display_type = display_type
+        decision.talent_id = best_action.get('talent_id')
+        decision.talent_name = best_action.get('talent_name')
         
         return decision
     
@@ -661,21 +715,20 @@ class UnitAIController:
                 print(f"🤖 AI Agent {unit.name}: Decided to {decision.action_id}")
                 
                 # Execute the decided action using MCP tools
-                action_result = self._execute_action_via_mcp(decision, unit)
+                actions_taken += 1  # Increment before execution for proper numbering
+                action_result = self._execute_action_via_mcp(decision, unit, actions_taken)
                 
                 if action_result:
-                    actions_taken += 1
                     failed_actions = 0  # Reset failed action counter on success
-                    print(f"🤖 AI Agent {unit.name}: Action executed successfully ({actions_taken} actions taken)")
+                    print(f"🤖 AI Agent {unit.name}: Action #{actions_taken} completed successfully")
                     
                     # Check if we should end the turn
                     if self._should_end_turn(unit, actions_taken):
                         print(f"🤖 AI Agent {unit.name}: Ending turn (insufficient AP or tactical decision)")
                         break
                 else:
-                    actions_taken += 1  # Count failed actions too
                     failed_actions += 1  # Increment consecutive failed actions
-                    print(f"🤖 AI Agent {unit.name}: Action failed, consuming 1 AP as penalty ({actions_taken} actions taken, {failed_actions} consecutive failures)")
+                    print(f"🤖 AI Agent {unit.name}: Action #{actions_taken} failed, consuming 1 AP as penalty ({failed_actions} consecutive failures)")
                     
                     # Consume AP for failed action to prevent infinite loops
                     current_ap = getattr(unit, 'ap', 0)
@@ -701,11 +754,11 @@ class UnitAIController:
             # Fallback: end turn via MCP tools
             self._end_turn_via_mcp(unit)
     
-    def _execute_action_via_mcp(self, decision: ActionDecision, unit) -> bool:
+    def _execute_action_via_mcp(self, decision: ActionDecision, unit, action_number: int = 1) -> bool:
         """Execute an action using only MCP tools."""
         try:
             action_type = decision.action_id
-            print(f"🎮 Executing action: {action_type} for {unit.name}")
+            print(f"🎮 Executing action #{action_number}: {action_type} for {unit.name}")
             print(f"   Target positions: {decision.target_positions}")
             print(f"   Reasoning: {decision.reasoning}")
             print(f"   Confidence: {decision.confidence}")
@@ -722,7 +775,7 @@ class UnitAIController:
             
             # Execute movement first if needed
             if move_to and (move_to.get('x') != unit.x or move_to.get('y') != unit.y):
-                print(f"🚶 Moving to ({move_to['x']}, {move_to['y']}) first")
+                print(f"🚶 Action #{action_number} - Moving to ({move_to['x']}, {move_to['y']}) first")
                 move_result = self.tool_registry.execute_tool(
                     'move_unit',
                     unit_id=self.unit_id,
@@ -730,22 +783,24 @@ class UnitAIController:
                     target_y=move_to['y']
                 )
                 if not move_result.success:
-                    print(f"❌ Movement failed: {move_result.error_message}")
+                    print(f"❌ Action #{action_number} - Movement failed: {move_result.error_message}")
                     return False
-                print(f"✅ Movement successful")
+                print(f"✅ Action #{action_number} - Movement successful: {move_result.data}")
             
-            # Execute the action
-            if action_type == "attack":
-                return self._execute_attack_via_mcp(decision, unit)
-            elif action_type == "ability":
-                return self._execute_ability_via_mcp(decision, unit)
-            elif self._is_talent_action(action_type):
-                return self._execute_talent_via_mcp(decision, unit)
+            # Execute the action based on the original action type from tactical analysis
+            original_action_type = getattr(decision, 'original_action_type', action_type)
+            
+            if original_action_type == "attack":
+                return self._execute_attack_via_mcp(decision, unit, action_number)
+            elif original_action_type == "ability":
+                return self._execute_ability_via_mcp(decision, unit, action_number)
+            elif original_action_type == "talent":
+                return self._execute_talent_via_mcp(decision, unit, action_number)
             elif action_type == "wait":
-                print(f"💤 {unit.name} waits (no action taken)")
+                print(f"💤 Action #{action_number} - {unit.name} waits (no action taken)")
                 return True
             else:
-                print(f"⚠️ Unknown action type: {action_type}")
+                print(f"⚠️ Action #{action_number} - Unknown action type: {action_type} (original: {original_action_type})")
                 return False
                 
         except Exception as e:
@@ -779,15 +834,15 @@ class UnitAIController:
             print(f"❌ MCP move exception: {e}")
             return False
     
-    def _execute_attack_via_mcp(self, decision: ActionDecision, unit) -> bool:
+    def _execute_attack_via_mcp(self, decision: ActionDecision, unit, action_number: int = 1) -> bool:
         """Execute attack using MCP attack_unit tool."""
         try:
             if not decision.target_positions or len(decision.target_positions) == 0:
-                print(f"❌ Attack action failed: No target positions provided")
+                print(f"❌ Action #{action_number} - Attack action failed: No target positions provided")
                 return False
                 
             target_pos = decision.target_positions[0]  # Use first target position
-            print(f"⚔️ Attempting to attack from {unit.name} to ({target_pos['x']}, {target_pos['y']})")
+            print(f"⚔️ Action #{action_number} - Attempting to attack from {unit.name} to ({target_pos['x']}, {target_pos['y']})")
             
             result = self.tool_registry.execute_tool(
                 'attack_unit',
@@ -797,24 +852,29 @@ class UnitAIController:
             )
             
             if result.success:
-                print(f"✅ Attack successful: {result.data}")
+                # Check if this was a talent-based attack
+                if hasattr(decision, 'original_action_type') and decision.original_action_type == 'talent':
+                    talent_name = getattr(decision, 'talent_name', getattr(decision, 'display_type', decision.action_id))
+                    print(f"✅ Action #{action_number} - Talent attack '{talent_name}' successful: {result.data}")
+                else:
+                    print(f"✅ Action #{action_number} - Attack successful: {result.data}")
             else:
-                print(f"❌ Attack failed: {result.error_message}")
+                print(f"❌ Action #{action_number} - Attack failed: {result.error_message}")
                 
             return result.success
         except Exception as e:
-            print(f"❌ MCP attack exception: {e}")
+            print(f"❌ Action #{action_number} - MCP attack exception: {e}")
             return False
     
-    def _execute_ability_via_mcp(self, decision: ActionDecision, unit) -> bool:
+    def _execute_ability_via_mcp(self, decision: ActionDecision, unit, action_number: int = 1) -> bool:
         """Execute ability using MCP cast_spell tool."""
         try:
             if not decision.target_positions or len(decision.target_positions) == 0:
-                print(f"❌ Ability action failed: No target positions provided")
+                print(f"❌ Action #{action_number} - Ability action failed: No target positions provided")
                 return False
                 
             target_pos = decision.target_positions[0]  # Use first target position
-            print(f"✨ Attempting to cast spell from {unit.name} to ({target_pos['x']}, {target_pos['y']})")
+            print(f"✨ Action #{action_number} - Attempting to cast spell from {unit.name} to ({target_pos['x']}, {target_pos['y']})")
             
             result = self.tool_registry.execute_tool(
                 'cast_spell',
@@ -824,13 +884,18 @@ class UnitAIController:
             )
             
             if result.success:
-                print(f"✅ Ability successful: {result.data}")
+                # Check if this was a talent-based ability
+                if hasattr(decision, 'original_action_type') and decision.original_action_type == 'talent':
+                    talent_name = getattr(decision, 'talent_name', getattr(decision, 'display_type', decision.action_id))
+                    print(f"✅ Action #{action_number} - Talent ability '{talent_name}' successful: {result.data}")
+                else:
+                    print(f"✅ Action #{action_number} - Ability successful: {result.data}")
             else:
-                print(f"❌ Ability failed: {result.error_message}")
+                print(f"❌ Action #{action_number} - Ability failed: {result.error_message}")
                 
             return result.success
         except Exception as e:
-            print(f"❌ MCP ability exception: {e}")
+            print(f"❌ Action #{action_number} - MCP ability exception: {e}")
             return False
     
     def _is_talent_action(self, action_type: str) -> bool:
@@ -846,16 +911,16 @@ class UnitAIController:
             pass
         return False
     
-    def _execute_talent_via_mcp(self, decision: ActionDecision, unit) -> bool:
+    def _execute_talent_via_mcp(self, decision: ActionDecision, unit, action_number: int = 1) -> bool:
         """Execute talent using MCP execute_talent tool."""
         try:
             talent_id = decision.action_id
-            print(f"🔥 Attempting to use talent '{talent_id}' from {unit.name}")
+            print(f"🔥 Action #{action_number} - Attempting to use talent '{talent_id}' from {unit.name}")
             
             # Find the slot index for this talent
             actions_result = self.tool_registry.execute_tool('get_available_actions', unit_id=self.unit_id)
             if not actions_result.success:
-                print(f"❌ Failed to get available actions: {actions_result.error_message}")
+                print(f"❌ Action #{action_number} - Failed to get available actions: {actions_result.error_message}")
                 return False
             
             actions = actions_result.data.get('actions', [])
@@ -866,7 +931,7 @@ class UnitAIController:
                     break
             
             if not talent_action:
-                print(f"❌ Talent '{talent_id}' not found in available actions")
+                print(f"❌ Action #{action_number} - Talent '{talent_id}' not found in available actions")
                 return False
             
             slot_index = talent_action.get('slot_index', 0)
@@ -874,7 +939,7 @@ class UnitAIController:
             # Check if we have target positions
             if decision.target_positions and len(decision.target_positions) > 0:
                 target_pos = decision.target_positions[0]
-                print(f"   Targeting ({target_pos['x']}, {target_pos['y']})")
+                print(f"   Action #{action_number} - Targeting ({target_pos['x']}, {target_pos['y']})")
                 
                 result = self.tool_registry.execute_tool(
                     'execute_hotkey_talent',
@@ -885,7 +950,7 @@ class UnitAIController:
                 )
             else:
                 # Self-targeted or instant talent
-                print(f"   Self-targeted talent")
+                print(f"   Action #{action_number} - Self-targeted talent")
                 
                 result = self.tool_registry.execute_tool(
                     'execute_hotkey_talent',
@@ -894,13 +959,13 @@ class UnitAIController:
                 )
             
             if result.success:
-                print(f"✅ Talent '{talent_id}' executed successfully: {result.data}")
+                print(f"✅ Action #{action_number} - Talent '{talent_id}' executed successfully: {result.data}")
             else:
-                print(f"❌ Talent '{talent_id}' failed: {result.error_message}")
+                print(f"❌ Action #{action_number} - Talent '{talent_id}' failed: {result.error_message}")
                 
             return result.success
         except Exception as e:
-            print(f"❌ MCP talent exception: {e}")
+            print(f"❌ Action #{action_number} - MCP talent exception: {e}")
             return False
     
     def _should_end_turn(self, unit, actions_taken: int) -> bool:
@@ -949,3 +1014,88 @@ class UnitAIController:
                 print(f"⚠️ AI Agent {unit.name}: MCP end_turn failed: {result.error}")
         except Exception as e:
             print(f"❌ MCP end_turn failed: {e}")
+    
+    def _get_unit_weapon_name(self):
+        """Get the current unit's equipped weapon name for action labeling."""
+        try:
+            # Get the unit object to check its weapon
+            unit_result = self.tool_registry.execute_tool('get_unit_details', unit_id=self.unit_id)
+            if unit_result.success:
+                unit_data = unit_result.data
+                
+                # Try different possible data structures
+                unit = None
+                if 'unit' in unit_data:
+                    unit = unit_data['unit']
+                elif isinstance(unit_data, dict) and hasattr(unit_data.get('unit'), 'equipped_weapon'):
+                    unit = unit_data
+                else:
+                    # The unit might be directly in the data
+                    unit = unit_data
+                
+                # Debug: Print what we found (remove when confirmed working)
+                # print(f"🔍 Unit weapon debug for {self.unit_id}: unit={type(unit)}")
+                # if isinstance(unit, dict):
+                #     print(f"🔍 Unit dict keys: {list(unit.keys())}")
+                # elif unit and hasattr(unit, 'equipped_weapon'):
+                #     print(f"🔍 Equipped weapon: {unit.equipped_weapon}")
+                
+                # Check for weapon in different possible formats
+                weapon_name = None
+                
+                # Case 1: Unit object with equipped_weapon attribute
+                if unit and hasattr(unit, 'equipped_weapon') and unit.equipped_weapon:
+                    if isinstance(unit.equipped_weapon, dict):
+                        weapon_name = unit.equipped_weapon.get('name', 'unnamed_weapon')
+                    else:
+                        weapon_name = str(unit.equipped_weapon)
+                
+                # Case 2: Dictionary representation with equipment info
+                elif isinstance(unit, dict):
+                    # Check for equipped_weapon key in dict
+                    if 'equipped_weapon' in unit and unit['equipped_weapon']:
+                        if isinstance(unit['equipped_weapon'], dict):
+                            weapon_name = unit['equipped_weapon'].get('name', 'unnamed_weapon')
+                        else:
+                            weapon_name = str(unit['equipped_weapon'])
+                    
+                    # Check for equipment summary
+                    elif 'equipment' in unit and isinstance(unit['equipment'], dict):
+                        equipment = unit['equipment']
+                        if 'weapon' in equipment and equipment['weapon'] and equipment['weapon'] != 'None':
+                            weapon_name = equipment['weapon']
+                    
+                    # Check for direct weapon key
+                    elif 'weapon' in unit and unit['weapon'] and unit['weapon'] != 'None':
+                        weapon_name = unit['weapon']
+                
+                if weapon_name:
+                    # Clean up weapon name for use in action type  
+                    clean_name = weapon_name.lower().replace(' ', '_').replace("'", "").replace('-', '_')
+                    return clean_name
+                else:
+                    return "unarmed"
+                    
+            return "no_weapon_data"
+        except Exception as e:
+            print(f"⚠️ Error getting unit weapon name: {e}")
+            return "weapon_lookup_failed"
+    
+    def _get_contextual_ability_name(self, target: str) -> str:
+        """Get a contextual ability name based on the situation."""
+        # Simple contextual mapping based on common spell types
+        # This could be enhanced with more sophisticated logic
+        spell_options = [
+            'fire_bolt', 'ice_shard', 'lightning_bolt', 'magic_missile', 
+            'heal', 'shield', 'fireball', 'frost_bolt', 'power_blast'
+        ]
+        
+        # Use a simple hash of the unit name and target to get consistent ability names
+        # This ensures the same unit will use the same spell type consistently
+        import hashlib
+        unit_name = self.unit_id.replace('_', '')
+        hash_input = f"{unit_name}_{target}".encode()
+        hash_value = int(hashlib.md5(hash_input).hexdigest(), 16)
+        spell_index = hash_value % len(spell_options)
+        
+        return spell_options[spell_index]

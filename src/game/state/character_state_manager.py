@@ -222,6 +222,19 @@ class CharacterInstance:
         """Get hotkey abilities in slot order for the Character Interface."""
         hotkey_abilities_data = self.template_data.get('hotkey_abilities', {})
         
+        # If hotkey abilities are empty, populate with defaults
+        if not hotkey_abilities_data:
+            try:
+                # Get character state manager instance to access default abilities method
+                from src.game.controllers.tactical_rpg_controller import tactical_rpg_controller
+                if tactical_rpg_controller and hasattr(tactical_rpg_controller, 'character_state_manager'):
+                    default_abilities = tactical_rpg_controller.character_state_manager._get_default_hotkey_abilities(self.unit_type)
+                    self.template_data['hotkey_abilities'] = default_abilities
+                    hotkey_abilities_data = default_abilities
+            except Exception as e:
+                print(f"⚠️ Could not populate default hotkey abilities: {e}")
+                hotkey_abilities_data = {}
+        
         # Convert to ordered list based on slot numbers (FIXED: sparse list with None for empty slots)
         abilities_list = []
         
@@ -407,7 +420,7 @@ class CharacterStateManager:
                 'visual': self.unit_data_manager.get_unit_visual_properties(unit_type),
                 'inventory': {'starting_items': [], 'max_inventory_size': 20, 'gold': 0},
                 'talents': {},
-                'hotkey_abilities': {},
+                'hotkey_abilities': self._get_default_hotkey_abilities(unit_type),
                 'game_state_effects': {}
             }
         
@@ -425,6 +438,101 @@ class CharacterStateManager:
         self._notify_observers('character_created', instance_id, character)
         
         return character
+    
+    def _get_default_hotkey_abilities(self, unit_type) -> Dict[str, Any]:
+        """Get default hotkey abilities for a unit type."""
+        default_abilities = {}
+        
+        try:
+            # Define default talents based on unit type
+            unit_type_str = unit_type.value.lower() if hasattr(unit_type, 'value') else str(unit_type).lower()
+            
+            # Basic talents that most units get
+            basic_talents = {
+                '1': {
+                    'talent_id': 'basic_strike',
+                    'name': 'Basic Strike',
+                    'action_type': 'attack',
+                    'cost': {'ap': 1},
+                    'range': 1,
+                    'effects': {'physical_damage': 10, 'attack_bonus': 5}
+                },
+                '2': {
+                    'talent_id': 'power_attack',
+                    'name': 'Power Attack',
+                    'action_type': 'attack',
+                    'cost': {'ap': 2},
+                    'range': 1,
+                    'effects': {'physical_damage': 18, 'accuracy_penalty': -5}
+                }
+            }
+            
+            # Unit type specific talents
+            if 'magi' in unit_type_str or 'wargi' in unit_type_str:
+                # Magic users get spell abilities
+                default_abilities.update(basic_talents)
+                default_abilities['3'] = {
+                    'talent_id': 'magic_missile',
+                    'name': 'Magic Missile',
+                    'action_type': 'attack',
+                    'cost': {'ap': 2, 'mp': 3},
+                    'range': 3,
+                    'effects': {'magical_damage': 15}
+                }
+                default_abilities['4'] = {
+                    'talent_id': 'heal',
+                    'name': 'Heal',
+                    'action_type': 'heal',
+                    'cost': {'ap': 2, 'mp': 4},
+                    'range': 2,
+                    'effects': {'healing': 25}
+                }
+            elif 'soul_linked' in unit_type_str or 'realm_walker' in unit_type_str:
+                # Spiritual units get faith-based abilities
+                default_abilities.update(basic_talents)
+                default_abilities['3'] = {
+                    'talent_id': 'soul_fire',
+                    'name': 'Soul Fire',
+                    'action_type': 'attack',
+                    'cost': {'ap': 2, 'kwan': 3},
+                    'range': 2,
+                    'effects': {'spiritual_damage': 16}
+                }
+                default_abilities['4'] = {
+                    'talent_id': 'divine_protection',
+                    'name': 'Divine Protection',
+                    'action_type': 'buff',
+                    'cost': {'ap': 1, 'kwan': 2},
+                    'range': 1,
+                    'effects': {'defense_bonus': 10, 'duration': 3}
+                }
+            else:
+                # Physical units (heromancer, ubermensch, etc.)
+                default_abilities.update(basic_talents)
+                default_abilities['3'] = {
+                    'talent_id': 'charge_attack',
+                    'name': 'Charge Attack',
+                    'action_type': 'attack',
+                    'cost': {'ap': 2, 'rage': 2},
+                    'range': 2,
+                    'effects': {'physical_damage': 20, 'movement_required': True}
+                }
+                
+        except Exception as e:
+            print(f"⚠️ Error getting default hotkey abilities for {unit_type}: {e}")
+            # Return basic abilities as fallback
+            default_abilities = {
+                '1': {
+                    'talent_id': 'basic_strike',
+                    'name': 'Basic Strike',
+                    'action_type': 'attack',
+                    'cost': {'ap': 1},
+                    'range': 1,
+                    'effects': {'physical_damage': 10}
+                }
+            }
+        
+        return default_abilities
     
     def get_character_instance(self, instance_id: str) -> Optional[CharacterInstance]:
         """Get character instance by ID."""

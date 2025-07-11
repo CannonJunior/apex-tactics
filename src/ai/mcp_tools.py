@@ -162,6 +162,12 @@ class GameStateTool:
                     'alive': getattr(unit, 'alive', True),
                     'cooldowns': getattr(unit, 'action_cooldowns', {})
                 },
+                'equipment': {
+                    'weapon': getattr(unit.equipped_weapon, 'name', None) if getattr(unit, 'equipped_weapon', None) else None,
+                    'armor': getattr(unit.equipped_armor, 'name', None) if getattr(unit, 'equipped_armor', None) else None,
+                    'accessory': getattr(unit.equipped_accessory, 'name', None) if getattr(unit, 'equipped_accessory', None) else None
+                },
+                'equipped_weapon': getattr(unit, 'equipped_weapon', None),
                 'available_actions': available_actions,
                 'queued_actions': queued_actions
             }

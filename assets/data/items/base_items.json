@@ -254,6 +254,156 @@
       "max_stack": 5,
       "crafting_material": true,
       "legendary": true
+    },
+    {
+      "id": "steel_fists",
+      "name": "Steel Fists",
+      "type": "Weapons",
+      "tier": "ENHANCED",
+      "description": "Reinforced steel gauntlets for powerful unarmed combat.",
+      "stats": {
+        "physical_attack": 16,
+        "attack_range": 1,
+        "effect_area": 1,
+        "durability": 150,
+        "weight": 2.0
+      },
+      "requirements": {
+        "level": 2,
+        "strength": 12
+      },
+      "icon": "items/weapons/steel_fists.png",
+      "rarity": "uncommon",
+      "value": 120,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "spirit_staff",
+      "name": "Spirit Staff",
+      "type": "Weapons",
+      "tier": "ENHANCED", 
+      "description": "A mystical staff channeling spiritual energy.",
+      "stats": {
+        "magical_attack": 18,
+        "spiritual_attack": 12,
+        "attack_range": 2,
+        "effect_area": 1,
+        "durability": 120,
+        "weight": 1.5
+      },
+      "requirements": {
+        "level": 3,
+        "spirit": 14,
+        "faith": 10
+      },
+      "icon": "items/weapons/spirit_staff.png",
+      "rarity": "uncommon",
+      "value": 180,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "void_blade",
+      "name": "Void Blade",
+      "type": "Weapons",
+      "tier": "ENCHANTED",
+      "description": "A blade forged from void essence, cuts through dimensions.",
+      "stats": {
+        "physical_attack": 20,
+        "magical_attack": 15,
+        "attack_range": 1,
+        "effect_area": 1,
+        "durability": 130,
+        "weight": 2.2
+      },
+      "requirements": {
+        "level": 5,
+        "spirit": 16,
+        "finesse": 14
+      },
+      "icon": "items/weapons/void_blade.png",
+      "rarity": "rare",
+      "value": 400,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "war_staff",
+      "name": "War Staff",
+      "type": "Weapons",
+      "tier": "ENHANCED",
+      "description": "A sturdy staff designed for both magic and melee combat.",
+      "stats": {
+        "physical_attack": 14,
+        "magical_attack": 16,
+        "attack_range": 2,
+        "effect_area": 1,
+        "durability": 140,
+        "weight": 2.8
+      },
+      "requirements": {
+        "level": 3,
+        "wisdom": 12,
+        "strength": 10
+      },
+      "icon": "items/weapons/war_staff.png",
+      "rarity": "uncommon",
+      "value": 160,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "arcane_staff",
+      "name": "Arcane Staff",
+      "type": "Weapons",
+      "tier": "ENCHANTED",
+      "description": "A powerful staff imbued with pure arcane energy.",
+      "stats": {
+        "magical_attack": 24,
+        "attack_range": 3,
+        "effect_area": 2,
+        "durability": 110,
+        "weight": 1.8
+      },
+      "requirements": {
+        "level": 5,
+        "wisdom": 18,
+        "wonder": 15
+      },
+      "icon": "items/weapons/arcane_staff.png",
+      "rarity": "rare",
+      "value": 450,
+      "stackable": false,
+      "max_stack": 1
+    },
+    {
+      "id": "shadow_blade",
+      "name": "Shadow Blade",
+      "type": "Weapons",
+      "tier": "ENCHANTED",
+      "description": "A blade wreathed in shadows, strikes from darkness.",
+      "stats": {
+        "physical_attack": 19,
+        "attack_range": 1,
+        "effect_area": 1,
+        "durability": 125,
+        "weight": 1.9
+      },
+      "requirements": {
+        "level": 4,
+        "finesse": 16,
+        "speed": 14
+      },
+      "icon": "items/weapons/shadow_blade.png",
+      "rarity": "rare",
+      "value": 350,
+      "stackable": false,
+      "max_stack": 1,
+      "weapon_properties": {
+        "stealth_strike": true,
+        "shadow_damage": true
+      }
     }
   ]
 }
