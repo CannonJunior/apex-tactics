@@ -86,7 +86,17 @@
       "model": "cube",
       "scale": {"x": 0.8, "y": 1.6, "z": 0.8},
       "highlight_color": "#FFFFFF",
-      "selection_outline": true
+      "selection_outline": true,
+      "health_visual_feedback": {
+        "enabled": true,
+        "healthy_threshold": 0.7,
+        "wounded_threshold": 0.3,
+        "colors": {
+          "healthy": "original",
+          "wounded": "#FFA500",
+          "critical": "#8B0000"
+        }
+      }
     },
     
     "lighting": {
@@ -106,17 +116,30 @@
       "move_speed": 0.5,
       "rotation_speed": 50,
       "distance_limits": {"min": 3, "max": 15},
-      "angle_limits": {"min": -80, "max": 80}
+      "angle_limits": {"min": -80, "max": 80},
+      "mouse_sensitivity": {
+        "orbit": 50,
+        "free": 40
+      },
+      "scroll_sensitivity": {
+        "step_size": 0.5
+      },
+      "free_camera_limits": {
+        "angle_x": {"min": -90, "max": 90}
+      }
     },
     
     "modes": {
       "orbit": {
         "distance": 8,
-        "angle_x": 30
+        "angle_x": 30,
+        "angle_y": 0
       },
       "top_down": {
         "distance": 12,
-        "angle_x": 90
+        "angle_x": 90,
+        "angle_y": 0,
+        "rotation": {"x": 90, "y": 0, "z": 0}
       },
       "free": {
         "unrestricted": true
@@ -198,6 +221,17 @@
         "max_talents": 12,
         "drag_drop_threshold": 0.12,
         "slot_scale_factor": 0.8
+      },
+      
+      "visual_effects": {
+        "drag_z_offset": 0.01,
+        "slot_icon_z_offset": -0.01
+      },
+      
+      "tooltip": {
+        "background_color": "#000000",
+        "background_alpha": 0.8,
+        "text_color": "#FFFFFF"
       }
     },
 
@@ -233,42 +267,99 @@
         "position": {"x": -0.2, "y": 0.2, "z": 0.0},
         "scale": {"x": 0.6, "y": 0.8, "z": 0.01},
         "color": "#1A1A26",
-        "alpha": 0.9
+        "alpha": 0.9,
+        "title": "Inventory Info",
+        "popup": false
       },
       
       "grid": {
         "width": 6,
         "height": 8,
         "cell_size": 0.08,
-        "position": {"x": -0.2, "y": 0.2}
+        "position": {"x": -0.2, "y": 0.2},
+        "background_color": "#1A1A1A",
+        "background_alpha": 0.9,
+        "quad_radius": 0.015,
+        "scale_multiplier": 0.08
+      },
+      
+      "items": {
+        "origin": {"x": -0.5, "y": 0.5},
+        "z_depth": -0.1,
+        "scale_formula": "1/grid_size",
+        "position_precision": 3,
+        "collision_tolerance": 0.01,
+        "equipped_border": {
+          "color": "#FFD700",
+          "width": 2,
+          "z_offset": 0.01
+        }
       },
       
       "info_panel": {
         "scale": {"x": 0.3, "y": 0.4},
-        "position": {"x": 0.3, "y": 0.2}
+        "position": {"x": 0.3, "y": 0.2},
+        "title": "Item Information",
+        "default_text": [
+          "Select an item to view details",
+          "Name: -",
+          "Type: -", 
+          "Tier: -",
+          "Description: -"
+        ]
       },
       
       "tabs": {
         "names": ["All", "Weapons", "Armor", "Accessories", "Consumables", "Materials"],
         "button_scale": {"x": 0.08, "y": 0.03},
         "start_position": {"x": -0.4, "y": 0.45},
-        "spacing": 0.09
+        "spacing": 0.09,
+        "colors": {
+          "active": "#87CEEB",
+          "inactive": "#696969"
+        }
       },
       
       "action_buttons": {
         "scale": {"x": 0.08, "y": 0.04},
         "spacing": 0.1,
-        "base_position": {"x": 0.3, "y": 0.0}
+        "base_position": {"x": 0.3, "y": 0.0},
+        "buttons": {
+          "add_item": {
+            "text": "Add Item",
+            "color": "#32CD32",
+            "tooltip": "Add random item to inventory"
+          },
+          "sort": {
+            "text": "Sort",
+            "color": "#FF8C00",
+            "tooltip": "Sort inventory items"
+          }
+        }
       },
       
       "drag_drop": {
         "tolerance": 0.12,
         "copy_offset": {"x": 0.02, "y": 0.02, "z": -0.02},
+        "drag_z_offset": 0.01,
+        "drop_z_offset": -0.01,
         "feedback": {
           "valid_drop": "#00FF00",
           "invalid_drop": "#FF0000",
           "drop_zone_alpha": 0.3
         }
+      },
+      
+      "messages": {
+        "inventory_full": "Inventory full!",
+        "item_equipped": "Item equipped",
+        "item_unequipped": "Item unequipped"
+      },
+      
+      "tooltip": {
+        "background_color": "#000000",
+        "background_alpha": 0.8,
+        "text_color": "#FFFFFF"
       }
     }
   },

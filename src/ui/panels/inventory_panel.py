@@ -75,6 +75,19 @@ class InventoryItem(Draggable):
         # Store original position for drag operations
         self.org_pos = None
     
+    def _get_item_origin(self):
+        """Get item origin from master UI config."""
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        origin = ui_config.get('panels.inventory_panel.items.origin', {'x': -0.5, 'y': 0.5})
+        return (origin['x'], origin['y'])
+    
+    def _get_item_z_depth(self):
+        """Get item z depth from master UI config."""
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        return ui_config.get('panels.inventory_panel.items.z_depth', -0.1)
+    
     def _load_item_texture(self):
         """Load the appropriate texture for this item."""
         if not ASSETS_AVAILABLE:

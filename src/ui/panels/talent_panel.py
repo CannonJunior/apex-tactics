@@ -32,8 +32,10 @@ class DraggableTalentIcon(Draggable):
         # Handle parent parameter properly
         parent = kwargs.pop('parent', camera.ui)
         
-        # Load icon scale from UI config
-        icon_scale = self._get_icon_scale()
+        # Load icon scale from master UI config
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        icon_scale = ui_config.get('panels.talent_panel.talent_grid.icon_scale', 0.06)
         
         # Create icon entity
         super().__init__(
@@ -45,24 +47,24 @@ class DraggableTalentIcon(Draggable):
             **kwargs
         )
         
-        # Create tooltip
+        # Create tooltip using master UI config
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
         tooltip_text = f"{talent_data['name']}\n{talent_data['description']}\nAction: {talent_data.get('action_type', 'Unknown')}"
         self.tooltip = Tooltip(tooltip_text)
-        self.tooltip.background.color = color.hsv(0, 0, 0, .8)
+        tooltip_bg_color = ui_config.get_color('panels.talent_panel.tooltip.background_color', '#000000')
+        tooltip_alpha = ui_config.get('panels.talent_panel.tooltip.background_alpha', 0.8)
+        self.tooltip.background.color = color.rgba(*tooltip_bg_color, tooltip_alpha)
         
         # Store original position for drag operations (like inventory items)
         self.org_pos = None
     
     def _get_icon_scale(self):
-        """Get icon scale from unified action item configuration."""
-        try:
-            from src.core.assets.data_manager import get_action_item_scale
-            scale = get_action_item_scale()
-            print(f"🎨 Loaded talent icon scale: {scale}")
-            return scale
-        except Exception as e:
-            print(f"⚠️ Could not load icon scale: {e}, using fallback")
-            return 0.06  # Default scale to match hotkeys
+        """Get icon scale from master UI config."""
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        return ui_config.get('panels.talent_panel.talent_grid.icon_scale', 0.06)
         
     def _get_talent_color(self):
         """Get color based on talent action type using unified configuration."""
@@ -89,8 +91,12 @@ class DraggableTalentIcon(Draggable):
     
     def drag(self):
         """Called when talent starts being dragged."""
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
         self.org_pos = (self.x, self.y)
-        self.z -= .01  # Move talent forward visually
+        drag_z_offset = ui_config.get('panels.talent_panel.visual_effects.drag_z_offset', 0.01)
+        self.z -= drag_z_offset  # Move talent forward visually
         
         # Disable camera movement during drag
         self._set_camera_drag_state(True, "talent icon")
@@ -99,9 +105,13 @@ class DraggableTalentIcon(Draggable):
     
     def drop(self):
         """Called when talent is dropped."""
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
         self.x = round(self.x, 3)
         self.y = round(self.y, 3)
-        self.z += .01  # Move talent back
+        drop_z_offset = ui_config.get('panels.talent_panel.visual_effects.drag_z_offset', 0.01)
+        self.z += drop_z_offset  # Move talent back
         
         # Re-enable camera movement after drag
         self._set_camera_drag_state(False, "talent icon")
@@ -176,7 +186,11 @@ class DraggableTalentIcon(Draggable):
                         closest_index = i
                 
                 # Check if closest slot is within threshold
-                if closest_distance < 0.12:  # Generous drop zone
+                from src.core.ui.ui_config_manager import get_ui_config_manager
+                ui_config = get_ui_config_manager()
+                drop_threshold = ui_config.get('panels.talent_panel.talent_grid.drag_drop_threshold', 0.12)
+                
+                if closest_distance < drop_threshold:
                     print(f"🎯 HOTKEY SLOT DETECTION: Mouse over HOTKEY #{closest_index + 1}")
                     print(f"   📏 Distance from slot center: {closest_distance:.3f} (threshold: 0.12)")
                     print(f"   📍 Talent drop position: ({self.x:.3f}, {self.y:.3f})")
@@ -272,32 +286,33 @@ class DraggableTalentIcon(Draggable):
                 destroy(child.tooltip)
             destroy(child)
         
-        # Get icon scale from unified action item config
-        try:
-            from src.core.assets.data_manager import get_action_item_scale
-            icon_scale = get_action_item_scale()
-            print(f"🎨 Using unified icon scale for hotkey slot: {icon_scale}")
-        except Exception as e:
-            print(f"⚠️ Could not load unified icon scale: {e}")
-            icon_scale = 0.06
+        # Get icon scale from master UI config
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        icon_scale = ui_config.get('panels.talent_panel.talent_grid.icon_scale', 0.06)
+        slot_scale_factor = ui_config.get('panels.talent_panel.talent_grid.slot_scale_factor', 0.8)
         
-        # Create new talent icon in the slot
+        # Create new talent icon in the slot using master UI config
+        slot_icon_z_offset = ui_config.get('panels.talent_panel.visual_effects.slot_icon_z_offset', -0.01)
+        
         slot_icon = Entity(
             parent=target_slot,
             model='cube',
             texture='white_cube',
             color=self._get_talent_color(),
-            scale=icon_scale * 0.8,  # Slightly smaller than configured scale
-            position=(0, 0, -0.01)  # Slightly in front of slot
+            scale=icon_scale * slot_scale_factor,
+            position=(0, 0, slot_icon_z_offset)
         )
         
         # Store talent data on the slot icon for reference
         slot_icon.talent_data = self.talent_data
         
-        # Create tooltip for slot icon
+        # Create tooltip for slot icon using master UI config
         tooltip_text = f"{self.talent_data['name']}\n{self.talent_data['description']}\nAction: {self.talent_data.get('action_type', 'Unknown')}\nHotkey: {slot_index + 1}"
         slot_icon.tooltip = Tooltip(tooltip_text)
-        slot_icon.tooltip.background.color = color.hsv(0, 0, 0, .8)
+        tooltip_bg_color = ui_config.get_color('panels.talent_panel.tooltip.background_color', '#000000')
+        tooltip_alpha = ui_config.get('panels.talent_panel.tooltip.background_alpha', 0.8)
+        slot_icon.tooltip.background.color = color.rgba(*tooltip_bg_color, tooltip_alpha)
         
         # Update character's hotkey abilities
         self.talent_panel._assign_talent_to_hotkey(self.talent_data, slot_index)
@@ -447,33 +462,47 @@ class TalentPanel:
         """Create tab buttons for switching between talent trees."""
         tabs = ["Physical", "Magical", "Spiritual"]
         
+        # Get tab configuration from master UI config
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
+        tab_config = ui_config.get('panels.talent_panel.tabs', {})
+        button_spacing = tab_config.get('button_spacing', 0.3)
+        button_offset = tab_config.get('button_offset', -0.3)
+        y_position = tab_config.get('y_position', 0.35)
+        scale = tab_config.get('scale', {'x': 0.2, 'y': 0.4})
+        active_color = ui_config.get_color('panels.talent_panel.tabs.colors.active', '#87CEEB')
+        inactive_color = ui_config.get_color('panels.talent_panel.tabs.colors.inactive', '#696969')
+        
         for i, tab in enumerate(tabs):
-            # Use proper spacing that prevents overlap
-            x_offset = i * 0.3 - 0.3  # 0.15 spacing to prevent overlap (tab width is 0.08)
-            y_offset = 0.35  # Position above the panel
+            x_offset = i * button_spacing + button_offset
             
             btn = Button(
                 text=tab,
                 parent=self.panel,  # Attach to panel so they move together
-                color=color.azure if tab == self.current_tab else color.dark_gray,
-                scale=(0.2, 0.4),
+                color=active_color if tab == self.current_tab else inactive_color,
+                scale=(scale['x'], scale['y']),
                 # Position relative to panel
-                position=(x_offset, y_offset, 0),
+                position=(x_offset, y_position, 0),
                 on_click=lambda t=tab: self.switch_tab(t)
             )
             
             # Debug output to verify positioning
-            print(f"🏷️ Created tab '{tab}' at panel-relative position ({x_offset:.2f}, {y_offset:.2f}, 0)")
+            print(f"🏷️ Created tab '{tab}' at panel-relative position ({x_offset:.2f}, {y_position:.2f}, 0)")
             
             # Start hidden to match panel visibility
             btn.enabled = False
             self.tab_buttons.append(btn)
     
     def _position_panel(self):
-        """Position the panel on the right side of the screen."""
+        """Position the panel using master UI config."""
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
         if self.panel:
-            self.panel.x = 0.25
-            self.panel.y = 0.0
+            panel_position = ui_config.get_position('panels.talent_panel.main_panel.position')
+            self.panel.x = panel_position['x']
+            self.panel.y = panel_position['y']
             self.panel.layout()
     
     def _update_display(self):
@@ -496,17 +525,27 @@ class TalentPanel:
         panel_x = self.panel.x if self.panel else 0.25
         panel_y = self.panel.y if self.panel else 0.0
         
-        # Position icons below the panel
-        start_x = panel_x + 0.05
-        start_y = panel_y - 0.15  # Below the panel
-        max_per_row = 3
+        # Get talent grid configuration from master UI config
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
         
-        for i, talent in enumerate(current_talents[:12]):  # Show up to 12 talents
+        grid_config = ui_config.get('panels.talent_panel.talent_grid', {})
+        start_position = grid_config.get('start_position', {'x': 0.05, 'y': -0.15})
+        icons_per_row = grid_config.get('icons_per_row', 3)
+        spacing = grid_config.get('spacing', {'x': 0.1, 'y': 0.08})
+        max_talents = grid_config.get('max_talents', 12)
+        
+        # Position icons below the panel
+        start_x = panel_x + start_position['x']
+        start_y = panel_y + start_position['y']
+        max_per_row = icons_per_row
+        
+        for i, talent in enumerate(current_talents[:max_talents]):
             row = i // max_per_row
             col = i % max_per_row
             
-            x = start_x + col * 0.1
-            y = start_y - row * 0.08
+            x = start_x + col * spacing['x']
+            y = start_y - row * spacing['y']
             
             # Create draggable talent icon
             talent_icon = DraggableTalentIcon(
@@ -516,10 +555,18 @@ class TalentPanel:
             )
             self.talent_icons.append(talent_icon)
         
-        # Update tab button colors
+        # Update tab button colors using master UI config
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
+        tab_names = ui_config.get('panels.talent_panel.tabs.names', ["Physical", "Magical", "Spiritual"])
+        active_color = ui_config.get_color('panels.talent_panel.tabs.colors.active', '#87CEEB')
+        inactive_color = ui_config.get_color('panels.talent_panel.tabs.colors.inactive', '#696969')
+        
         for i, btn in enumerate(self.tab_buttons):
-            tab_name = ["Physical", "Magical", "Spiritual"][i]
-            btn.color = color.azure if tab_name == self.current_tab else color.dark_gray
+            if i < len(tab_names):
+                tab_name = tab_names[i]
+                btn.color = active_color if tab_name == self.current_tab else inactive_color
     
     def _clear_talent_icons(self):
         """Clear all existing talent icons."""
