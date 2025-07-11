@@ -150,7 +150,7 @@ class CharacterAttackInterface:
     
     def create_unit_icon(self, unit: Any, index: int) -> Button:
         """
-        Create a single unit icon for the carousel.
+        Create a single unit icon for the carousel using master UI configuration.
         
         Args:
             unit: Unit object to create icon for
@@ -159,21 +159,27 @@ class CharacterAttackInterface:
         Returns:
             Button: Created unit icon button
         """
+        # Use master UI configuration
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
+        # Get carousel configuration from master config
+        icon_size = ui_config.get('panels.control_panel.unit_carousel.icons.size', 0.06)
+        icon_spacing = ui_config.get('panels.control_panel.unit_carousel.icons.spacing', 0.07)
+        start_x = ui_config.get('panels.control_panel.unit_carousel.icons.start_x', -0.3)
+        icon_y = ui_config.get('panels.control_panel.unit_carousel.icons.y_position', -0.45)
+        
         # Calculate position (spacing icons horizontally)
-        icon_size = 0.06
-        icon_spacing = 0.07
-        start_x = -0.3  # Start position
         icon_x = start_x + (index * icon_spacing)
-        icon_y = -0.45
         
         # Determine icon color based on unit type and status
         icon_color = self.get_unit_icon_color(unit)
         
-        # Create the icon as a clickable button
+        # Create the icon as a clickable button using master config
         unit_icon = Button(
             parent=self.carousel_container,
-            model='cube',
-            texture='white_cube',
+            model=ui_config.get('models_and_textures.default_models.button', 'cube'),
+            texture=ui_config.get('models_and_textures.default_textures.button', 'white_cube'),
             color=icon_color,
             scale=icon_size,
             position=(icon_x, icon_y, 0)
@@ -185,12 +191,15 @@ class CharacterAttackInterface:
         # Store unit reference
         unit_icon.unit = unit
         
-        # Add unit name text below icon
+        # Add unit name text below icon using master config
+        name_text_scale = ui_config.get('panels.control_panel.unit_carousel.icons.name_text_scale', 0.5)
+        name_text_offset = ui_config.get('panels.control_panel.unit_carousel.icons.name_text_offset', -0.04)
+        
         unit_name_text = Text(
             text=unit.name[:4],  # Abbreviate long names
             parent=self.carousel_container,
-            position=(icon_x, icon_y - 0.04, 0),
-            scale=0.5,
+            position=(icon_x, icon_y + name_text_offset, 0),
+            scale=name_text_scale,
             origin=(0, 0)
         )
         

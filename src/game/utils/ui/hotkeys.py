@@ -78,22 +78,22 @@ def hotkey_get_hotkey_slot_ability_data(self, slot_index: int) -> Optional[Dict[
     return getattr(slot, 'ability_data', None)
 
 def create_hotkey_slots(self):
-    """Create hotkey ability slots positioned below the resource bar."""
-    if not URSINA_AVAILABLE or not self.hotkey_config:
+    """Create hotkey ability slots using master UI configuration."""
+    if not URSINA_AVAILABLE:
         return
 
-    hotkey_settings = self.hotkey_config.get('hotkey_system', {})
-    slot_layout = hotkey_settings.get('slot_layout', {})
-    visual_settings = hotkey_settings.get('visual_settings', {})
+    # Use master UI configuration
+    from src.core.ui.ui_config_manager import get_ui_config_manager
+    ui_config = get_ui_config_manager()
 
-    # Get configuration values
-    max_slots = hotkey_settings.get('max_interface_slots', 8)
-    slot_size = slot_layout.get('slot_size', 0.06)
-    slot_spacing = slot_layout.get('slot_spacing', 0.01)
-    start_pos = slot_layout.get('start_position', {'x': -0.4, 'y': 0.35, 'z': 0})
+    # Get configuration values from master config
+    max_slots = ui_config.get('hotkey_system.max_interface_slots', 8)
+    slot_size = ui_config.get('hotkey_system.slot_layout.slot_size', 0.06)
+    slot_spacing = ui_config.get('hotkey_system.slot_layout.slot_spacing', 0.01)
+    start_pos = ui_config.get_position('hotkey_system.slot_layout.start_position')
 
-    # Colors
-    empty_color = self._hex_to_color(visual_settings.get('empty_slot_color', '#404040'))
+    # Colors from master config
+    empty_color = ui_config.get_color('hotkey_system.visual_settings.empty_slot_color', '#404040')
 
     # Clear existing slots
     self._clear_hotkey_slots()
@@ -102,25 +102,26 @@ def create_hotkey_slots(self):
     for i in range(max_slots):
         x_offset = i * (slot_size + slot_spacing)
 
-        # Create slot button
+        # Create slot button using master config
         slot_button = Button(
             parent=camera.ui,
-            model='cube',
+            model=ui_config.get('models_and_textures.default_models.button', 'cube'),
             color=empty_color,
             scale=slot_size,
             position=(start_pos['x'] + x_offset, start_pos['y'], start_pos['z']),
             on_click=lambda slot_index=i: self._on_hotkey_slot_clicked(slot_index)
         )
 
-        # Add hotkey number text
-        if hotkey_settings.get('display_options', {}).get('show_hotkey_numbers', True):
-            hotkey_text_color = self._hex_to_color(visual_settings.get('hotkey_text_color', '#ffff00'))
-            hotkey_text_scale = visual_settings.get('hotkey_text_scale', 0.3)
+        # Add hotkey number text using master config
+        if ui_config.get('hotkey_system.display_options.show_hotkey_numbers', True):
+            hotkey_text_color = ui_config.get_color('hotkey_system.visual_settings.hotkey_text_color', '#FFFF00')
+            hotkey_text_scale = ui_config.get('hotkey_system.visual_settings.hotkey_text_scale', 0.3)
+            text_pos = ui_config.get_position('hotkey_system.visual_settings.hotkey_text_position')
 
             hotkey_text = Text(
                 text=str(i + 1),
                 parent=slot_button,
-                position=(0, 0, -0.01),
+                position=(text_pos['x'], text_pos['y'], text_pos['z']),
                 scale=hotkey_text_scale,
                 color=hotkey_text_color,
                 origin=(0, 0)

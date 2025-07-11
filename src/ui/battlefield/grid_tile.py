@@ -3,21 +3,39 @@ import time
 
 class GridTile(Entity):
     def __init__(self, x, y, game_controller=None):
+        # Use master UI configuration
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
+        # Get tile configuration from master config
+        tile_config = ui_config.get('battlefield.grid_tiles', {})
+        tile_model = tile_config.get('model', 'cube')
+        tile_color = ui_config.get_color('battlefield.grid_tiles.color', '#D3D3D3')
+        tile_scale = ui_config.get_scale('battlefield.grid_tiles.scale')
+        position_offset = ui_config.get_position('battlefield.grid_tiles.position_offset')
+        collider_type = tile_config.get('collider', 'box')
+        
+        # Convert scale dict to tuple if needed
+        if isinstance(tile_scale, dict):
+            scale_tuple = (tile_scale['x'], tile_scale['y'], tile_scale['z'])
+        else:
+            scale_tuple = (0.9, 0.1, 0.9)  # fallback
+        
         super().__init__(
             parent=scene,
-            model='cube',
-            color=color.light_gray,
-            scale=(0.9, 0.1, 0.9),
-            position=(x + 0.5, 0, y + 0.5),  # Center tiles to match unit positioning
-            collider='box'  # Add collider for click detection
+            model=tile_model,
+            color=tile_color,
+            scale=scale_tuple,
+            position=(x + position_offset['x'], position_offset['y'], y + position_offset['z']),
+            collider=collider_type
         )
         self.grid_x, self.grid_y = x, y
-        self.original_color = color.light_gray
+        self.original_color = tile_color
         self.game_controller = game_controller
         
-        # Double-click detection
+        # Double-click detection using master config
         self.last_click_time = 0
-        self.double_click_threshold = 0.3  # 300ms for double-click
+        self.double_click_threshold = ui_config.get('battlefield.grid_tiles.double_click_threshold', 0.3)
         self.click_count = 0
         
     def on_click(self):

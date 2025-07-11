@@ -8,7 +8,7 @@ from ursina import Entity, color, destroy, Button, Text, WindowPanel, camera, To
 from ursina.prefabs.health_bar import HealthBar
 
 def util_update_health_bar(self, unit):
-    """Create or update health bar for the selected unit"""
+    """Create or update health bar for the selected unit using master UI configuration"""
     if self.health_bar:
         self.health_bar.enabled = False
         self.health_bar = None
@@ -18,26 +18,41 @@ def util_update_health_bar(self, unit):
         self.health_bar_label = None
 
     if unit:
-        # Get UI style manager
+        # Use master UI configuration
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        ui_config = get_ui_config_manager()
+        
+        # Get UI style manager for fallback
         style_manager = get_ui_style_manager()
 
-        # Create health bar label
+        # Get health bar configuration from master config
+        label_config = ui_config.get_text_config('ui_bars.health_bar.label')
+        bar_position = ui_config.get_position_tuple('ui_bars.health_bar.position')
+        bar_scale = ui_config.get_scale('ui_bars.health_bar.scale')
+
+        # Create health bar label using master config
         self.health_bar_label = Text(
-            text="HP",
+            text=label_config['text'],
             parent=camera.ui,
-            position=(-0.47, 0.43),  # Position to the left of health bar
-            scale=1.0,
-            color=style_manager.get_bar_label_color(),
+            position=label_config['position'],
+            scale=label_config['scale'],
+            color=label_config['color'],
             origin=(-0.5, 0)  # Right-align the text
         )
+
+        # Convert scale to tuple if it's a dict
+        if isinstance(bar_scale, dict):
+            scale_tuple = (bar_scale['x'], bar_scale['y'])
+        else:
+            scale_tuple = (bar_scale, 0.03)
 
         self.health_bar = HealthBar(
             max_value=unit.max_hp,
             value=unit.hp,
-            position=(-0.4, 0.45),
+            position=bar_position,
             parent=camera.ui,
-            scale=(0.3, 0.03),
-            color=style_manager.get_health_bar_bg_color()  # Background color
+            scale=scale_tuple,
+            color=ui_config.get_color('ui_bars.health_bar.colors.background', '#333333')
         )
 
         # Set the foreground bar color after creation

@@ -1,0 +1,558 @@
+{
+  "version": "2.0.0",
+  "description": "Master UI configuration consolidating all visual properties, positioning, colors, and styling for all UI components in Apex Tactics",
+  
+  "coordinate_system": {
+    "type": "normalized",
+    "x_range": {"min": -1.0, "max": 1.0, "center": 0.0},
+    "y_range": {"min": -1.0, "max": 1.0, "center": 0.0},
+    "z_range": {"min": -0.1, "max": 0.1, "default": 0.0},
+    "description": "Ursina uses normalized coordinates where (0,0) is screen center"
+  },
+
+  "global_settings": {
+    "parent": "camera.ui",
+    "responsive_scaling": {
+      "enabled": true,
+      "base_resolution": {"width": 1920, "height": 1080},
+      "scale_factor": "min"
+    },
+    "accessibility": {
+      "font_scaling": {"min_scale": 0.5, "max_scale": 2.0, "default_scale": 1.0},
+      "high_contrast_mode": false,
+      "keyboard_navigation_highlight": true
+    }
+  },
+
+  "colors": {
+    "primary": "#0066CC",
+    "secondary": "#FF6600", 
+    "success": "#00CC66",
+    "warning": "#FFCC00",
+    "danger": "#CC0000",
+    "info": "#6666CC",
+    "light": "#F8F9FA",
+    "dark": "#343A40",
+    "transparent": "#00000000",
+    
+    "action_types": {
+      "Attack": "#FF0000",
+      "Magic": "#0000FF",
+      "Spirit": "#FFFF00", 
+      "Move": "#00FF00",
+      "Inventory": "#FFA500",
+      "Empty": "#404040",
+      "Default": "#FFFFFF"
+    },
+    
+    "health_states": {
+      "healthy": "#00FF00",
+      "wounded": "#FFA500",
+      "critical": "#8B0000",
+      "dead": "#444444"
+    },
+    
+    "ui_states": {
+      "normal": "#FFFFFF",
+      "hover": "#DDDDDD",
+      "selected": "#FFFF00",
+      "disabled": "#666666",
+      "active": "#87CEEB",
+      "inactive": "#696969"
+    },
+    
+    "tile_highlights": {
+      "selected": "#FFFF00",
+      "movement_range": "#00FF00",
+      "attack_range": "#FF0000",
+      "attack_area": "#FFA500",
+      "invalid": "#444444",
+      "hover": "#DDDDDD"
+    }
+  },
+
+  "battlefield": {
+    "grid_tiles": {
+      "model": "cube",
+      "color": "#D3D3D3",
+      "scale": {"x": 0.9, "y": 0.1, "z": 0.9},
+      "position_offset": {"x": 0.5, "y": 0.0, "z": 0.5},
+      "collider": "box",
+      "double_click_threshold": 0.3
+    },
+    
+    "units": {
+      "position_offset": {"x": 0.5, "y": 1.0, "z": 0.5},
+      "model": "cube",
+      "scale": {"x": 0.8, "y": 1.6, "z": 0.8},
+      "highlight_color": "#FFFFFF",
+      "selection_outline": true
+    },
+    
+    "lighting": {
+      "directional_light": {
+        "position": {"x": 0, "y": 10, "z": 5},
+        "intensity": 1.0,
+        "color": "#FFFFFF"
+      }
+    }
+  },
+
+  "camera": {
+    "controls": {
+      "distance": 8,
+      "angle_x": 30,
+      "angle_y": 0,
+      "move_speed": 0.5,
+      "rotation_speed": 50,
+      "distance_limits": {"min": 3, "max": 15},
+      "angle_limits": {"min": -80, "max": 80}
+    },
+    
+    "modes": {
+      "orbit": {
+        "distance": 8,
+        "angle_x": 30
+      },
+      "top_down": {
+        "distance": 12,
+        "angle_x": 90
+      },
+      "free": {
+        "unrestricted": true
+      }
+    }
+  },
+
+  "panels": {
+    "control_panel": {
+      "main_panel": {
+        "scale": {"x": 0.8, "y": 0.25, "z": 0.01},
+        "position": {"x": 0.0, "y": -0.3, "z": 0.0},
+        "color": "#1A1A26",
+        "alpha": 0.9,
+        "anchor": "bottom_center"
+      },
+      
+      "end_turn_button": {
+        "position": {"x": 0.0, "y": -0.38, "z": 0.01},
+        "scale": 0.08,
+        "color": "#FFA500",
+        "text": "End Turn",
+        "text_color": "#FFFFFF",
+        "text_scale": 1.0
+      },
+      
+      "unit_carousel": {
+        "label": {
+          "text": "Turn Order:",
+          "position": {"x": -0.45, "y": -0.45, "z": 0.0},
+          "scale": 0.8,
+          "color": "#FFFFFF"
+        },
+        "icons": {
+          "size": 0.06,
+          "spacing": 0.07,
+          "start_x": -0.3,
+          "y_position": -0.45,
+          "highlight_current": "#FFFF00",
+          "highlight_selected": "#FFFFFF",
+          "name_text_scale": 0.5,
+          "name_text_offset": -0.04
+        }
+      },
+      
+      "text_elements": {
+        "unit_info": {"position": {"x": 0.0, "y": 0.08, "z": 0.01}, "scale": 0.8},
+        "camera_controls": {"position": {"x": 0.0, "y": 0.04, "z": 0.01}, "scale": 0.6},
+        "game_controls": {"position": {"x": 0.0, "y": 0.0, "z": 0.01}, "scale": 0.6},
+        "stats_display": {"position": {"x": 0.0, "y": -0.04, "z": 0.01}, "scale": 0.6}
+      }
+    },
+
+    "talent_panel": {
+      "main_panel": {
+        "position": {"x": 0.25, "y": 0.0, "z": 0.0},
+        "scale": {"x": 0.4, "y": 0.8, "z": 0.01},
+        "color": "#1A1A26",
+        "alpha": 0.9
+      },
+      
+      "tabs": {
+        "names": ["Physical", "Magical", "Spiritual"],
+        "button_spacing": 0.3,
+        "button_offset": -0.3,
+        "y_position": 0.35,
+        "scale": {"x": 0.2, "y": 0.4},
+        "colors": {
+          "active": "#87CEEB",
+          "inactive": "#696969"
+        }
+      },
+      
+      "talent_grid": {
+        "icons_per_row": 3,
+        "start_position": {"x": 0.05, "y": -0.15},
+        "icon_scale": 0.06,
+        "spacing": {"x": 0.1, "y": 0.08},
+        "max_talents": 12,
+        "drag_drop_threshold": 0.12,
+        "slot_scale_factor": 0.8
+      }
+    },
+
+    "character_panel": {
+      "main_panel": {
+        "position": {"x": 0.5, "y": 0.0, "z": 0.0},
+        "scale": {"x": 0.4, "y": 0.8, "z": 0.01},
+        "color": "#1A1A26",
+        "alpha": 0.9
+      },
+      
+      "health_display": {
+        "healthy_threshold": 0.7,
+        "wounded_threshold": 0.3,
+        "colors": {
+          "healthy": "#00FF00",
+          "wounded": "#FFA500",
+          "critical": "#8B0000"
+        }
+      }
+    },
+
+    "party_panel": {
+      "max_party_slots": 5,
+      "position": {"x": -0.5, "y": 0.0, "z": 0.0},
+      "scale": {"x": 0.3, "y": 0.8, "z": 0.01},
+      "color": "#1A1A26",
+      "alpha": 0.9
+    },
+
+    "inventory_panel": {
+      "main_panel": {
+        "position": {"x": -0.2, "y": 0.2, "z": 0.0},
+        "scale": {"x": 0.6, "y": 0.8, "z": 0.01},
+        "color": "#1A1A26",
+        "alpha": 0.9
+      },
+      
+      "grid": {
+        "width": 6,
+        "height": 8,
+        "cell_size": 0.08,
+        "position": {"x": -0.2, "y": 0.2}
+      },
+      
+      "info_panel": {
+        "scale": {"x": 0.3, "y": 0.4},
+        "position": {"x": 0.3, "y": 0.2}
+      },
+      
+      "tabs": {
+        "names": ["All", "Weapons", "Armor", "Accessories", "Consumables", "Materials"],
+        "button_scale": {"x": 0.08, "y": 0.03},
+        "start_position": {"x": -0.4, "y": 0.45},
+        "spacing": 0.09
+      },
+      
+      "action_buttons": {
+        "scale": {"x": 0.08, "y": 0.04},
+        "spacing": 0.1,
+        "base_position": {"x": 0.3, "y": 0.0}
+      },
+      
+      "drag_drop": {
+        "tolerance": 0.12,
+        "copy_offset": {"x": 0.02, "y": 0.02, "z": -0.02},
+        "feedback": {
+          "valid_drop": "#00FF00",
+          "invalid_drop": "#FF0000",
+          "drop_zone_alpha": 0.3
+        }
+      }
+    }
+  },
+
+  "ui_bars": {
+    "health_bar": {
+      "position": {"x": -0.4, "y": 0.45, "z": 0.0},
+      "scale": {"x": 0.3, "y": 0.03},
+      "label": {
+        "text": "HP",
+        "position": {"x": -0.47, "y": 0.43, "z": 0.0},
+        "scale": 1.0,
+        "origin": {"x": -0.5, "y": 0.5},
+        "color": "#FFFFFF"
+      },
+      "colors": {
+        "healthy": "#00FF00",
+        "wounded": "#FFA500", 
+        "critical": "#8B0000",
+        "background": "#333333"
+      }
+    },
+    
+    "resource_bar": {
+      "position": {"x": -0.4, "y": 0.4, "z": 0.0},
+      "scale": {"x": 0.3, "y": 0.03},
+      "label": {
+        "position": {"x": -0.47, "y": 0.4, "z": 0.0},
+        "scale": 1.0,
+        "origin": {"x": -0.5, "y": 0.5},
+        "color": "#FFFFFF"
+      },
+      "colors": {
+        "mp": "#0000FF",
+        "rage": "#FF0000",
+        "kwan": "#FFFF00",
+        "background": "#333333"
+      }
+    },
+    
+    "action_points_bar": {
+      "position": {"x": -0.4, "y": 0.35, "z": 0.0},
+      "scale": {"x": 0.3, "y": 0.03},
+      "label": {
+        "text": "AP",
+        "position": {"x": -0.47, "y": 0.35, "z": 0.0},
+        "scale": 1.0,
+        "origin": {"x": -0.5, "y": 0.5},
+        "color": "#FFFFFF"
+      },
+      "colors": {
+        "full": "#00CC66",
+        "partial": "#FFCC00",
+        "empty": "#CC0000",
+        "background": "#333333"
+      }
+    },
+    
+    "targeted_unit_bars": {
+      "max_displayed": 3,
+      "vertical_spacing": 0.05,
+      "start_position": {"x": 0.3, "y": 0.45, "z": 0.0},
+      "scale": {"x": 0.25, "y": 0.025}
+    }
+  },
+
+  "hotkey_system": {
+    "max_hotkey_abilities": 8,
+    "max_interface_slots": 8,
+    
+    "slot_layout": {
+      "rows": 1,
+      "columns": 8,
+      "slot_size": 0.06,
+      "slot_spacing": 0.01,
+      "start_position": {"x": -0.4, "y": 0.35, "z": 0.0}
+    },
+    
+    "visual_settings": {
+      "empty_slot_color": "#404040",
+      "ability_slot_color": "#FFFFFF",
+      "disabled_slot_color": "#202020",
+      "cooldown_overlay_color": "#800000",
+      "hotkey_text_color": "#FFFF00",
+      "hotkey_text_scale": 0.3,
+      "hotkey_text_position": {"x": 0.0, "y": 0.0, "z": -0.01},
+      "tooltip_enabled": true,
+      "tooltip_background": "#000000E6"
+    },
+    
+    "interaction": {
+      "click_to_activate": true,
+      "keyboard_shortcuts": true,
+      "keyboard_keys": ["1", "2", "3", "4", "5", "6", "7", "8"],
+      "enable_drag_reorder": false
+    },
+    
+    "display_options": {
+      "show_ability_icons": true,
+      "show_cooldown_timer": true,
+      "show_hotkey_numbers": true,
+      "show_ability_names": false,
+      "icon_fallback": "white_cube"
+    }
+  },
+
+  "modals": {
+    "movement_confirmation": {
+      "title": "Confirm Movement",
+      "size": {"width": 300, "height": 150},
+      "position": "center",
+      "button_spacing": 20,
+      "buttons": {
+        "confirm": {
+          "text": "Confirm Move",
+          "color": "#00CC66"
+        },
+        "cancel": {
+          "text": "Cancel",
+          "color": "#CC0000"
+        }
+      }
+    },
+    
+    "attack_confirmation": {
+      "title": "Confirm Attack", 
+      "size": {"width": 350, "height": 200},
+      "position": "center",
+      "button_spacing": 20,
+      "buttons": {
+        "confirm": {
+          "text": "Attack",
+          "color": "#FF0000"
+        },
+        "cancel": {
+          "text": "Cancel",
+          "color": "#CC0000"
+        }
+      }
+    },
+    
+    "magic_confirmation": {
+      "title": "Confirm Magic",
+      "size": {"width": 350, "height": 200}, 
+      "position": "center",
+      "button_spacing": 20,
+      "buttons": {
+        "confirm": {
+          "text": "Cast",
+          "color": "#0000FF"
+        },
+        "cancel": {
+          "text": "Cancel",
+          "color": "#CC0000"
+        }
+      }
+    },
+    
+    "action_selection": {
+      "title": "Select Action",
+      "size": {"width": 250, "height": 300},
+      "position": "center",
+      "button_spacing": 15,
+      "action_buttons": {
+        "move": {"text": "Move", "color": "#00FF00"},
+        "attack": {"text": "Attack", "color": "#FF0000"},
+        "magic": {"text": "Magic", "color": "#0000FF"},
+        "inventory": {"text": "Inventory", "color": "#FFA500"},
+        "wait": {"text": "Wait", "color": "#CCCCCC"}
+      }
+    },
+    
+    "common_settings": {
+      "popup": true,
+      "background_color": "#1A1A26",
+      "background_alpha": 0.95,
+      "border_color": "#666666",
+      "title_color": "#FFFFFF",
+      "text_color": "#FFFFFF"
+    }
+  },
+
+  "tooltips": {
+    "enabled": true,
+    "background_color": "#000000",
+    "background_alpha": 0.8,
+    "text_color": "#FFFFFF",
+    "border_color": "#666666",
+    "padding": 0.01,
+    "delay_ms": 500,
+    "max_width": 300,
+    "font_scale": 0.7
+  },
+
+  "animations": {
+    "fade": {
+      "duration": 0.3,
+      "easing": "ease_in_out"
+    },
+    "scale": {
+      "duration": 0.2,
+      "easing": "ease_out"
+    },
+    "slide": {
+      "duration": 0.4,
+      "easing": "ease_in_out"
+    },
+    "bounce": {
+      "intensity": 0.1,
+      "duration": 0.5
+    },
+    "hover_effects": {
+      "brightness_multiplier": 1.2,
+      "scale_multiplier": 1.05,
+      "duration": 0.1
+    },
+    "selection_effects": {
+      "brightness_multiplier": 1.4,
+      "duration": 0.2
+    },
+    "disabled_effects": {
+      "alpha_multiplier": 0.5,
+      "duration": 0.3
+    }
+  },
+
+  "visual_effects": {
+    "damage_numbers": {
+      "scale": 2.0,
+      "duration": 1.0,
+      "float_distance": 0.5,
+      "color": "#FF0000"
+    },
+    "healing_numbers": {
+      "scale": 1.5,
+      "duration": 0.8,
+      "float_distance": 0.3,
+      "color": "#00FF00"
+    },
+    "impact_effects": {
+      "scale": 1.2,
+      "duration": 0.3,
+      "flash_color": "#FFFFFF"
+    }
+  },
+
+  "models_and_textures": {
+    "default_models": {
+      "ui_element": "cube",
+      "unit": "cube", 
+      "tile": "cube",
+      "button": "cube",
+      "panel": "cube"
+    },
+    "default_textures": {
+      "fallback": "white_cube",
+      "button": "white_cube",
+      "panel": "white_cube"
+    },
+    "origins": {
+      "top_left": {"x": -0.5, "y": 0.5},
+      "center": {"x": 0.0, "y": 0.0},
+      "bottom_center": {"x": 0.0, "y": -0.5}
+    }
+  },
+
+  "theme_variants": {
+    "default": {
+      "description": "Standard theme with blue accents"
+    },
+    "dark": {
+      "description": "Dark theme with reduced brightness",
+      "color_overrides": {
+        "panels": "#111111",
+        "text": "#CCCCCC"
+      }
+    },
+    "high_contrast": {
+      "description": "High contrast theme for accessibility",
+      "color_overrides": {
+        "text": "#FFFFFF",
+        "background": "#000000",
+        "selected": "#FFFF00"
+      }
+    }
+  }
+}
