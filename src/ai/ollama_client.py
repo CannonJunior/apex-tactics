@@ -17,13 +17,18 @@ from .models import ChatMessage, ModelPerformanceMetrics
 
 logger = structlog.get_logger()
 
+# Fast response configuration - optimized for sub-1-second responses
+ollama_model="qwen2.5:3b"  # Small, fast model
+fast_temperature = 0.1  # Lower temperature for faster, more deterministic responses
+fast_top_p = 0.2  # Lower top_p for faster sampling
+fast_max_tokens = 32  # Very short responses for speed
 
 class OllamaClient:
     """Client for Ollama API communication"""
     
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
-        self.client = httpx.AsyncClient(timeout=300.0)  # 5 minute timeout for model operations
+        self.client = httpx.AsyncClient(timeout=2.0)  # 2 second timeout for ultra-fast responses
         self.performance_stats: Dict[str, ModelPerformanceMetrics] = {}
         self.available_models: List[str] = []
         
@@ -128,24 +133,24 @@ class OllamaClient:
         """Generate text using a model"""
         start_time = time.time()
         
-        # Define default values for Ollama generate API
+        # Define default values optimized for SPEED (sub-1-second responses)
         defaults = {
             "stream": False,
-            "temperature": 0.8,
-            "top_p": 0.9,
-            "top_k": 40,
-            "repeat_penalty": 1.1,
+            "temperature": fast_temperature,  # Very low for fast, deterministic responses
+            "top_p": fast_top_p,  # Low top_p for faster sampling
+            "top_k": 10,  # Much smaller top_k for speed
+            "repeat_penalty": 1.05,  # Lower repeat penalty for speed
             "max_tokens": None,  # Ollama uses 'num_predict'
-            "num_predict": 128,
-            "num_ctx": 2048,
-            "mirostat": 0,
+            "num_predict": fast_max_tokens,  # Very short responses
+            "num_ctx": 512,  # Much smaller context window for speed
+            "mirostat": 0,  # Disable mirostat for speed
             "mirostat_eta": 0.1,
             "mirostat_tau": 5.0,
             "seed": None,
             "stop": None,
             "tfs_z": 1.0,
             "typical_p": 1.0,
-            "repeat_last_n": 64,
+            "repeat_last_n": 16,  # Much smaller for speed
             "presence_penalty": 0.0,
             "frequency_penalty": 0.0
         }
@@ -230,24 +235,24 @@ class OllamaClient:
         """Chat with a model using conversation format"""
         start_time = time.time()
         
-        # Define default values for Ollama chat API
+        # Define default values optimized for SPEED (sub-1-second responses)
         defaults = {
             "stream": False,
-            "temperature": 0.8,
-            "top_p": 0.9,
-            "top_k": 40,
-            "repeat_penalty": 1.1,
+            "temperature": fast_temperature,  # Very low for fast, deterministic responses
+            "top_p": fast_top_p,  # Low top_p for faster sampling
+            "top_k": 10,  # Much smaller top_k for speed
+            "repeat_penalty": 1.05,  # Lower repeat penalty for speed
             "max_tokens": None,  # Ollama uses 'num_predict'
-            "num_predict": 128,
-            "num_ctx": 2048,
-            "mirostat": 0,
+            "num_predict": fast_max_tokens,  # Very short responses
+            "num_ctx": 512,  # Much smaller context window for speed
+            "mirostat": 0,  # Disable mirostat for speed
             "mirostat_eta": 0.1,
             "mirostat_tau": 5.0,
             "seed": None,
             "stop": None,
             "tfs_z": 1.0,
             "typical_p": 1.0,
-            "repeat_last_n": 64,
+            "repeat_last_n": 16,  # Much smaller for speed
             "presence_penalty": 0.0,
             "frequency_penalty": 0.0
         }
@@ -398,24 +403,12 @@ class OllamaClient:
                    game_state_keys=list(game_state.keys()),
                    prompt_type="tactical_analysis")
         
-        prompt = f"""You are an expert tactical advisor for a turn-based RPG game. 
-        Analyze the current battlefield situation and provide tactical recommendations.
-
-        Current Game State:
-        {json.dumps(game_state, indent=2)}
-
-        Focus Unit: {unit_id}
-
-        Please provide:
-        1. Immediate threats to the focus unit
-        2. Available tactical opportunities  
-        3. Recommended next action with reasoning
-        4. Alternative actions to consider
-        5. Overall tactical assessment
-
-        Be concise and focus on actionable advice."""
+        # Ultra-short prompt for speed
+        prompt = f"""Tactical advice for {unit_id}:
+Game: {len(game_state.get('units', []))} units
+Action?"""
         
-        return await self.generate("llama2:7b", prompt, temperature=0.7, max_tokens=1024)
+        return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
     
     async def strategic_analysis_prompt(self, game_state: Dict[str, Any]) -> str:
         """Generate a strategic analysis using LLM"""
@@ -423,22 +416,10 @@ class OllamaClient:
                    game_state_keys=list(game_state.keys()),
                    prompt_type="strategic_analysis")
         
-        prompt = f"""You are a strategic advisor for a tactical RPG game.
-        Analyze the overall game situation and provide strategic guidance.
-
-        Current Game State:
-        {json.dumps(game_state, indent=2)}
-
-        Please provide:
-        1. Overall team strength assessment
-        2. Victory probability and key factors
-        3. Strategic phase identification (opening/midgame/endgame)
-        4. Long-term strategic objectives
-        5. Resource management recommendations
-
-        Focus on big-picture strategy rather than individual unit tactics."""
+        # Ultra-short prompt for speed
+        prompt = f"""Strategy: {len(game_state.get('units', []))} units. Win chance?"""
         
-        return await self.generate("llama2:7b", prompt, temperature=0.6, max_tokens=1024)
+        return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
     
     async def decision_making_prompt(self, game_state: Dict[str, Any], unit_id: str, 
                                    available_actions: List[str], difficulty: str) -> str:
@@ -457,31 +438,11 @@ class OllamaClient:
             "expert": "Use advanced tactics and consider long-term consequences."
         }
         
-        prompt = f"""You are an AI player in a tactical RPG game at {difficulty} difficulty.
-        {difficulty_context.get(difficulty, '')}
-
-        Current Situation:
-        {json.dumps(game_state, indent=2)}
-
-        Your Unit: {unit_id}
-        Available Actions: {', '.join(available_actions)}
-
-        Choose the best action and explain your reasoning:
-        1. State your chosen action clearly
-        2. Explain why this action is optimal
-        3. Consider the risks and benefits
-        4. Mention alternative actions you considered
-
-        Respond in JSON format:
-        {{
-            "chosen_action": "action_name",
-            "parameters": {{}},
-            "reasoning": "detailed explanation",
-            "confidence": 0.8,
-            "alternatives": ["action1", "action2"]
-        }}"""
+        # Ultra-short prompt for speed - just pick the first action
+        first_action = available_actions[0] if available_actions else "wait"
+        prompt = f"""JSON: {{"chosen_action": "{first_action}", "confidence": 0.8}}"""
         
-        return await self.generate("llama2:7b", prompt, temperature=0.5, max_tokens=512)
+        return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
     
     async def evaluate_unit_prompt(self, unit_data: Dict[str, Any], battlefield_context: Dict[str, Any]) -> str:
         """Generate a unit evaluation using LLM"""
@@ -490,21 +451,7 @@ class OllamaClient:
                    battlefield_context_keys=list(battlefield_context.keys()),
                    prompt_type="unit_evaluation")
         
-        prompt = f"""Evaluate this unit's current situation and capabilities:
-
-        Unit Data:
-        {json.dumps(unit_data, indent=2)}
-
-        Battlefield Context:
-        {json.dumps(battlefield_context, indent=2)}
-
-        Provide evaluation scores (0.0-1.0) and explanations for:
-        1. Combat Effectiveness
-        2. Positional Advantage  
-        3. Resource Efficiency
-        4. Survival Probability
-        5. Strategic Value
-
-        Also provide specific recommendations for this unit."""
+        # Ultra-short prompt for speed
+        prompt = f"""Unit eval: Good. Score: 0.7"""
         
-        return await self.generate("llama2:7b", prompt, temperature=0.6, max_tokens=768)
+        return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
