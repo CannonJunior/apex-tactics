@@ -58,6 +58,26 @@ class UIConfig:
     auto_update_interval: float = 0.5  # Seconds
     max_timeline_actions: int = 20
     show_ai_coordination: bool = True
+    
+    def __post_init__(self):
+        """Load configuration from master UI config if available."""
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Override with master UI config values if available
+            queue_config = ui_config.get('ui_queue_management.config', {})
+            if queue_config:
+                theme_str = queue_config.get('theme', self.theme.value)
+                self.theme = UITheme(theme_str) if theme_str in [t.value for t in UITheme] else self.theme
+                self.enable_animations = queue_config.get('enable_animations', self.enable_animations)
+                self.enable_drag_drop = queue_config.get('enable_drag_drop', self.enable_drag_drop)
+                self.enable_previews = queue_config.get('enable_previews', self.enable_previews)
+                self.auto_update_interval = queue_config.get('auto_update_interval', self.auto_update_interval)
+                self.max_timeline_actions = queue_config.get('max_timeline_actions', self.max_timeline_actions)
+                self.show_ai_coordination = queue_config.get('show_ai_coordination', self.show_ai_coordination)
+        except ImportError:
+            pass  # Master UI config not available
 
 
 @dataclass
@@ -110,7 +130,29 @@ class QueueTimelineDisplay:
         self.needs_refresh = True
     
     def _get_theme_colors(self) -> Dict[str, Tuple[float, float, float]]:
-        """Get color scheme for current theme."""
+        """Get color scheme for current theme using master UI config."""
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Get theme colors from master UI config
+            theme_name = self.config.theme.value
+            theme_config = ui_config.get(f'ui_queue_management.themes.{theme_name}', {})
+            
+            if theme_config:
+                return {
+                    'background': ui_config.get_color_tuple(f'ui_queue_management.themes.{theme_name}.background', (0.1, 0.1, 0.15)),
+                    'player_action': ui_config.get_color_tuple(f'ui_queue_management.themes.{theme_name}.player_action', (0.2, 0.4, 0.8)),
+                    'ai_action': ui_config.get_color_tuple(f'ui_queue_management.themes.{theme_name}.ai_action', (0.8, 0.3, 0.2)),
+                    'high_priority': ui_config.get_color_tuple(f'ui_queue_management.themes.{theme_name}.high_priority', (0.9, 0.7, 0.1)),
+                    'normal_priority': ui_config.get_color_tuple(f'ui_queue_management.themes.{theme_name}.normal_priority', (0.7, 0.7, 0.7)),
+                    'low_priority': ui_config.get_color_tuple(f'ui_queue_management.themes.{theme_name}.low_priority', (0.5, 0.5, 0.5)),
+                    'text': ui_config.get_color_tuple(f'ui_queue_management.themes.{theme_name}.text', (0.9, 0.9, 0.9))
+                }
+        except ImportError:
+            pass
+        
+        # Fallback to hardcoded themes
         themes = {
             UITheme.TACTICAL: {
                 'background': (0.1, 0.1, 0.15),
@@ -152,26 +194,50 @@ class QueueTimelineDisplay:
         return themes.get(self.config.theme, themes[UITheme.TACTICAL])
     
     def _create_timeline_ui(self):
-        """Create the timeline UI structure."""
+        """Create the timeline UI structure using master UI config."""
         if not URSINA_AVAILABLE:
             print("📱 Timeline UI created (Ursina not available)")
             return
         
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Timeline container configuration from master UI config
+            container_config = ui_config.get('ui_queue_management.timeline.container', {})
+            container_model = container_config.get('model', 'cube')
+            container_scale = container_config.get('scale', (12, 1.5, 0.1))
+            container_position = container_config.get('position', (0, 8, 0))
+            
+            # Timeline title configuration from master UI config
+            title_config = ui_config.get('ui_queue_management.timeline.title', {})
+            title_text = title_config.get('text', 'Action Timeline')
+            title_position = title_config.get('position', (-5.5, 0.6, -0.1))
+            title_scale = title_config.get('scale', 2)
+        except ImportError:
+            # Fallback values if master UI config not available
+            container_model = 'cube'
+            container_scale = (12, 1.5, 0.1)
+            container_position = (0, 8, 0)
+            title_text = 'Action Timeline'
+            title_position = (-5.5, 0.6, -0.1)
+            title_scale = 2
+        
         # Main timeline container
         self.timeline_container = Entity(
             parent=self.parent,
-            model='cube',
+            model=container_model,
             color=self.theme_colors['background'],
-            scale=(12, 1.5, 0.1),
-            position=(0, 8, 0)
+            scale=container_scale,
+            position=container_position
         )
         
         # Timeline title
         Text(
-            "Action Timeline",
+            title_text,
             parent=self.timeline_container,
-            position=(-5.5, 0.6, -0.1),
-            scale=2,
+            position=title_position,
+            scale=title_scale,
             color=self.theme_colors['text']
         )
         
@@ -181,29 +247,63 @@ class QueueTimelineDisplay:
         print("📱 Action Timeline UI created")
     
     def _create_action_slots(self):
-        """Create slots for timeline actions."""
+        """Create slots for timeline actions using master UI config."""
         if not URSINA_AVAILABLE:
             return
         
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Action slots configuration from master UI config
+            slots_config = ui_config.get('ui_queue_management.timeline.action_slots', {})
+            slot_width = slots_config.get('slot_width', 0.8)
+            start_x = slots_config.get('start_x', -5.5)
+            slot_model = slots_config.get('model', 'cube')
+            slot_color = ui_config.get_color_tuple('ui_queue_management.timeline.action_slots.color', (0.3, 0.3, 0.3))
+            slot_height = slots_config.get('slot_height', 0.8)
+            slot_thickness = slots_config.get('thickness', 0.05)
+            slot_y = slots_config.get('y_position', -0.2)
+            slot_z = slots_config.get('z_position', -0.05)
+            slot_spacing = slots_config.get('spacing', 0.1)
+            
+            # Slot number configuration from master UI config
+            number_config = slots_config.get('slot_number', {})
+            number_y_offset = number_config.get('y_offset', -0.5)
+            number_z_offset = number_config.get('z_offset', -0.1)
+            number_scale = number_config.get('scale', 1.5)
+        except ImportError:
+            # Fallback values
+            slot_width = 0.8
+            start_x = -5.5
+            slot_model = 'cube'
+            slot_color = (0.3, 0.3, 0.3)
+            slot_height = 0.8
+            slot_thickness = 0.05
+            slot_y = -0.2
+            slot_z = -0.05
+            slot_spacing = 0.1
+            number_y_offset = -0.5
+            number_z_offset = -0.1
+            number_scale = 1.5
+        
         self.action_slots = []
-        slot_width = 0.8
-        start_x = -5.5
         
         for i in range(self.config.max_timeline_actions):
             slot = Entity(
                 parent=self.timeline_container,
-                model='cube',
-                color=(0.3, 0.3, 0.3),
-                scale=(slot_width, 0.8, 0.05),
-                position=(start_x + i * (slot_width + 0.1), -0.2, -0.05)
+                model=slot_model,
+                color=slot_color,
+                scale=(slot_width, slot_height, slot_thickness),
+                position=(start_x + i * (slot_width + slot_spacing), slot_y, slot_z)
             )
             
             # Slot number
             Text(
                 str(i + 1),
                 parent=slot,
-                position=(0, -0.5, -0.1),
-                scale=1.5,
+                position=(0, number_y_offset, number_z_offset),
+                scale=number_scale,
                 color=self.theme_colors['text']
             )
             
@@ -353,35 +453,68 @@ class UnitActionQueuePanel:
         return QueueTimelineDisplay(None, None, self.config)._get_theme_colors()
     
     def _create_panel_ui(self):
-        """Create the unit action panel UI."""
+        """Create the unit action panel UI using master UI config."""
         if not URSINA_AVAILABLE:
             print(f"📱 Unit panel UI created for {self.unit_id} (Ursina not available)")
             return
         
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Panel container configuration from master UI config
+            panel_config = ui_config.get('ui_queue_management.unit_panel.container', {})
+            panel_model = panel_config.get('model', 'cube')
+            panel_scale = panel_config.get('scale', (4, 6, 0.1))
+            panel_position = panel_config.get('position', (6, 2, 0))
+            
+            # Panel title configuration from master UI config
+            title_config = ui_config.get('ui_queue_management.unit_panel.title', {})
+            title_position = title_config.get('position', (0, 2.5, -0.1))
+            title_scale = title_config.get('scale', 1.5)
+            title_template = title_config.get('text_template', '{unit_id} Actions')
+            
+            # Add button configuration from master UI config
+            button_config = ui_config.get('ui_queue_management.unit_panel.add_button', {})
+            button_text = button_config.get('text', '+ Add Action')
+            button_scale = button_config.get('scale', (1.5, 0.4))
+            button_position = button_config.get('position', (0, -2.5, -0.1))
+        except ImportError:
+            # Fallback values
+            panel_model = 'cube'
+            panel_scale = (4, 6, 0.1)
+            panel_position = (6, 2, 0)
+            title_position = (0, 2.5, -0.1)
+            title_scale = 1.5
+            title_template = '{unit_id} Actions'
+            button_text = '+ Add Action'
+            button_scale = (1.5, 0.4)
+            button_position = (0, -2.5, -0.1)
+        
         # Main panel container
         self.panel_container = Entity(
             parent=self.parent,
-            model='cube',
+            model=panel_model,
             color=self.theme_colors['background'],
-            scale=(4, 6, 0.1),
-            position=(6, 2, 0)
+            scale=panel_scale,
+            position=panel_position
         )
         
         # Panel title
         Text(
-            f"{self.unit_id} Actions",
+            title_template.format(unit_id=self.unit_id),
             parent=self.panel_container,
-            position=(0, 2.5, -0.1),
-            scale=1.5,
+            position=title_position,
+            scale=title_scale,
             color=self.theme_colors['text']
         )
         
         # Add action button
         add_button = Button(
-            text="+ Add Action",
+            text=button_text,
             parent=self.panel_container,
-            scale=(1.5, 0.4),
-            position=(0, -2.5, -0.1),
+            scale=button_scale,
+            position=button_position,
             color=self.theme_colors['player_action']
         )
         add_button.on_click = self._on_add_action_clicked
@@ -547,52 +680,100 @@ class AICoordinationDisplay:
         return QueueTimelineDisplay(None, None, self.config)._get_theme_colors()
     
     def _create_coordination_ui(self):
-        """Create AI coordination UI."""
+        """Create AI coordination UI using master UI config."""
         if not URSINA_AVAILABLE:
             print("📱 AI coordination UI created (Ursina not available)")
             return
         
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Coordination panel configuration from master UI config
+            coord_config = ui_config.get('ui_queue_management.ai_coordination.panel', {})
+            panel_model = coord_config.get('model', 'cube')
+            panel_scale = coord_config.get('scale', (5, 4, 0.1))
+            panel_position = coord_config.get('position', (-6, 2, 0))
+            
+            # Title configuration from master UI config
+            title_config = ui_config.get('ui_queue_management.ai_coordination.title', {})
+            title_text = title_config.get('text', 'AI Coordination')
+            title_position = title_config.get('position', (0, 1.7, -0.1))
+            title_scale = title_config.get('scale', 1.5)
+            
+            # Section configurations from master UI config
+            sections_config = ui_config.get('ui_queue_management.ai_coordination.sections', {})
+            battle_plan_config = sections_config.get('battle_plan', {})
+            battle_plan_label = battle_plan_config.get('label', 'Battle Plan:')
+            battle_plan_label_pos = battle_plan_config.get('label_position', (-2, 1.2, -0.1))
+            battle_plan_text_pos = battle_plan_config.get('text_position', (-2, 0.8, -0.1))
+            battle_plan_default = battle_plan_config.get('default_text', 'No active plan')
+            
+            metrics_config = sections_config.get('metrics', {})
+            metrics_label = metrics_config.get('label', 'AI Performance:')
+            metrics_label_pos = metrics_config.get('label_position', (-2, 0.2, -0.1))
+            
+            # Text scales from master UI config
+            label_scale = sections_config.get('label_scale', 1.2)
+            text_scale = sections_config.get('text_scale', 1.0)
+        except ImportError:
+            # Fallback values
+            panel_model = 'cube'
+            panel_scale = (5, 4, 0.1)
+            panel_position = (-6, 2, 0)
+            title_text = 'AI Coordination'
+            title_position = (0, 1.7, -0.1)
+            title_scale = 1.5
+            battle_plan_label = 'Battle Plan:'
+            battle_plan_label_pos = (-2, 1.2, -0.1)
+            battle_plan_text_pos = (-2, 0.8, -0.1)
+            battle_plan_default = 'No active plan'
+            metrics_label = 'AI Performance:'
+            metrics_label_pos = (-2, 0.2, -0.1)
+            label_scale = 1.2
+            text_scale = 1.0
+        
         # Main coordination panel
         self.coordination_panel = Entity(
             parent=self.parent,
-            model='cube',
+            model=panel_model,
             color=self.theme_colors['background'],
-            scale=(5, 4, 0.1),
-            position=(-6, 2, 0)
+            scale=panel_scale,
+            position=panel_position
         )
         
         # Panel title
         Text(
-            "AI Coordination",
+            title_text,
             parent=self.coordination_panel,
-            position=(0, 1.7, -0.1),
-            scale=1.5,
+            position=title_position,
+            scale=title_scale,
             color=self.theme_colors['ai_action']
         )
         
         # Battle plan section
         Text(
-            "Battle Plan:",
+            battle_plan_label,
             parent=self.coordination_panel,
-            position=(-2, 1.2, -0.1),
-            scale=1.2,
+            position=battle_plan_label_pos,
+            scale=label_scale,
             color=self.theme_colors['text']
         )
         
         self.battle_plan_text = Text(
-            "No active plan",
+            battle_plan_default,
             parent=self.coordination_panel,
-            position=(-2, 0.8, -0.1),
-            scale=1.0,
+            position=battle_plan_text_pos,
+            scale=text_scale,
             color=self.theme_colors['text']
         )
         
         # Metrics section
         Text(
-            "AI Performance:",
+            metrics_label,
             parent=self.coordination_panel,
-            position=(-2, 0.2, -0.1),
-            scale=1.2,
+            position=metrics_label_pos,
+            scale=label_scale,
             color=self.theme_colors['text']
         )
         

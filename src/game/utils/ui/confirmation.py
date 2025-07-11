@@ -1,12 +1,23 @@
 """
 Confirmations
 
+Confirmation modal utilities for tactical actions.
 """
 
+try:
+    from ursina import Button, Text, WindowPanel, color
+    URSINA_AVAILABLE = True
+except ImportError:
+    URSINA_AVAILABLE = False
+
 def show_attack_confirmation(self, target_x: int, target_y: int):
-    """Show modal to confirm attack on target tile."""
+    """Show modal to confirm attack on target tile using master UI config."""
     if not self.active_unit or not self.attack_target_tile:
         return
+
+    # Load master UI configuration
+    from src.core.ui.ui_config_manager import get_ui_config_manager
+    ui_config = get_ui_config_manager()
 
     # Find units that would be affected by the attack
     affected_units = self.get_units_in_effect_area(target_x, target_y)
@@ -15,14 +26,18 @@ def show_attack_confirmation(self, target_x: int, target_y: int):
     # Set the targeted units for UI display
     self.set_targeted_units(unit_list)
 
-    # Create confirmation buttons
+    # Button configuration from master UI config
+    confirm_config = ui_config.get('game_utils.confirmation.attack_confirmation.confirm_button', {})
+    cancel_config = ui_config.get('game_utils.confirmation.attack_confirmation.cancel_button', {})
+    
+    # Create confirmation buttons using master UI config
     confirm_btn = Button(
-        text=self._get_button_config('attack_confirmation', 'confirm').get('text', 'Confirm Attack'),
-        color=self._get_button_color('attack_confirmation', 'confirm', color.red)
+        text=confirm_config.get('text', 'Confirm Attack'),
+        color=ui_config.get_color('game_utils.confirmation.attack_confirmation.confirm_button.color', '#FF0000')
     )
     cancel_btn = Button(
-        text=self._get_button_config('attack_confirmation', 'cancel').get('text', 'Cancel'),
-        color=self._get_button_color('attack_confirmation', 'cancel', color.gray)
+        text=cancel_config.get('text', 'Cancel'),
+        color=ui_config.get_color('game_utils.confirmation.attack_confirmation.cancel_button.color', '#808080')
     )
 
     # Store attack data for keyboard handling
@@ -93,16 +108,24 @@ def show_attack_confirmation(self, target_x: int, target_y: int):
             cancel_btn
         ])
         
+            # Window panel configuration from master UI config
+        modal_config = ui_config.get('game_utils.confirmation.attack_confirmation.modal', {})
+        modal_popup = modal_config.get('popup', True)
+        
         # Create modal window with talent information
         self.attack_modal = WindowPanel(
             title=title_text,
             content=tuple(content_items),
-            popup=True
+            popup=modal_popup
         )
     else:
-        # Fallback to original attack information
+        # Fallback title configuration from master UI config
+        fallback_config = ui_config.get('game_utils.confirmation.attack_confirmation.fallback', {})
+        fallback_title = fallback_config.get('title', 'Confirm Attack')
+        
+        # Fallback to original attack information using master UI config
         self.attack_modal = WindowPanel(
-            title='Confirm Attack',
+            title=fallback_title,
             content=(
                 Text(f'{self.active_unit.name} attacks tile ({target_x}, {target_y})'),
                 Text(f'Attack damage: {self.active_unit.physical_attack}'),
@@ -110,17 +133,28 @@ def show_attack_confirmation(self, target_x: int, target_y: int):
                 confirm_btn,
                 cancel_btn
             ),
-            popup=True
+            popup=modal_popup
         )
 
+    # Modal positioning configuration from master UI config
+    positioning_config = ui_config.get('game_utils.confirmation.modal_positioning', {})
+    use_auto_center = positioning_config.get('auto_center', True)
+    
     # Center the window panel
-    self.attack_modal.y = self.attack_modal.panel.scale_y / 2 * self.attack_modal.scale_y
+    if use_auto_center:
+        scale_factor = positioning_config.get('scale_factor', 0.5)
+        self.attack_modal.y = self.attack_modal.panel.scale_y / 2 * self.attack_modal.scale_y * scale_factor
+    
     self.attack_modal.layout()
 
 def show_magic_confirmation(self, target_x: int, target_y: int):
-    """Show modal to confirm magic on target tile."""
+    """Show modal to confirm magic on target tile using master UI config."""
     if not self.active_unit or not self.magic_target_tile:
         return
+
+    # Load master UI configuration
+    from src.core.ui.ui_config_manager import get_ui_config_manager
+    ui_config = get_ui_config_manager()
 
     # Find units that would be affected by the magic
     affected_units = self.get_units_in_magic_effect_area(target_x, target_y)
@@ -129,14 +163,18 @@ def show_magic_confirmation(self, target_x: int, target_y: int):
     # Set the targeted units for UI display
     self.set_targeted_units(unit_list)
 
-    # Create confirmation buttons
+    # Button configuration from master UI config
+    magic_confirm_config = ui_config.get('game_utils.confirmation.magic_confirmation.confirm_button', {})
+    magic_cancel_config = ui_config.get('game_utils.confirmation.magic_confirmation.cancel_button', {})
+    
+    # Create confirmation buttons using master UI config
     confirm_btn = Button(
-        text=self._get_button_config('magic_confirmation', 'confirm').get('text', 'Confirm Magic'),
-        color=self._get_button_color('magic_confirmation', 'confirm', color.blue)
+        text=magic_confirm_config.get('text', 'Confirm Magic'),
+        color=ui_config.get_color('game_utils.confirmation.magic_confirmation.confirm_button.color', '#0000FF')
     )
     cancel_btn = Button(
-        text=self._get_button_config('magic_confirmation', 'cancel').get('text', 'Cancel'),
-        color=self._get_button_color('magic_confirmation', 'cancel', color.gray)
+        text=magic_cancel_config.get('text', 'Cancel'),
+        color=ui_config.get_color('game_utils.confirmation.magic_confirmation.cancel_button.color', '#808080')
     )
 
     # Store magic data for keyboard handling
@@ -223,17 +261,26 @@ def show_magic_confirmation(self, target_x: int, target_y: int):
             cancel_btn
         ])
         
+        # Magic modal configuration from master UI config
+        magic_modal_config = ui_config.get('game_utils.confirmation.magic_confirmation.modal', {})
+        magic_modal_popup = magic_modal_config.get('popup', True)
+        
         # Create modal window with talent information
         self.magic_modal = WindowPanel(
             title=title_text,
             content=tuple(content_items),
-            popup=True
+            popup=magic_modal_popup
         )
     else:
-        # Fallback to original magic information
-        magic_spell_name = self.active_unit.magic_spell_name if hasattr(self.active_unit, 'magic_spell_name') else "Magic Spell"
+        # Fallback configuration from master UI config
+        magic_fallback_config = ui_config.get('game_utils.confirmation.magic_confirmation.fallback', {})
+        magic_fallback_title = magic_fallback_config.get('title', 'Confirm Magic')
+        default_spell_name = magic_fallback_config.get('default_spell_name', 'Magic Spell')
+        
+        # Fallback to original magic information using master UI config
+        magic_spell_name = self.active_unit.magic_spell_name if hasattr(self.active_unit, 'magic_spell_name') else default_spell_name
         self.magic_modal = WindowPanel(
-            title='Confirm Magic',
+            title=magic_fallback_title,
             content=(
                 Text(f'{self.active_unit.name} casts {magic_spell_name} on tile ({target_x}, {target_y})'),
                 Text(f'Magic damage: {self.active_unit.magical_attack}'),
@@ -242,9 +289,16 @@ def show_magic_confirmation(self, target_x: int, target_y: int):
                 confirm_btn,
                 cancel_btn
             ),
-            popup=True
+            popup=magic_modal_popup
         )
 
+    # Magic modal positioning configuration from master UI config
+    magic_positioning_config = ui_config.get('game_utils.confirmation.modal_positioning', {})
+    magic_auto_center = magic_positioning_config.get('auto_center', True)
+    
     # Center the window panel
-    self.magic_modal.y = self.magic_modal.panel.scale_y / 2 * self.magic_modal.scale_y
+    if magic_auto_center:
+        magic_scale_factor = magic_positioning_config.get('scale_factor', 0.5)
+        self.magic_modal.y = self.magic_modal.panel.scale_y / 2 * self.magic_modal.scale_y * magic_scale_factor
+    
     self.magic_modal.layout()

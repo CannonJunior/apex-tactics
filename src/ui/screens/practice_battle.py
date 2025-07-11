@@ -258,16 +258,34 @@ class CameraController:
 
 class GridTile(Entity):
     def __init__(self, x, y, **kwargs):
+        # Load master UI configuration for grid tiles
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Grid tile configuration from master UI config
+            tile_config = ui_config.get('ui_screens.practice_battle.grid_tile', {})
+            tile_model = tile_config.get('model', 'cube')
+            tile_color = ui_config.get_color('ui_screens.practice_battle.grid_tile.color', '#808080')
+            tile_scale = tile_config.get('scale', (0.9, 0.1, 0.9))
+            tile_y_position = tile_config.get('y_position', 0)
+        except ImportError:
+            # Fallback values if master UI config not available
+            tile_model = 'cube'
+            tile_color = color.gray
+            tile_scale = (0.9, 0.1, 0.9)
+            tile_y_position = 0
+        
         super().__init__(
-            model='cube',
-            color=color.gray,
-            scale=(0.9, 0.1, 0.9),
-            position=(x, 0, y),
+            model=tile_model,
+            color=tile_color,
+            scale=tile_scale,
+            position=(x, tile_y_position, y),
             **kwargs
         )
         self.grid_x = x
         self.grid_y = y
-        self.default_color = color.gray
+        self.default_color = tile_color
         self.highlighted = False
         
     def highlight(self, highlight_color=color.orange):
@@ -280,28 +298,64 @@ class GridTile(Entity):
 
 class UnitEntity(Entity):
     def __init__(self, unit, **kwargs):
+        # Load master UI configuration for unit entities
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Unit entity configuration from master UI config
+            unit_config = ui_config.get('ui_screens.practice_battle.unit_entity', {})
+            unit_model = unit_config.get('model', 'cube')
+            unit_scale = unit_config.get('scale', (0.8, 1.5, 0.8))
+            unit_y_position = unit_config.get('y_position', 0.8)
+        except ImportError:
+            # Fallback values if master UI config not available
+            unit_model = 'cube'
+            unit_scale = (0.8, 1.5, 0.8)
+            unit_y_position = 0.8
+        
         super().__init__(
-            model='cube',
+            model=unit_model,
             color=self._get_unit_color(unit),
-            scale=(0.8, 1.5, 0.8),
-            position=(unit.x, 0.8, unit.y),
+            scale=unit_scale,
+            position=(unit.x, unit_y_position, unit.y),
             **kwargs
         )
         self.unit = unit
+        self.unit_y_position = unit_y_position
         
     def _get_unit_color(self, unit):
-        unit_colors = {
-            UnitType.HEROMANCER: color.red,
-            UnitType.UBERMENSCH: color.orange,
-            UnitType.SOUL_LINKED: color.blue,
-            UnitType.REALM_WALKER: color.magenta,
-            UnitType.WARGI: color.green,
-            UnitType.MAGI: color.blue
-        }
-        return unit_colors.get(unit.type, color.white)
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Unit type colors from master UI config
+            colors_config = ui_config.get('ui_screens.practice_battle.unit_colors', {})
+            unit_colors = {
+                UnitType.HEROMANCER: ui_config.get_color('ui_screens.practice_battle.unit_colors.heromancer', '#FF0000'),
+                UnitType.UBERMENSCH: ui_config.get_color('ui_screens.practice_battle.unit_colors.ubermensch', '#FFA500'),
+                UnitType.SOUL_LINKED: ui_config.get_color('ui_screens.practice_battle.unit_colors.soul_linked', '#0000FF'),
+                UnitType.REALM_WALKER: ui_config.get_color('ui_screens.practice_battle.unit_colors.realm_walker', '#FF00FF'),
+                UnitType.WARGI: ui_config.get_color('ui_screens.practice_battle.unit_colors.wargi', '#00FF00'),
+                UnitType.MAGI: ui_config.get_color('ui_screens.practice_battle.unit_colors.magi', '#0000FF')
+            }
+            default_color = ui_config.get_color('ui_screens.practice_battle.unit_colors.default', '#FFFFFF')
+        except ImportError:
+            # Fallback values if master UI config not available
+            unit_colors = {
+                UnitType.HEROMANCER: color.red,
+                UnitType.UBERMENSCH: color.orange,
+                UnitType.SOUL_LINKED: color.blue,
+                UnitType.REALM_WALKER: color.magenta,
+                UnitType.WARGI: color.green,
+                UnitType.MAGI: color.blue
+            }
+            default_color = color.white
+        
+        return unit_colors.get(unit.type, default_color)
         
     def update_position(self):
-        self.position = (self.unit.x, 0.8, self.unit.y)
+        self.position = (self.unit.x, self.unit_y_position, self.unit.y)
 
 class PracticeBattle:
     """Practice battle demonstration"""
@@ -350,19 +404,53 @@ class PracticeBattle:
         print("- ESC: Exit battle")
         
     def _create_environment(self):
-        """Create battle environment"""
+        """Create battle environment using master UI config"""
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Environment configuration from master UI config
+            env_config = ui_config.get('ui_screens.practice_battle.environment', {})
+            
+            # Background plane configuration
+            bg_config = env_config.get('background_plane', {})
+            bg_model = bg_config.get('model', 'plane')
+            bg_texture = bg_config.get('texture', 'white_cube')
+            bg_color = ui_config.get_color('ui_screens.practice_battle.environment.background_plane.color', '#2F2F2F')
+            bg_scale = bg_config.get('scale', (20, 1, 20))
+            bg_position = bg_config.get('position', (4, -0.1, 4))
+            
+            # Lighting configuration
+            lighting_config = env_config.get('lighting', {})
+            directional_config = lighting_config.get('directional_light', {})
+            dir_position = directional_config.get('position', (0, 2, -1))
+            dir_rotation = directional_config.get('rotation', (45, -45, 0))
+            
+            ambient_config = lighting_config.get('ambient_light', {})
+            ambient_color = ui_config.get_color_rgba('ui_screens.practice_battle.environment.lighting.ambient_light.color', (100, 100, 100, 100))
+        except ImportError:
+            # Fallback values if master UI config not available
+            bg_model = 'plane'
+            bg_texture = 'white_cube'
+            bg_color = color.dark_gray
+            bg_scale = (20, 1, 20)
+            bg_position = (4, -0.1, 4)
+            dir_position = (0, 2, -1)
+            dir_rotation = (45, -45, 0)
+            ambient_color = (100, 100, 100, 100)
+        
         # Background plane
         Entity(
-            model='plane',
-            texture='white_cube',
-            color=color.dark_gray,
-            scale=(20, 1, 20),
-            position=(4, -0.1, 4)
+            model=bg_model,
+            texture=bg_texture,
+            color=bg_color,
+            scale=bg_scale,
+            position=bg_position
         )
         
         # Lighting
-        DirectionalLight(y=2, z=-1, rotation=(45, -45, 0))
-        AmbientLight(color=color.rgba(100, 100, 100, 100))
+        DirectionalLight(x=dir_position[0], y=dir_position[1], z=dir_position[2], rotation=dir_rotation)
+        AmbientLight(color=color.rgba(*ambient_color))
         
     def _create_grid(self):
         """Create battle grid tiles"""
@@ -402,29 +490,87 @@ class PracticeBattle:
         self.battle_phase = "active"
         
     def _create_ui(self):
-        """Create battle UI"""
+        """Create battle UI using master UI config"""
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # UI panel configuration from master UI config
+            ui_panel_config = ui_config.get('ui_screens.practice_battle.info_panel', {})
+            panel_title = ui_panel_config.get('title', 'Practice Battle - Turn 1')
+            panel_popup = ui_panel_config.get('popup', False)
+            panel_x = ui_panel_config.get('x_position', 0.7)
+            panel_y = ui_panel_config.get('y_position', 0.2)
+            panel_scale = ui_panel_config.get('scale', 0.8)
+            
+            # Panel content configuration from master UI config
+            content_config = ui_panel_config.get('content', {})
+            tutorial_title = content_config.get('tutorial_title', 'Practice Battle Tutorial')
+            tutorial_color = ui_config.get_color('ui_screens.practice_battle.info_panel.content.tutorial_color', '#FFFFFF')
+            tutorial_scale = content_config.get('tutorial_scale', 1.2)
+            
+            player_turn_text = content_config.get('player_turn_text', 'Player 1 Turn')
+            player_turn_color = ui_config.get_color('ui_screens.practice_battle.info_panel.content.player_turn_color', '#0000FF')
+            
+            unit_instruction = content_config.get('unit_instruction', 'Select a unit to see its stats')
+            
+            controls_title = content_config.get('controls_title', 'Controls:')
+            controls_color = ui_config.get_color('ui_screens.practice_battle.info_panel.content.controls_color', '#FFFF00')
+            
+            # Control instructions from master UI config
+            controls_list = content_config.get('controls_list', [
+                'Left click: Select unit',
+                'Right click: Move unit',
+                '1/2/3: Camera modes',
+                'ESC: Exit battle'
+            ])
+        except ImportError:
+            # Fallback values if master UI config not available
+            panel_title = 'Practice Battle - Turn 1'
+            panel_popup = False
+            panel_x = 0.7
+            panel_y = 0.2
+            panel_scale = 0.8
+            tutorial_title = 'Practice Battle Tutorial'
+            tutorial_color = color.white
+            tutorial_scale = 1.2
+            player_turn_text = 'Player 1 Turn'
+            player_turn_color = color.blue
+            unit_instruction = 'Select a unit to see its stats'
+            controls_title = 'Controls:'
+            controls_color = color.yellow
+            controls_list = [
+                'Left click: Select unit',
+                'Right click: Move unit',
+                '1/2/3: Camera modes',
+                'ESC: Exit battle'
+            ]
+        
+        # Build content list
+        content_items = [
+            Text(tutorial_title, color=tutorial_color, scale=tutorial_scale),
+            Text(''),
+            Text(player_turn_text, color=player_turn_color),
+            Text(unit_instruction),
+            Text(''),
+            Text(controls_title, color=controls_color),
+        ]
+        
+        # Add control instructions
+        for control_text in controls_list:
+            content_items.append(Text(control_text))
+        
         # Battle info panel
         self.info_panel = WindowPanel(
-            title='Practice Battle - Turn 1',
-            content=(
-                Text('Practice Battle Tutorial', color=color.white, scale=1.2),
-                Text(''),
-                Text('Player 1 Turn', color=color.blue),
-                Text('Select a unit to see its stats'),
-                Text(''),
-                Text('Controls:', color=color.yellow),
-                Text('Left click: Select unit'),
-                Text('Right click: Move unit'),
-                Text('1/2/3: Camera modes'),
-                Text('ESC: Exit battle'),
-            ),
-            popup=False
+            title=panel_title,
+            content=tuple(content_items),
+            popup=panel_popup
         )
         
         # Position panel on right side
-        self.info_panel.x = 0.7
-        self.info_panel.y = 0.2
-        self.info_panel.scale = 0.8
+        self.info_panel.x = panel_x
+        self.info_panel.y = panel_y
+        self.info_panel.scale = panel_scale
         
     def _handle_tile_click(self, tile):
         """Handle clicking on a grid tile"""
@@ -444,8 +590,15 @@ class PracticeBattle:
             else:
                 print(f"Cannot move to ({x}, {y})")
         
-        # Highlight clicked tile
-        tile.highlight(color.yellow)
+        # Highlight clicked tile using master UI config
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            highlight_color = ui_config.get_color('ui_screens.practice_battle.tile_highlights.clicked', '#FFFF00')
+        except ImportError:
+            highlight_color = color.yellow
+        
+        tile.highlight(highlight_color)
         
     def _handle_unit_click(self, unit):
         """Handle clicking on a unit"""
@@ -458,9 +611,16 @@ class PracticeBattle:
         # Select the unit
         self.selected_unit = unit
         
-        # Highlight unit's tile
+        # Highlight unit's tile using master UI config
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            selected_color = ui_config.get_color('ui_screens.practice_battle.tile_highlights.selected_unit', '#0000FF')
+        except ImportError:
+            selected_color = color.blue
+        
         tile = self.grid_tiles[unit.x][unit.y]
-        tile.highlight(color.blue)
+        tile.highlight(selected_color)
         
         # Highlight movement range
         self._highlight_movement_range(unit)
@@ -497,7 +657,14 @@ class PracticeBattle:
             for y in range(self.grid.height):
                 if unit.can_move_to(x, y, self.grid) and not self.grid.get_unit_at(x, y):
                     if x != unit.x or y != unit.y:  # Don't highlight current position
-                        self.grid_tiles[x][y].highlight(color.green)
+                        try:
+                            from src.core.ui.ui_config_manager import get_ui_config_manager
+                            ui_config = get_ui_config_manager()
+                            movement_color = ui_config.get_color('ui_screens.practice_battle.tile_highlights.movement_range', '#00FF00')
+                        except ImportError:
+                            movement_color = color.green
+                        
+                        self.grid_tiles[x][y].highlight(movement_color)
                         
     def _clear_highlights(self):
         """Clear all tile highlights"""
