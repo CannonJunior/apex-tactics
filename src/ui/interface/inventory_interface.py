@@ -61,6 +61,10 @@ class InventoryInterface:
         if not URSINA_AVAILABLE:
             raise ImportError("Ursina is required for InventoryInterface")
         
+        # Load master UI configuration
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        self.ui_config = get_ui_config_manager()
+        
         self.screen_width = screen_width
         self.screen_height = screen_height
         
@@ -82,49 +86,66 @@ class InventoryInterface:
         self.ui_elements: List['Entity'] = []
         self.modal_background: Optional['Entity'] = None
         
-        # Layout configuration
-        self.panel_width = 0.8
-        self.panel_height = 0.9
-        self.grid_size = (8, 6)  # 8x6 inventory grid
+        # Layout configuration from master UI config
+        layout_config = self.ui_config.get('ui_interface.inventory_interface.layout', {})
+        self.panel_width = layout_config.get('panel_width', 0.8)
+        self.panel_height = layout_config.get('panel_height', 0.9)
+        grid_config = layout_config.get('grid_size', {'width': 8, 'height': 6})
+        self.grid_size = (grid_config['width'], grid_config['height'])
         
-        # Color scheme
+        # Color scheme from master UI config
         self.colors = {
-            'background': color.Color(0.1, 0.1, 0.15, 0.95),
-            'panel': color.Color(0.2, 0.2, 0.25, 0.9),
-            'button': color.Color(0.3, 0.3, 0.35, 1.0),
-            'button_hover': color.Color(0.4, 0.4, 0.45, 1.0),
-            'text': color.white,
-            'stat_increase': color.green,
-            'stat_decrease': color.red,
-            'equipment_common': color.white,
-            'equipment_enhanced': color.Color(0.0, 1.0, 0.0, 1.0),  # Green
-            'equipment_enchanted': color.Color(0.0, 0.7, 1.0, 1.0),  # Blue
-            'equipment_superpowered': color.Color(0.8, 0.0, 1.0, 1.0),  # Purple
-            'equipment_metapowered': color.Color(1.0, 0.7, 0.0, 1.0)   # Orange/Gold
+            'background': self.ui_config.get_color_rgba('ui_interface.inventory_interface.colors.background', (0.1, 0.1, 0.15, 0.95)),
+            'panel': self.ui_config.get_color_rgba('ui_interface.inventory_interface.colors.panel', (0.2, 0.2, 0.25, 0.9)),
+            'button': self.ui_config.get_color_rgba('ui_interface.inventory_interface.colors.button', (0.3, 0.3, 0.35, 1.0)),
+            'button_hover': self.ui_config.get_color_rgba('ui_interface.inventory_interface.colors.button_hover', (0.4, 0.4, 0.45, 1.0)),
+            'text': self.ui_config.get_color('ui_interface.inventory_interface.colors.text', '#FFFFFF'),
+            'stat_increase': self.ui_config.get_color('ui_interface.inventory_interface.colors.stat_increase', '#00FF00'),
+            'stat_decrease': self.ui_config.get_color('ui_interface.inventory_interface.colors.stat_decrease', '#FF0000'),
+            'equipment_common': self.ui_config.get_color('ui_interface.inventory_interface.equipment_colors.common', '#FFFFFF'),
+            'equipment_enhanced': self.ui_config.get_color_rgba('ui_interface.inventory_interface.equipment_colors.enhanced', (0.0, 1.0, 0.0, 1.0)),
+            'equipment_enchanted': self.ui_config.get_color_rgba('ui_interface.inventory_interface.equipment_colors.enchanted', (0.0, 0.7, 1.0, 1.0)),
+            'equipment_superpowered': self.ui_config.get_color_rgba('ui_interface.inventory_interface.equipment_colors.superpowered', (0.8, 0.0, 1.0, 1.0)),
+            'equipment_metapowered': self.ui_config.get_color_rgba('ui_interface.inventory_interface.equipment_colors.metapowered', (1.0, 0.7, 0.0, 1.0))
         }
         
         # Initialize interface
         self._create_interface()
     
     def _create_interface(self):
-        """Create the main interface components"""
+        """Create the main interface components using master UI config"""
+        # Get modal configuration from master UI config
+        modal_config = self.ui_config.get('ui_interface.inventory_interface.modal', {})
+        modal_model = modal_config.get('model', 'cube')
+        modal_scale = modal_config.get('scale', (20, 20, 1))
+        modal_color = self.ui_config.get_color_rgba('ui_interface.inventory_interface.modal.background_color', (0, 0, 0, 0.3))
+        modal_position = modal_config.get('position', (0, 0, -1))
+        modal_parent = modal_config.get('parent', 'camera.ui')
+        
         # Modal background (invisible clickable area)
         self.modal_background = Entity(
-            model='cube',
-            scale=(20, 20, 1),
-            color=color.Color(0, 0, 0, 0.3),
-            position=(0, 0, -1),
-            parent=camera.ui,
+            model=modal_model,
+            scale=modal_scale,
+            color=color.Color(*modal_color),
+            position=modal_position,
+            parent=camera.ui if modal_parent == 'camera.ui' else scene,
             visible=False
         )
         
+        # Main panel configuration from master UI config
+        panel_config = self.ui_config.get('ui_interface.inventory_interface.main_panel', {})
+        panel_model = panel_config.get('model', 'cube')
+        panel_thickness = panel_config.get('thickness', 0.01)
+        panel_position = panel_config.get('position', (0, 0, 0))
+        panel_parent = panel_config.get('parent', 'camera.ui')
+        
         # Main panel
         self.main_panel = Entity(
-            model='cube',
-            scale=(self.panel_width, self.panel_height, 0.01),
-            color=self.colors['background'],
-            position=(0, 0, 0),
-            parent=camera.ui,
+            model=panel_model,
+            scale=(self.panel_width, self.panel_height, panel_thickness),
+            color=color.Color(*self.colors['background']),
+            position=panel_position,
+            parent=camera.ui if panel_parent == 'camera.ui' else scene,
             visible=False
         )
         
@@ -141,37 +162,54 @@ class InventoryInterface:
         self._create_comparison_section()
     
     def _create_header_section(self):
-        """Create header with title and mode buttons"""
-        header_y = self.panel_height / 2 - 0.1
+        """Create header with title and mode buttons using master UI config"""
+        # Header configuration from master UI config
+        header_config = self.ui_config.get('ui_interface.inventory_interface.header', {})
+        header_y_offset = header_config.get('y_offset', 0.1)
+        header_y = self.panel_height / 2 - header_y_offset
+        
+        # Title configuration from master UI config
+        title_config = header_config.get('title', {})
+        title_text = title_config.get('text', 'Inventory & Equipment')
+        title_position = title_config.get('position', (0, header_y, 0.01))
+        title_scale = title_config.get('scale', 2)
         
         # Title
         title = Text(
-            'Inventory & Equipment',
-            position=(0, header_y, 0.01),
-            scale=2,
+            title_text,
+            position=title_position,
+            scale=title_scale,
             color=self.colors['text'],
             parent=self.main_panel
         )
         self.ui_elements.append(title)
         
-        # Mode buttons
-        button_y = header_y - 0.08
-        button_spacing = 0.15
-        modes = [
-            ('Inventory', InterfaceMode.INVENTORY),
-            ('Equipment', InterfaceMode.EQUIPMENT),
-            ('Compare', InterfaceMode.COMPARISON),
-            ('Crafting', InterfaceMode.CRAFTING)
-        ]
+        # Mode buttons configuration from master UI config
+        button_config = header_config.get('mode_buttons', {})
+        button_y_offset = button_config.get('y_offset', 0.08)
+        button_y = header_y - button_y_offset
+        button_spacing = button_config.get('spacing', 0.15)
+        button_scale = button_config.get('scale', 0.08)
+        button_z = button_config.get('z', 0.01)
+        
+        # Mode button list from master UI config
+        mode_list = button_config.get('modes', [
+            {'label': 'Inventory', 'mode': 'INVENTORY'},
+            {'label': 'Equipment', 'mode': 'EQUIPMENT'},
+            {'label': 'Compare', 'mode': 'COMPARISON'},
+            {'label': 'Crafting', 'mode': 'CRAFTING'}
+        ])
+        
+        modes = [(item['label'], InterfaceMode(item['mode'].lower())) for item in mode_list]
         
         for i, (label, mode) in enumerate(modes):
             x_pos = (i - len(modes) / 2 + 0.5) * button_spacing
             
             button = Button(
                 text=label,
-                position=(x_pos, button_y, 0.01),
-                scale=0.08,
-                color=self.colors['button'],
+                position=(x_pos, button_y, button_z),
+                scale=button_scale,
+                color=color.Color(*self.colors['button']),
                 text_color=self.colors['text'],
                 parent=self.main_panel,
                 on_click=lambda m=mode: self._set_mode(m)
@@ -179,11 +217,21 @@ class InventoryInterface:
             self.ui_elements.append(button)
     
     def _create_inventory_section(self):
-        """Create inventory grid"""
-        grid_start_x = -self.panel_width / 2 + 0.1
-        grid_start_y = self.panel_height / 2 - 0.25
-        slot_size = 0.08
-        slot_spacing = 0.09
+        """Create inventory grid using master UI config"""
+        # Grid configuration from master UI config
+        grid_config = self.ui_config.get('ui_interface.inventory_interface.inventory_grid', {})
+        grid_margin = grid_config.get('margin', 0.1)
+        grid_start_x = -self.panel_width / 2 + grid_margin
+        grid_y_offset = grid_config.get('y_offset', 0.25)
+        grid_start_y = self.panel_height / 2 - grid_y_offset
+        
+        # Slot configuration from master UI config
+        slot_config = grid_config.get('slot', {})
+        slot_size = slot_config.get('size', 0.08)
+        slot_spacing = slot_config.get('spacing', 0.09)
+        slot_model = slot_config.get('model', 'cube')
+        slot_thickness = slot_config.get('thickness', 0.005)
+        slot_z_offset = slot_config.get('z_offset', 0.005)
         
         for y in range(self.grid_size[1]):
             row = []
@@ -192,10 +240,10 @@ class InventoryInterface:
                 slot_y = grid_start_y - y * slot_spacing
                 
                 slot = Entity(
-                    model='cube',
-                    scale=(slot_size, slot_size, 0.005),
-                    color=self.colors['panel'],
-                    position=(slot_x, slot_y, 0.005),
+                    model=slot_model,
+                    scale=(slot_size, slot_size, slot_thickness),
+                    color=color.Color(*self.colors['panel']),
+                    position=(slot_x, slot_y, slot_z_offset),
                     parent=self.main_panel
                 )
                 
@@ -208,37 +256,56 @@ class InventoryInterface:
             self.inventory_grid.append(row)
     
     def _create_equipment_section(self):
-        """Create equipment slots display"""
-        equipment_x = self.panel_width / 2 - 0.2
-        equipment_y = self.panel_height / 2 - 0.25
+        """Create equipment slots display using master UI config"""
+        # Equipment section configuration from master UI config
+        equipment_config = self.ui_config.get('ui_interface.inventory_interface.equipment_slots', {})
+        equipment_x_offset = equipment_config.get('x_offset', 0.2)
+        equipment_x = self.panel_width / 2 - equipment_x_offset
+        equipment_y_offset = equipment_config.get('y_offset', 0.25)
+        equipment_y = self.panel_height / 2 - equipment_y_offset
         
-        # Equipment slots layout using EquipmentType
-        slot_positions = {
-            EquipmentType.WEAPON: (-0.15, 0),
-            EquipmentType.ARMOR: (0, 0),
-            EquipmentType.ACCESSORY: (0.15, 0),
-            EquipmentType.CONSUMABLE: (0, -0.2)
-        }
+        # Equipment slots layout from master UI config
+        slot_positions_config = equipment_config.get('slot_positions', {
+            'WEAPON': {'x': -0.15, 'y': 0},
+            'ARMOR': {'x': 0, 'y': 0},
+            'ACCESSORY': {'x': 0.15, 'y': 0},
+            'CONSUMABLE': {'x': 0, 'y': -0.2}
+        })
         
-        slot_size = 0.1
+        slot_positions = {}
+        for slot_name, pos in slot_positions_config.items():
+            slot_positions[EquipmentType(slot_name.lower())] = (pos['x'], pos['y'])
+        
+        # Slot configuration from master UI config
+        slot_config = equipment_config.get('slot', {})
+        slot_size = slot_config.get('size', 0.1)
+        slot_model = slot_config.get('model', 'cube')
+        slot_thickness = slot_config.get('thickness', 0.005)
+        slot_z_offset = slot_config.get('z_offset', 0.005)
+        
+        # Label configuration from master UI config
+        label_config = equipment_config.get('label', {})
+        label_y_offset = label_config.get('y_offset', 0.02)
+        label_z = label_config.get('z', 0.01)
+        label_scale = label_config.get('scale', 0.5)
         
         for slot_type, (offset_x, offset_y) in slot_positions.items():
             slot_x = equipment_x + offset_x
             slot_y = equipment_y + offset_y
             
             slot_entity = Entity(
-                model='cube',
-                scale=(slot_size, slot_size, 0.005),
-                color=self.colors['panel'],
-                position=(slot_x, slot_y, 0.005),
+                model=slot_model,
+                scale=(slot_size, slot_size, slot_thickness),
+                color=color.Color(*self.colors['panel']),
+                position=(slot_x, slot_y, slot_z_offset),
                 parent=self.main_panel
             )
             
             # Add slot label
             label = Text(
                 slot_type.value.replace('_', ' ').title(),
-                position=(slot_x, slot_y - slot_size - 0.02, 0.01),
-                scale=0.5,
+                position=(slot_x, slot_y - slot_size - label_y_offset, label_z),
+                scale=label_scale,
                 color=self.colors['text'],
                 parent=self.main_panel
             )
@@ -249,34 +316,51 @@ class InventoryInterface:
             self.ui_elements.extend([slot_entity, label])
     
     def _create_stats_section(self):
-        """Create stats display section"""
-        stats_x = -self.panel_width / 2 + 0.05
-        stats_y = 0
+        """Create stats display section using master UI config"""
+        # Stats section configuration from master UI config
+        stats_config = self.ui_config.get('ui_interface.inventory_interface.stats_section', {})
+        stats_x_offset = stats_config.get('x_offset', 0.05)
+        stats_x = -self.panel_width / 2 + stats_x_offset
+        stats_y = stats_config.get('y_position', 0)
+        
+        # Stats title configuration from master UI config
+        title_config = stats_config.get('title', {})
+        title_text = title_config.get('text', 'Character Stats')
+        title_y_offset = title_config.get('y_offset', 0.15)
+        title_z = title_config.get('z', 0.01)
+        title_scale = title_config.get('scale', 1.2)
         
         # Stats title
         stats_title = Text(
-            'Character Stats',
-            position=(stats_x, stats_y + 0.15, 0.01),
-            scale=1.2,
+            title_text,
+            position=(stats_x, stats_y + title_y_offset, title_z),
+            scale=title_scale,
             color=self.colors['text'],
             parent=self.main_panel
         )
         self.ui_elements.append(stats_title)
         
-        # Create stat display entries
-        stat_names = [
+        # Stat display configuration from master UI config
+        stat_config = stats_config.get('stat_display', {})
+        stat_start_y_offset = stat_config.get('start_y_offset', 0.08)
+        stat_spacing = stat_config.get('spacing', 0.04)
+        stat_z = stat_config.get('z', 0.01)
+        stat_scale = stat_config.get('scale', 0.8)
+        
+        # Create stat display entries from master UI config
+        stat_names = stats_config.get('stat_names', [
             'HP', 'MP', 'Physical Attack', 'Physical Defense',
             'Magical Attack', 'Magical Defense', 'Spiritual Attack', 'Spiritual Defense',
             'Movement Speed', 'Initiative'
-        ]
+        ])
         
         for i, stat_name in enumerate(stat_names):
-            stat_y = stats_y + 0.08 - i * 0.04
+            stat_y = stats_y + stat_start_y_offset - i * stat_spacing
             
             stat_text = Text(
                 f'{stat_name}: 0',
-                position=(stats_x, stat_y, 0.01),
-                scale=0.8,
+                position=(stats_x, stat_y, stat_z),
+                scale=stat_scale,
                 color=self.colors['text'],
                 parent=self.main_panel
             )
@@ -285,53 +369,92 @@ class InventoryInterface:
             self.ui_elements.append(stat_text)
     
     def _create_comparison_section(self):
-        """Create equipment comparison section"""
-        comparison_x = 0.2
-        comparison_y = -0.1
+        """Create equipment comparison section using master UI config"""
+        # Comparison section configuration from master UI config
+        comparison_config = self.ui_config.get('ui_interface.inventory_interface.comparison_section', {})
+        comparison_x = comparison_config.get('x_position', 0.2)
+        comparison_y = comparison_config.get('y_position', -0.1)
+        
+        # Comparison title configuration from master UI config
+        title_config = comparison_config.get('title', {})
+        title_text = title_config.get('text', 'Equipment Comparison')
+        title_y_offset = title_config.get('y_offset', 0.15)
+        title_z = title_config.get('z', 0.01)
+        title_scale = title_config.get('scale', 1.2)
         
         # Comparison title
         comparison_title = Text(
-            'Equipment Comparison',
-            position=(comparison_x, comparison_y + 0.15, 0.01),
-            scale=1.2,
+            title_text,
+            position=(comparison_x, comparison_y + title_y_offset, title_z),
+            scale=title_scale,
             color=self.colors['text'],
             parent=self.main_panel
         )
         self.ui_elements.append(comparison_title)
         
+        # Comparison panel configuration from master UI config
+        panel_config = comparison_config.get('panel', {})
+        panel_model = panel_config.get('model', 'cube')
+        panel_width = panel_config.get('width', 0.35)
+        panel_height = panel_config.get('height', 0.25)
+        panel_thickness = panel_config.get('thickness', 0.005)
+        panel_z_offset = panel_config.get('z_offset', 0.005)
+        
         # Comparison display area
         comparison_panel = Entity(
-            model='cube',
-            scale=(0.35, 0.25, 0.005),
-            color=self.colors['panel'],
-            position=(comparison_x, comparison_y, 0.005),
+            model=panel_model,
+            scale=(panel_width, panel_height, panel_thickness),
+            color=color.Color(*self.colors['panel']),
+            position=(comparison_x, comparison_y, panel_z_offset),
             parent=self.main_panel
         )
         self.ui_elements.append(comparison_panel)
     
     def _create_controls(self):
-        """Create interface controls"""
+        """Create interface controls using master UI config"""
+        # Controls configuration from master UI config
+        controls_config = self.ui_config.get('ui_interface.inventory_interface.controls', {})
+        
+        # Close button configuration from master UI config
+        close_config = controls_config.get('close_button', {})
+        close_text = close_config.get('text', 'X')
+        close_x_offset = close_config.get('x_offset', 0.05)
+        close_y_offset = close_config.get('y_offset', 0.05)
+        close_z = close_config.get('z', 0.01)
+        close_scale = close_config.get('scale', 0.05)
+        close_color = self.ui_config.get_color('ui_interface.inventory_interface.controls.close_button.color', '#FF0000')
+        
         # Close button
         close_button = Button(
-            text='X',
-            position=(self.panel_width / 2 - 0.05, self.panel_height / 2 - 0.05, 0.01),
-            scale=0.05,
-            color=color.red,
+            text=close_text,
+            position=(self.panel_width / 2 - close_x_offset, self.panel_height / 2 - close_y_offset, close_z),
+            scale=close_scale,
+            color=close_color,
             text_color=self.colors['text'],
             parent=self.main_panel,
             on_click=self.hide
         )
         self.ui_elements.append(close_button)
         
-        # Action buttons
-        button_y = -self.panel_height / 2 + 0.1
-        button_spacing = 0.15
+        # Action buttons configuration from master UI config
+        action_config = controls_config.get('action_buttons', {})
+        button_y_offset = action_config.get('y_offset', 0.1)
+        button_y = -self.panel_height / 2 + button_y_offset
+        button_spacing = action_config.get('spacing', 0.15)
+        button_scale = action_config.get('scale', 0.08)
+        button_z = action_config.get('z', 0.01)
+        
+        # Action button list from master UI config
+        action_list = action_config.get('buttons', [
+            {'label': 'Equip', 'action': 'equip'},
+            {'label': 'Unequip', 'action': 'unequip'},
+            {'label': 'Drop', 'action': 'drop'},
+            {'label': 'Sort', 'action': 'sort'}
+        ])
         
         action_buttons = [
-            ('Equip', self._equip_selected_item),
-            ('Unequip', self._unequip_selected_slot),
-            ('Drop', self._drop_selected_item),
-            ('Sort', self._sort_inventory)
+            (item['label'], getattr(self, f"_{item['action']}_selected_item" if item['action'] != 'unequip' else "_unequip_selected_slot" if item['action'] == 'unequip' else f"_{item['action']}_inventory"))
+            for item in action_list
         ]
         
         for i, (label, callback) in enumerate(action_buttons):
@@ -339,9 +462,9 @@ class InventoryInterface:
             
             button = Button(
                 text=label,
-                position=(x_pos, button_y, 0.01),
-                scale=0.08,
-                color=self.colors['button'],
+                position=(x_pos, button_y, button_z),
+                scale=button_scale,
+                color=color.Color(*self.colors['button']),
                 text_color=self.colors['text'],
                 parent=self.main_panel,
                 on_click=callback

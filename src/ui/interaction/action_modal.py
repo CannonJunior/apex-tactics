@@ -52,6 +52,10 @@ class ActionModal:
         if not URSINA_AVAILABLE:
             raise ImportError("Ursina is required for ActionModal")
         
+        # Load master UI configuration
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        self.ui_config = get_ui_config_manager()
+        
         self.modal_type = modal_type
         self.title = title
         self.actions = actions
@@ -63,55 +67,70 @@ class ActionModal:
         self.background_entity = None
         self.action_buttons = []
         
-        # Styling configuration
-        self.modal_width = 0.4
-        self.modal_height = 0.6
-        self.button_height = 0.08
-        self.button_spacing = 0.02
+        # Styling configuration from master UI config
+        modal_config = self.ui_config.get('ui_interaction.action_modal', {})
+        self.modal_width = modal_config.get('modal_width', 0.4)
+        self.modal_height = modal_config.get('modal_height', 0.6)
+        self.button_height = modal_config.get('button_height', 0.08)
+        self.button_spacing = modal_config.get('button_spacing', 0.02)
         
-        # Colors
+        # Colors from master UI config
         self.colors = {
-            'background': color.black33,
-            'modal_bg': color.dark_gray,
-            'modal_border': color.white,
-            'button_normal': color.azure,
-            'button_hover': color.blue,
-            'button_disabled': color.gray,
-            'text': color.white,
-            'title': color.yellow
+            'background': self.ui_config.get_color('ui_interaction.action_modal.colors.background', '#555555'),
+            'modal_bg': self.ui_config.get_color('ui_interaction.action_modal.colors.modal_bg', '#A9A9A9'),
+            'modal_border': self.ui_config.get_color('ui_interaction.action_modal.colors.modal_border', '#FFFFFF'),
+            'button_normal': self.ui_config.get_color('ui_interaction.action_modal.colors.button_normal', '#87CEEB'),
+            'button_hover': self.ui_config.get_color('ui_interaction.action_modal.colors.button_hover', '#0000FF'),
+            'button_disabled': self.ui_config.get_color('ui_interaction.action_modal.colors.button_disabled', '#808080'),
+            'text': self.ui_config.get_color('ui_interaction.action_modal.colors.text', '#FFFFFF'),
+            'title': self.ui_config.get_color('ui_interaction.action_modal.colors.title', '#FFFF00')
         }
         
         # Create modal
         self._create_modal()
     
     def _create_modal(self):
-        """Create the modal UI elements"""
+        """Create the modal UI elements using master UI config."""
+        # Get entity configuration from master UI config
+        entity_config = self.ui_config.get('ui_interaction.action_modal.entities', {})
+        background_model = entity_config.get('background_model', 'cube')
+        modal_model = entity_config.get('modal_model', 'cube')
+        background_scale = entity_config.get('background_scale', {'x': 2, 'y': 1, 'z': 2})
+        modal_thickness = entity_config.get('modal_thickness', 0.01)
+        background_z_offset = entity_config.get('background_z_offset', -0.1)
+        
         # Create semi-transparent background
         self.background_entity = Entity(
-            model='cube',
+            model=background_model,
             color=self.colors['background'],
-            scale=(2, 1, 2),
-            position=(0, 0, -0.1),
+            scale=(background_scale['x'], background_scale['y'], background_scale['z']),
+            position=(0, 0, background_z_offset),
             enabled=False
         )
         
         # Create main modal panel
         self.modal_entity = Entity(
-            model='cube',
+            model=modal_model,
             color=self.colors['modal_bg'],
-            scale=(self.modal_width, self.modal_height, 0.01),
+            scale=(self.modal_width, self.modal_height, modal_thickness),
             position=(0, 0, 0),
             enabled=False
         )
         
-        # Create title text
+        # Create title text using master UI config
+        title_config = self.ui_config.get('ui_interaction.action_modal.title', {})
+        title_y_offset = title_config.get('y_offset', 0.1)
+        title_z_offset = title_config.get('z_offset', 0.01)
+        title_scale = title_config.get('scale', 1.5)
+        title_origin = title_config.get('origin', [0, 0])
+        
         self.title_text = Text(
             self.title,
             parent=self.modal_entity,
-            position=(0, self.modal_height/2 - 0.1, 0.01),
-            scale=1.5,
+            position=(0, self.modal_height/2 - title_y_offset, title_z_offset),
+            scale=title_scale,
             color=self.colors['title'],
-            origin=(0, 0)
+            origin=tuple(title_origin)
         )
         
         # Create action buttons
@@ -145,19 +164,27 @@ class ActionModal:
             
             self.action_buttons.append(button)
         
-        # Add cancel button
-        cancel_button_y = button_start_y - (len(self.actions) * (self.button_height + self.button_spacing)) - 0.05
+        # Add cancel button using master UI config
+        cancel_config = self.ui_config.get('ui_interaction.action_modal.cancel_button', {})
+        cancel_spacing = cancel_config.get('spacing', 0.05)
+        cancel_text = cancel_config.get('text', 'Cancel')
+        cancel_color = self.ui_config.get_color('ui_interaction.action_modal.cancel_button.color', '#FF0000')
+        cancel_hover_color = self.ui_config.get_color('ui_interaction.action_modal.cancel_button.hover_color', '#A9A9A9')
+        button_width_offset = cancel_config.get('width_offset', 0.1)
+        button_z_offset = cancel_config.get('z_offset', 0.01)
+        
+        cancel_button_y = button_start_y - (len(self.actions) * (self.button_height + self.button_spacing)) - cancel_spacing
         
         cancel_button = Button(
-            text="Cancel",
-            color=color.red,
-            scale=(self.modal_width - 0.1, self.button_height),
-            position=(0, cancel_button_y, 0.01),
+            text=cancel_text,
+            color=cancel_color,
+            scale=(self.modal_width - button_width_offset, self.button_height),
+            position=(0, cancel_button_y, button_z_offset),
             parent=self.modal_entity
         )
         cancel_button.on_click = self.close
-        cancel_button.on_mouse_enter = lambda: setattr(cancel_button, 'color', color.dark_gray)
-        cancel_button.on_mouse_exit = lambda: setattr(cancel_button, 'color', color.red)
+        cancel_button.on_mouse_enter = lambda: setattr(cancel_button, 'color', cancel_hover_color)
+        cancel_button.on_mouse_exit = lambda: setattr(cancel_button, 'color', cancel_color)
         
         self.action_buttons.append(cancel_button)
     
@@ -177,15 +204,22 @@ class ActionModal:
         return callback
     
     def _position_modal(self):
-        """Position the modal relative to the camera"""
+        """Position the modal relative to the camera using master UI config."""
         if camera:
-            # Position modal in front of camera
-            modal_distance = 2.0
-            self.modal_entity.position = camera.position + camera.forward * modal_distance
-            self.background_entity.position = camera.position + camera.forward * (modal_distance - 0.1)
+            # Get positioning configuration from master UI config
+            position_config = self.ui_config.get('ui_interaction.action_modal.positioning', {})
+            modal_distance = position_config.get('modal_distance', 2.0)
+            background_offset = position_config.get('background_offset', 0.1)
+            face_camera = position_config.get('face_camera', True)
+            look_at_axis = position_config.get('look_at_axis', 'forward')
             
-            # Make modal face the camera
-            self.modal_entity.look_at(camera.position, axis='forward')
+            # Position modal in front of camera
+            self.modal_entity.position = camera.position + camera.forward * modal_distance
+            self.background_entity.position = camera.position + camera.forward * (modal_distance - background_offset)
+            
+            # Make modal face the camera if configured
+            if face_camera:
+                self.modal_entity.look_at(camera.position, axis=look_at_axis)
     
     def show(self):
         """Show the modal dialog"""

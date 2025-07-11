@@ -44,6 +44,10 @@ class InteractiveTile:
         if not URSINA_AVAILABLE:
             raise ImportError("Ursina is required for InteractiveTile")
         
+        # Load master UI configuration
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        self.ui_config = get_ui_config_manager()
+        
         self.grid_pos = grid_pos
         self.world_pos = world_pos
         self.tile_size = tile_size
@@ -55,16 +59,17 @@ class InteractiveTile:
         self.is_occupied = False
         self.occupant = None
         
-        # Color configuration
+        # Color configuration from master UI config
+        colors_config = self.ui_config.get('ui_interaction.interactive_tile.state_colors', {})
         self.state_colors = {
-            TileState.NORMAL: color.light_gray,
-            TileState.HIGHLIGHTED: color.yellow,
-            TileState.SELECTED: color.white,
-            TileState.MOVEMENT_RANGE: color.green,
-            TileState.ATTACK_RANGE: color.red,
-            TileState.EFFECT_AREA: color.orange,
-            TileState.INVALID: color.dark_gray,
-            TileState.HOVERED: color.blue
+            TileState.NORMAL: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.normal', '#D3D3D3'),
+            TileState.HIGHLIGHTED: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.highlighted', '#FFFF00'),
+            TileState.SELECTED: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.selected', '#FFFFFF'),
+            TileState.MOVEMENT_RANGE: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.movement_range', '#00FF00'),
+            TileState.ATTACK_RANGE: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.attack_range', '#FF0000'),
+            TileState.EFFECT_AREA: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.effect_area', '#FFA500'),
+            TileState.INVALID: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.invalid', '#A9A9A9'),
+            TileState.HOVERED: self.ui_config.get_color('ui_interaction.interactive_tile.state_colors.hovered', '#0000FF')
         }
         
         # Create Ursina entity
@@ -74,13 +79,20 @@ class InteractiveTile:
         self.interaction_data = {}
     
     def _create_visual_entity(self):
-        """Create the visual Ursina entity for this tile"""
+        """Create the visual Ursina entity for this tile using master UI config."""
+        # Get entity configuration from master UI config
+        entity_config = self.ui_config.get('ui_interaction.interactive_tile.entity', {})
+        model_type = entity_config.get('model', 'cube')
+        scale_multiplier = entity_config.get('scale_multiplier', 0.95)
+        scale_height = entity_config.get('scale_height', 0.1)
+        collider_type = entity_config.get('collider', 'box')
+        
         self.entity = Entity(
-            model='cube',
+            model=model_type,
             color=self.state_colors[TileState.NORMAL],
-            scale=(self.tile_size * 0.95, 0.1, self.tile_size * 0.95),
+            scale=(self.tile_size * scale_multiplier, scale_height, self.tile_size * scale_multiplier),
             position=(self.world_pos.x, self.world_pos.y, self.world_pos.z),
-            collider='box'  # Enable click detection
+            collider=collider_type  # Enable click detection
         )
         
         # Set up click handling

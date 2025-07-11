@@ -31,6 +31,10 @@ class CombatInterface:
         if not URSINA_AVAILABLE:
             raise ImportError("Ursina is required for CombatInterface")
         
+        # Load master UI configuration
+        from src.core.ui.ui_config_manager import get_ui_config_manager
+        self.ui_config = get_ui_config_manager()
+        
         # Interface state
         self.is_visible = False
         self.selected_unit: Optional[GameEntity] = None
@@ -46,24 +50,40 @@ class CombatInterface:
         self._create_interface()
     
     def _create_interface(self):
-        """Create the combat interface elements"""
-        # Unit info panel (top left)
+        """Create the combat interface elements using master UI config"""
+        # Get panel configuration from master UI config
+        unit_info_config = self.ui_config.get('ui_interface.combat_interface.unit_info_panel', {})
+        turn_order_config = self.ui_config.get('ui_interface.combat_interface.turn_order_panel', {})
+        
+        # Unit info panel (top left) using master UI config
+        panel_model = unit_info_config.get('model', 'cube')
+        panel_scale = self.ui_config.get_scale('ui_interface.combat_interface.unit_info_panel.scale')
+        panel_color = self.ui_config.get_color_rgba('ui_interface.combat_interface.unit_info_panel.color', (0.1, 0.1, 0.15, 0.9))
+        panel_position = self.ui_config.get_position_tuple('ui_interface.combat_interface.unit_info_panel.position')
+        parent_type = unit_info_config.get('parent', 'camera.ui')
+        
         self.unit_info_panel = Entity(
-            model='cube',
-            scale=(0.3, 0.2, 0.01),
-            color=color.Color(0.1, 0.1, 0.15, 0.9),
-            position=(-0.6, 0.3, 0),
-            parent=camera.ui,
+            model=panel_model,
+            scale=panel_scale,
+            color=color.Color(*panel_color),
+            position=panel_position,
+            parent=camera.ui if parent_type == 'camera.ui' else scene,
             visible=False
         )
         
-        # Turn order panel (top right)
+        # Turn order panel (top right) using master UI config
+        turn_model = turn_order_config.get('model', 'cube')
+        turn_scale = self.ui_config.get_scale('ui_interface.combat_interface.turn_order_panel.scale')
+        turn_color = self.ui_config.get_color_rgba('ui_interface.combat_interface.turn_order_panel.color', (0.1, 0.1, 0.15, 0.9))
+        turn_position = self.ui_config.get_position_tuple('ui_interface.combat_interface.turn_order_panel.position')
+        turn_parent_type = turn_order_config.get('parent', 'camera.ui')
+        
         self.turn_order_panel = Entity(
-            model='cube', 
-            scale=(0.25, 0.4, 0.01),
-            color=color.Color(0.1, 0.1, 0.15, 0.9),
-            position=(0.6, 0.1, 0),
-            parent=camera.ui,
+            model=turn_model,
+            scale=turn_scale,
+            color=color.Color(*turn_color),
+            position=turn_position,
+            parent=camera.ui if turn_parent_type == 'camera.ui' else scene,
             visible=False
         )
         
@@ -73,22 +93,32 @@ class CombatInterface:
         self.ui_elements.extend([self.unit_info_panel, self.turn_order_panel])
     
     def _create_action_buttons(self):
-        """Create action buttons for combat"""
-        button_y = -0.4
-        button_spacing = 0.15
+        """Create action buttons for combat using master UI config"""
+        # Get button configuration from master UI config
+        button_config = self.ui_config.get('ui_interface.combat_interface.action_buttons', {})
+        button_y = button_config.get('y_position', -0.4)
+        button_spacing = button_config.get('spacing', 0.15)
+        button_scale = button_config.get('scale', 0.08)
+        button_z_offset = button_config.get('z_offset', 0.01)
         
-        actions = ['Move', 'Attack', 'Ability', 'Guard', 'Wait', 'End Turn']
+        # Colors from master UI config
+        button_normal_color = self.ui_config.get_color_rgba('ui_interface.combat_interface.action_buttons.colors.normal', (0.3, 0.3, 0.35, 1.0))
+        button_text_color = self.ui_config.get_color('ui_interface.combat_interface.action_buttons.colors.text', '#FFFFFF')
+        button_parent_type = button_config.get('parent', 'camera.ui')
         
-        for i, action in enumerate(actions):
-            x_pos = (i - len(actions) / 2 + 0.5) * button_spacing
+        # Action button configuration from master UI config
+        action_list = button_config.get('action_list', ['Move', 'Attack', 'Ability', 'Guard', 'Wait', 'End Turn'])
+        
+        for i, action in enumerate(action_list):
+            x_pos = (i - len(action_list) / 2 + 0.5) * button_spacing
             
             button = Button(
                 text=action,
-                position=(x_pos, button_y, 0.01),
-                scale=0.08,
-                color=color.Color(0.3, 0.3, 0.35, 1.0),
-                text_color=color.white,
-                parent=camera.ui,
+                position=(x_pos, button_y, button_z_offset),
+                scale=button_scale,
+                color=color.Color(*button_normal_color),
+                text_color=button_text_color,
+                parent=camera.ui if button_parent_type == 'camera.ui' else scene,
                 on_click=lambda a=action: self._on_action_click(a),
                 visible=False
             )
@@ -131,12 +161,17 @@ class CombatInterface:
         if not self.selected_unit:
             return
         
-        # Unit name
+        # Unit name using master UI config
+        text_config = self.ui_config.get('ui_interface.combat_interface.unit_info_text', {})
+        name_position = text_config.get('name_position', (0, 0.07, 0.01))
+        name_scale = text_config.get('name_scale', 1.2)
+        name_color = self.ui_config.get_color('ui_interface.combat_interface.unit_info_text.name_color', '#FFFFFF')
+        
         unit_name = Text(
             f'Unit {self.selected_unit.id}',
-            position=(0, 0.07, 0.01),
-            scale=1.2,
-            color=color.white,
+            position=name_position,
+            scale=name_scale,
+            color=name_color,
             parent=self.unit_info_panel
         )
         
@@ -145,28 +180,49 @@ class CombatInterface:
         if attributes:
             hp_ratio = attributes.current_hp / attributes.max_hp
             
+            # HP text using master UI config
+            hp_text_position = text_config.get('hp_text_position', (0, 0.03, 0.01))
+            hp_text_scale = text_config.get('hp_text_scale', 0.8)
+            hp_text_color = self.ui_config.get_color('ui_interface.combat_interface.unit_info_text.hp_color', '#FFFFFF')
+            
             hp_text = Text(
                 f'HP: {attributes.current_hp}/{attributes.max_hp}',
-                position=(0, 0.03, 0.01),
-                scale=0.8,
-                color=color.white,
+                position=hp_text_position,
+                scale=hp_text_scale,
+                color=hp_text_color,
                 parent=self.unit_info_panel
             )
+            
+            # Health bar configuration from master UI config
+            bar_config = self.ui_config.get('ui_interface.combat_interface.health_bar', {})
+            bar_model = bar_config.get('model', 'cube')
+            bar_width = bar_config.get('width', 0.2)
+            bar_height = bar_config.get('height', 0.02)
+            bar_bg_position = bar_config.get('bg_position', (0, -0.01, 0.001))
+            bar_bg_color = self.ui_config.get_color('ui_interface.combat_interface.health_bar.bg_color', '#2F2F2F')
             
             # Simple health bar representation
             hp_bar_bg = Entity(
-                model='cube',
-                scale=(0.2, 0.02, 0.001),
-                color=color.dark_gray,
-                position=(0, -0.01, 0.001),
+                model=bar_model,
+                scale=(bar_width, bar_height, 0.001),
+                color=bar_bg_color,
+                position=bar_bg_position,
                 parent=self.unit_info_panel
             )
             
+            # Health bar fill colors from master UI config
+            hp_colors = self.ui_config.get('ui_interface.combat_interface.health_bar.fill_colors', {})
+            hp_low_threshold = bar_config.get('low_threshold', 0.3)
+            hp_medium_threshold = bar_config.get('medium_threshold', 0.7)
+            hp_low_color = self.ui_config.get_color('ui_interface.combat_interface.health_bar.fill_colors.low', '#FF0000')
+            hp_medium_color = self.ui_config.get_color('ui_interface.combat_interface.health_bar.fill_colors.medium', '#FFFF00')
+            hp_high_color = self.ui_config.get_color('ui_interface.combat_interface.health_bar.fill_colors.high', '#00FF00')
+            
             hp_bar_fill = Entity(
-                model='cube',
-                scale=(0.2 * hp_ratio, 0.02, 0.001),
-                color=color.red if hp_ratio < 0.3 else color.yellow if hp_ratio < 0.7 else color.green,
-                position=((-0.2 + 0.2 * hp_ratio) / 2, -0.01, 0.002),
+                model=bar_model,
+                scale=(bar_width * hp_ratio, bar_height, 0.001),
+                color=hp_low_color if hp_ratio < hp_low_threshold else hp_medium_color if hp_ratio < hp_medium_threshold else hp_high_color,
+                position=((-bar_width + bar_width * hp_ratio) / 2, -0.01, 0.002),
                 parent=self.unit_info_panel
             )
             
@@ -174,27 +230,41 @@ class CombatInterface:
             if attributes.max_mp > 0:
                 mp_ratio = attributes.current_mp / attributes.max_mp
                 
+                # MP text using master UI config
+                mp_text_position = text_config.get('mp_text_position', (0, -0.05, 0.01))
+                mp_text_scale = text_config.get('mp_text_scale', 0.8)
+                mp_text_color = self.ui_config.get_color('ui_interface.combat_interface.unit_info_text.mp_color', '#FFFFFF')
+                
                 mp_text = Text(
                     f'MP: {attributes.current_mp}/{attributes.max_mp}',
-                    position=(0, -0.05, 0.01),
-                    scale=0.8,
-                    color=color.white,
+                    position=mp_text_position,
+                    scale=mp_text_scale,
+                    color=mp_text_color,
                     parent=self.unit_info_panel
                 )
                 
+                # MP bar configuration from master UI config
+                mp_bar_config = self.ui_config.get('ui_interface.combat_interface.mp_bar', {})
+                mp_bar_model = mp_bar_config.get('model', 'cube')
+                mp_bar_width = mp_bar_config.get('width', 0.2)
+                mp_bar_height = mp_bar_config.get('height', 0.02)
+                mp_bar_bg_position = mp_bar_config.get('bg_position', (0, -0.09, 0.001))
+                mp_bar_bg_color = self.ui_config.get_color('ui_interface.combat_interface.mp_bar.bg_color', '#2F2F2F')
+                mp_bar_fill_color = self.ui_config.get_color('ui_interface.combat_interface.mp_bar.fill_color', '#0000FF')
+                
                 mp_bar_bg = Entity(
-                    model='cube',
-                    scale=(0.2, 0.02, 0.001),
-                    color=color.dark_gray,
-                    position=(0, -0.09, 0.001),
+                    model=mp_bar_model,
+                    scale=(mp_bar_width, mp_bar_height, 0.001),
+                    color=mp_bar_bg_color,
+                    position=mp_bar_bg_position,
                     parent=self.unit_info_panel
                 )
                 
                 mp_bar_fill = Entity(
-                    model='cube',
-                    scale=(0.2 * mp_ratio, 0.02, 0.001),
-                    color=color.blue,
-                    position=((-0.2 + 0.2 * mp_ratio) / 2, -0.09, 0.002),
+                    model=mp_bar_model,
+                    scale=(mp_bar_width * mp_ratio, mp_bar_height, 0.001),
+                    color=mp_bar_fill_color,
+                    position=((-mp_bar_width + mp_bar_width * mp_ratio) / 2, -0.09, 0.002),
                     parent=self.unit_info_panel
                 )
     
@@ -229,12 +299,16 @@ class CombatInterface:
             else:
                 required_ap = 0  # End Turn and other actions
             
-            # Enable/disable button based on AP availability
+            # Enable/disable button based on AP availability using master UI config
+            button_colors = self.ui_config.get('ui_interface.combat_interface.action_buttons.colors', {})
+            enabled_color = self.ui_config.get_color_rgba('ui_interface.combat_interface.action_buttons.colors.enabled', (0.3, 0.3, 0.35, 1.0))
+            disabled_color = self.ui_config.get_color_rgba('ui_interface.combat_interface.action_buttons.colors.disabled', (0.15, 0.15, 0.15, 1.0))
+            
             if current_ap >= required_ap:
-                button.color = color.Color(0.3, 0.3, 0.35, 1.0)
+                button.color = color.Color(*enabled_color)
                 button.disabled = False
             else:
-                button.color = color.Color(0.15, 0.15, 0.15, 1.0)  # Darker gray for insufficient AP
+                button.color = color.Color(*disabled_color)
                 button.disabled = True
     
     def _on_action_click(self, action: str):
@@ -277,26 +351,44 @@ class CombatInterface:
         for child in self.turn_order_panel.children:
             destroy(child)
         
+        # Turn order configuration from master UI config
+        turn_text_config = self.ui_config.get('ui_interface.combat_interface.turn_order_text', {})
+        title_position = turn_text_config.get('title_position', (0, 0.15, 0.01))
+        title_scale = turn_text_config.get('title_scale', 1.0)
+        title_color = self.ui_config.get_color('ui_interface.combat_interface.turn_order_text.title_color', '#FFFFFF')
+        title_text = turn_text_config.get('title_text', 'Turn Order')
+        
         # Turn order title
         title = Text(
-            'Turn Order',
-            position=(0, 0.15, 0.01),
-            scale=1.0,
-            color=color.white,
+            title_text,
+            position=title_position,
+            scale=title_scale,
+            color=title_color,
             parent=self.turn_order_panel
         )
         
-        # Display up to 8 units in turn order
-        for i, unit in enumerate(units[:8]):
-            y_pos = 0.1 - i * 0.03
+        # Display configuration from master UI config
+        max_units_displayed = turn_text_config.get('max_units_displayed', 8)
+        unit_start_y = turn_text_config.get('unit_start_y', 0.1)
+        unit_spacing = turn_text_config.get('unit_spacing', 0.03)
+        unit_scale = turn_text_config.get('unit_scale', 0.7)
+        unit_z = turn_text_config.get('unit_z', 0.01)
+        
+        # Colors from master UI config
+        normal_unit_color = self.ui_config.get_color('ui_interface.combat_interface.turn_order_text.normal_color', '#FFFFFF')
+        selected_unit_color = self.ui_config.get_color('ui_interface.combat_interface.turn_order_text.selected_color', '#FFFF00')
+        
+        # Display up to configured number of units in turn order
+        for i, unit in enumerate(units[:max_units_displayed]):
+            y_pos = unit_start_y - i * unit_spacing
             
             # Highlight current unit
-            text_color = color.yellow if unit == self.selected_unit else color.white
+            text_color = selected_unit_color if unit == self.selected_unit else normal_unit_color
             
             unit_text = Text(
                 f'{i+1}. Unit {unit.id}',
-                position=(0, y_pos, 0.01),
-                scale=0.7,
+                position=(0, y_pos, unit_z),
+                scale=unit_scale,
                 color=text_color,
                 parent=self.turn_order_panel
             )
