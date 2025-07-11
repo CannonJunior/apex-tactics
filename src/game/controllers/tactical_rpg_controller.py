@@ -474,8 +474,11 @@ class TacticalRPG:
                 # In movement mode - don't clear selection, this could be path planning
                 return
             else:
-                # Not in movement mode - clear selection using centralized method
-                self.clear_active_unit()
+                # In normal mode, clicking empty tiles should NOT clear selection
+                # User should explicitly end turn or select another unit to deselect
+                # This allows users to keep units selected after movement for additional actions
+                print(f"🎯 Clicked empty tile at ({x}, {y}) - keeping current unit selected for additional actions")
+                return
     
     # Complete TacticalRPG controller implementation
     
