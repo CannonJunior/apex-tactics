@@ -128,13 +128,73 @@ class OllamaClient:
         """Generate text using a model"""
         start_time = time.time()
         
+        # Define default values for Ollama generate API
+        defaults = {
+            "stream": False,
+            "temperature": 0.8,
+            "top_p": 0.9,
+            "top_k": 40,
+            "repeat_penalty": 1.1,
+            "max_tokens": None,  # Ollama uses 'num_predict'
+            "num_predict": 128,
+            "num_ctx": 2048,
+            "mirostat": 0,
+            "mirostat_eta": 0.1,
+            "mirostat_tau": 5.0,
+            "seed": None,
+            "stop": None,
+            "tfs_z": 1.0,
+            "typical_p": 1.0,
+            "repeat_last_n": 64,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0
+        }
+        
+        # Merge provided kwargs with defaults, kwargs take precedence
+        final_params = defaults.copy()
+        final_params.update(kwargs)
+        
+        # Handle max_tokens -> num_predict conversion
+        if "max_tokens" in kwargs and "num_predict" not in kwargs:
+            final_params["num_predict"] = kwargs["max_tokens"]
+            del final_params["max_tokens"]
+        elif "max_tokens" in final_params and final_params["max_tokens"] is None:
+            del final_params["max_tokens"]
+        
         try:
+            # Build request with all parameters
             request_data = {
                 "model": model,
                 "prompt": prompt,
-                "stream": False,
-                **kwargs
+                **final_params
             }
+            
+            # Log comprehensive Ollama model call details
+            logger.info("🤖 OLLAMA MODEL CALL",
+                       model_name=model,
+                       prompt=prompt[:200] + "..." if len(prompt) > 200 else prompt,
+                       prompt_length=len(prompt),
+                       temperature=final_params.get("temperature"),
+                       max_tokens=kwargs.get("max_tokens"),
+                       num_predict=final_params.get("num_predict"),
+                       top_p=final_params.get("top_p"),
+                       top_k=final_params.get("top_k"),
+                       repeat_penalty=final_params.get("repeat_penalty"),
+                       num_ctx=final_params.get("num_ctx"),
+                       mirostat=final_params.get("mirostat"),
+                       mirostat_eta=final_params.get("mirostat_eta"),
+                       mirostat_tau=final_params.get("mirostat_tau"),
+                       seed=final_params.get("seed"),
+                       stop=final_params.get("stop"),
+                       tfs_z=final_params.get("tfs_z"),
+                       typical_p=final_params.get("typical_p"),
+                       repeat_last_n=final_params.get("repeat_last_n"),
+                       presence_penalty=final_params.get("presence_penalty"),
+                       frequency_penalty=final_params.get("frequency_penalty"),
+                       stream=final_params.get("stream"),
+                       provided_args=list(kwargs.keys()),
+                       default_args=[k for k in defaults.keys() if k not in kwargs],
+                       api_endpoint="generate")
             
             response = await self.client.post(
                 f"{self.base_url}/api/generate",
@@ -149,29 +209,99 @@ class OllamaClient:
             execution_time = time.time() - start_time
             self._update_performance_stats(model, execution_time, len(generated_text))
             
-            logger.info("Text generation completed",
+            logger.info("✅ OLLAMA RESPONSE COMPLETED",
                        model=model,
                        prompt_length=len(prompt),
                        response_length=len(generated_text),
-                       execution_time=execution_time)
+                       execution_time=execution_time,
+                       tokens_generated=len(generated_text.split()) if generated_text else 0)
             
             return generated_text
             
         except Exception as e:
-            logger.error("Text generation failed", model=model, error=str(e))
+            logger.error("❌ OLLAMA GENERATE FAILED", 
+                        model=model, 
+                        prompt_length=len(prompt),
+                        error=str(e),
+                        parameters=final_params)
             raise
     
     async def chat(self, model: str, messages: List[Dict[str, str]], **kwargs) -> str:
         """Chat with a model using conversation format"""
         start_time = time.time()
         
+        # Define default values for Ollama chat API
+        defaults = {
+            "stream": False,
+            "temperature": 0.8,
+            "top_p": 0.9,
+            "top_k": 40,
+            "repeat_penalty": 1.1,
+            "max_tokens": None,  # Ollama uses 'num_predict'
+            "num_predict": 128,
+            "num_ctx": 2048,
+            "mirostat": 0,
+            "mirostat_eta": 0.1,
+            "mirostat_tau": 5.0,
+            "seed": None,
+            "stop": None,
+            "tfs_z": 1.0,
+            "typical_p": 1.0,
+            "repeat_last_n": 64,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0
+        }
+        
+        # Merge provided kwargs with defaults, kwargs take precedence
+        final_params = defaults.copy()
+        final_params.update(kwargs)
+        
+        # Handle max_tokens -> num_predict conversion
+        if "max_tokens" in kwargs and "num_predict" not in kwargs:
+            final_params["num_predict"] = kwargs["max_tokens"]
+            del final_params["max_tokens"]
+        elif "max_tokens" in final_params and final_params["max_tokens"] is None:
+            del final_params["max_tokens"]
+        
+        # Calculate total message length for logging
+        total_message_length = sum(len(msg.get("content", "")) for msg in messages)
+        messages_summary = [{"role": msg.get("role", "unknown"), "content_length": len(msg.get("content", ""))} for msg in messages]
+        
         try:
+            # Build request with all parameters
             request_data = {
                 "model": model,
                 "messages": messages,
-                "stream": False,
-                **kwargs
+                **final_params
             }
+            
+            # Log comprehensive Ollama chat call details
+            logger.info("🤖 OLLAMA CHAT CALL",
+                       model_name=model,
+                       messages_count=len(messages),
+                       total_message_length=total_message_length,
+                       messages_summary=messages_summary,
+                       temperature=final_params.get("temperature"),
+                       max_tokens=kwargs.get("max_tokens"),
+                       num_predict=final_params.get("num_predict"),
+                       top_p=final_params.get("top_p"),
+                       top_k=final_params.get("top_k"),
+                       repeat_penalty=final_params.get("repeat_penalty"),
+                       num_ctx=final_params.get("num_ctx"),
+                       mirostat=final_params.get("mirostat"),
+                       mirostat_eta=final_params.get("mirostat_eta"),
+                       mirostat_tau=final_params.get("mirostat_tau"),
+                       seed=final_params.get("seed"),
+                       stop=final_params.get("stop"),
+                       tfs_z=final_params.get("tfs_z"),
+                       typical_p=final_params.get("typical_p"),
+                       repeat_last_n=final_params.get("repeat_last_n"),
+                       presence_penalty=final_params.get("presence_penalty"),
+                       frequency_penalty=final_params.get("frequency_penalty"),
+                       stream=final_params.get("stream"),
+                       provided_args=list(kwargs.keys()),
+                       default_args=[k for k in defaults.keys() if k not in kwargs],
+                       api_endpoint="chat")
             
             response = await self.client.post(
                 f"{self.base_url}/api/chat",
@@ -186,16 +316,23 @@ class OllamaClient:
             execution_time = time.time() - start_time
             self._update_performance_stats(model, execution_time, len(message_content))
             
-            logger.info("Chat completion completed",
+            logger.info("✅ OLLAMA CHAT COMPLETED",
                        model=model,
                        messages_count=len(messages),
+                       total_input_length=total_message_length,
                        response_length=len(message_content),
-                       execution_time=execution_time)
+                       execution_time=execution_time,
+                       tokens_generated=len(message_content.split()) if message_content else 0)
             
             return message_content
             
         except Exception as e:
-            logger.error("Chat completion failed", model=model, error=str(e))
+            logger.error("❌ OLLAMA CHAT FAILED", 
+                        model=model, 
+                        messages_count=len(messages),
+                        total_input_length=total_message_length,
+                        error=str(e),
+                        parameters=final_params)
             raise
     
     async def embeddings(self, model: str, prompt: str) -> List[float]:
@@ -256,6 +393,11 @@ class OllamaClient:
     
     async def tactical_analysis_prompt(self, game_state: Dict[str, Any], unit_id: str) -> str:
         """Generate a tactical analysis using LLM"""
+        logger.info("🎯 GENERATING TACTICAL ANALYSIS", 
+                   unit_id=unit_id, 
+                   game_state_keys=list(game_state.keys()),
+                   prompt_type="tactical_analysis")
+        
         prompt = f"""You are an expert tactical advisor for a turn-based RPG game. 
         Analyze the current battlefield situation and provide tactical recommendations.
 
@@ -277,6 +419,10 @@ class OllamaClient:
     
     async def strategic_analysis_prompt(self, game_state: Dict[str, Any]) -> str:
         """Generate a strategic analysis using LLM"""
+        logger.info("🧠 GENERATING STRATEGIC ANALYSIS", 
+                   game_state_keys=list(game_state.keys()),
+                   prompt_type="strategic_analysis")
+        
         prompt = f"""You are a strategic advisor for a tactical RPG game.
         Analyze the overall game situation and provide strategic guidance.
 
@@ -297,6 +443,13 @@ class OllamaClient:
     async def decision_making_prompt(self, game_state: Dict[str, Any], unit_id: str, 
                                    available_actions: List[str], difficulty: str) -> str:
         """Generate a decision using LLM reasoning"""
+        logger.info("🎲 GENERATING DECISION", 
+                   unit_id=unit_id, 
+                   difficulty=difficulty,
+                   available_actions=available_actions,
+                   game_state_keys=list(game_state.keys()),
+                   prompt_type="decision_making")
+        
         difficulty_context = {
             "easy": "Make conservative, safe decisions that minimize risk.",
             "normal": "Balance risk and reward with tactical awareness.",
@@ -328,10 +481,15 @@ class OllamaClient:
             "alternatives": ["action1", "action2"]
         }}"""
         
-        return await self.generate("codellama:7b", prompt, temperature=0.5, max_tokens=512)
+        return await self.generate("llama2:7b", prompt, temperature=0.5, max_tokens=512)
     
     async def evaluate_unit_prompt(self, unit_data: Dict[str, Any], battlefield_context: Dict[str, Any]) -> str:
         """Generate a unit evaluation using LLM"""
+        logger.info("📊 GENERATING UNIT EVALUATION", 
+                   unit_data_keys=list(unit_data.keys()),
+                   battlefield_context_keys=list(battlefield_context.keys()),
+                   prompt_type="unit_evaluation")
+        
         prompt = f"""Evaluate this unit's current situation and capabilities:
 
         Unit Data:

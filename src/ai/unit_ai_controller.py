@@ -421,8 +421,110 @@ class UnitAIController:
         return adapted_decision
     
     def _make_learning_decision(self, context: DecisionContext) -> Optional[ActionDecision]:
-        """Advanced learning decision making."""
-        # Use adaptive decision as base
+        """Advanced learning decision making using Ollama LLM."""
+        try:
+            # Try to use Ollama for advanced decision making
+            from ai.ollama_client import OllamaClient
+            import asyncio
+            import json
+            
+            print(f"🧠 AI Agent {self.unit_id}: Using Ollama LLM for learning decision...")
+            
+            # Initialize Ollama client
+            ollama_client = OllamaClient()
+            
+            # Prepare game state for Ollama
+            game_state = {
+                "current_unit": {
+                    "id": self.unit_id,
+                    "position": context.unit_details.get("position", {}),
+                    "hp": context.unit_details.get("hp", 0),
+                    "max_hp": context.unit_details.get("max_hp", 0),
+                    "ap": context.unit_details.get("ap", 0)
+                },
+                "battlefield": context.battlefield_state,
+                "available_actions": [action.get("type", "unknown") for action in context.available_actions]
+            }
+            
+            # Use Ollama for decision making
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                async def get_ollama_decision():
+                    await ollama_client.initialize()
+                    return await ollama_client.decision_making_prompt(
+                        game_state, 
+                        self.unit_id, 
+                        game_state["available_actions"], 
+                        "hard"  # Use hard difficulty for learning AI
+                    )
+                
+                decision_response = loop.run_until_complete(get_ollama_decision())
+                
+                print(f"🤖 Ollama decision response: {decision_response[:200]}...")
+                
+                # Parse Ollama response and convert to ActionDecision
+                try:
+                    # Try to parse as JSON
+                    decision_data = json.loads(decision_response)
+                    chosen_action = decision_data.get("chosen_action", "")
+                    reasoning = decision_data.get("reasoning", "LLM decision")
+                    confidence = float(decision_data.get("confidence", 0.7))
+                    
+                    # Find the corresponding action in available actions
+                    selected_action = None
+                    for action in context.available_actions:
+                        if action.get("type", "").lower() == chosen_action.lower():
+                            selected_action = action
+                            break
+                    
+                    if selected_action:
+                        # Create decision from Ollama choice
+                        target_position = selected_action.get('target_position', {})
+                        move_to = selected_action.get('move_to', {})
+                        
+                        decision = ActionDecision(
+                            action_id=chosen_action,
+                            target_positions=[target_position] if target_position else [],
+                            priority='HIGH',
+                            confidence=confidence,
+                            reasoning=f"Ollama LLM: {reasoning}",
+                            expected_outcome=f"LLM-guided action: {chosen_action}",
+                            alternative_actions=decision_data.get("alternatives", [])
+                        )
+                        
+                        # Add move information
+                        decision.move_to = move_to
+                        decision.original_action_type = selected_action.get('action_type', 'unknown')
+                        decision.display_type = selected_action.get('type', 'unknown')
+                        decision.talent_id = selected_action.get('talent_id')
+                        decision.talent_name = selected_action.get('talent_name')
+                        
+                        print(f"✅ AI Agent {self.unit_id}: Ollama decision successful - {chosen_action}")
+                        return decision
+                    else:
+                        print(f"⚠️ AI Agent {self.unit_id}: Ollama chose unknown action '{chosen_action}', falling back")
+                        
+                except (json.JSONDecodeError, KeyError, ValueError) as e:
+                    print(f"⚠️ AI Agent {self.unit_id}: Failed to parse Ollama response: {e}")
+                    
+            finally:
+                # Clean up the event loop
+                async def cleanup():
+                    await ollama_client.close()
+                
+                try:
+                    loop.run_until_complete(cleanup())
+                except:
+                    pass
+                loop.close()
+                
+        except Exception as e:
+            print(f"⚠️ AI Agent {self.unit_id}: Ollama integration failed: {e}")
+        
+        # Fallback to adaptive decision
+        print(f"🔄 AI Agent {self.unit_id}: Falling back to adaptive decision making")
         decision = self._make_adaptive_decision(context)
         if not decision:
             return None
@@ -1168,3 +1270,15 @@ class UnitAIController:
             
         except Exception as e:
             print(f"⚠️ Error updating AI target display: {e}")
+    
+    def restore_ai_target_on_activation(self, unit):
+        """Restore AI target display when the AI unit becomes active."""
+        try:
+            if hasattr(unit, 'target_unit') and unit.target_unit is not None:
+                print(f"🎯 Restoring AI target for {unit.name}: {unit.target_unit.name}")
+                self._update_ai_target_display(unit, unit.target_unit)
+                return True
+            return False
+        except Exception as e:
+            print(f"⚠️ Error restoring AI target on activation: {e}")
+            return False

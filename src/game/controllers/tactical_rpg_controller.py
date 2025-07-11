@@ -389,8 +389,11 @@ class TacticalRPG:
                 unit_id=f"{unit.name}_{id(unit)}",
                 tool_registry=tool_registry,
                 personality=AIPersonality.TACTICAL,  # Default to tactical personality
-                skill_level=AISkillLevel.STRATEGIC,  # Default to strategic skill level
+                skill_level=AISkillLevel.LEARNING,  # Use LEARNING to trigger Ollama integration
             )
+            
+            # Restore AI target display if this unit had a previous target
+            ai_controller.restore_ai_target_on_activation(unit)
             
             # Start AI agent turn - this will use only MCP tools
             ai_controller.execute_turn(unit, self._get_game_state_for_ai())
