@@ -53,9 +53,8 @@ class DraggableTalentIcon(Draggable):
         
         tooltip_text = f"{talent_data['name']}\n{talent_data['description']}\nAction: {talent_data.get('action_type', 'Unknown')}"
         self.tooltip = Tooltip(tooltip_text)
-        tooltip_bg_color = ui_config.get_color('panels.talent_panel.tooltip.background_color', '#000000')
-        tooltip_alpha = ui_config.get('panels.talent_panel.tooltip.background_alpha', 0.8)
-        self.tooltip.background.color = color.rgba(*tooltip_bg_color, tooltip_alpha)
+        tooltip_bg_color = ui_config.get_color('panels.talent_panel.tooltip.background_color', '#000000CC')
+        self.tooltip.background.color = tooltip_bg_color
         
         # Store original position for drag operations (like inventory items)
         self.org_pos = None

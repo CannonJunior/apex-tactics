@@ -42,16 +42,16 @@ def target_update_targeted_unit_bars(self):
         for i, unit in enumerate(self.targeted_units):
             # Calculate position for multiple units (stack vertically)
             base_x = 0.4  # Right side of screen
-            base_y = 0.45 - (i * 0.15)  # Stack downward
+            base_y = 0.45 - (i * 0.1)  # Stack downward
                 
             # Create health bar label
             health_label = Text(
-                text=f"{unit.name} HP:",
+                text=f"{unit.name} HP",
                 parent=camera.ui,
                 position=(base_x - 0.07, base_y),
                 scale=0.8,
                 color=style_manager.get_bar_label_color(),
-                origin=(-0.5, 0)
+                origin=(-0.5, 0.8)
             )
             self.targeted_health_bar_labels.append(health_label)
                 
@@ -59,7 +59,7 @@ def target_update_targeted_unit_bars(self):
             health_bar = HealthBar(
                 max_value=unit.max_hp,
                 value=unit.hp,
-                position=(base_x, base_y),
+                position=(base_x + 0.05, base_y),
                 parent=camera.ui,
                 scale=(0.25, 0.025),
                 color=style_manager.get_health_bar_bg_color()
@@ -78,12 +78,12 @@ def target_update_targeted_unit_bars(self):
             resource_label_text = style_manager.get_resource_bar_label(resource_type)
                 
             resource_label = Text(
-                text=f"{unit.name} {resource_label_text}:",
+                text=f"{unit.name} {resource_label_text}",
                 parent=camera.ui,
-                position=(base_x - 0.07, base_y - 0.05),
+                position=(base_x - 0.07, base_y - 0.03),
                 scale=0.8,
                 color=style_manager.get_bar_label_color(),
-                origin=(-0.5, 0)
+                origin=(-0.5, 0.8)
             )
             self.targeted_resource_bar_labels.append(resource_label)
                 
@@ -91,7 +91,7 @@ def target_update_targeted_unit_bars(self):
             resource_bar = HealthBar(
                 max_value=resource_max,
                 value=resource_value,
-                position=(base_x, base_y - 0.05),
+                position=(base_x + 0.05, base_y - 0.03),
                 parent=camera.ui,
                 scale=(0.25, 0.025),
                 color=style_manager.get_resource_bar_bg_color()
