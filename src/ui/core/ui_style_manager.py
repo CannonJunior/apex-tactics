@@ -229,7 +229,7 @@ class UIStyleManager:
         # Try master UI config first
         if self.master_ui_config:
             color_value = self.master_ui_config.get_color(f'ui_style_manager.bars.resource_bars.{resource_type}.color', 
-                                                        default_hex_colors.get(resource_type, '#808080'))
+                                                        default_hex_colors.get(resource_type, '#333333'))
             if color_value is not None:
                 return color_value
         
@@ -245,7 +245,11 @@ class UIStyleManager:
         return self.get_color(color_path, default_color)
     
     def get_resource_bar_bg_color(self) -> Any:
-        """Get resource bar background color from styles."""
+        """Get resource bar background color from master UI config or legacy styles."""
+        if self.master_ui_config:
+            color_value = self.master_ui_config.get_color('ui_style_manager.bars.resource_bars.background_color', '#333333')
+            if color_value is not None:
+                return color_value
         return self.get_color('bars.resource_bars.background_color', (0.2, 0.2, 0.2, 1.0))
     
     def get_resource_bar_label(self, resource_type: str) -> str:
@@ -282,7 +286,11 @@ class UIStyleManager:
         return self.get_color('bars.action_points_bar.color', (1.0, 0.5, 0.0, 1.0))  # Orange
     
     def get_action_points_bar_bg_color(self) -> Any:
-        """Get action points bar background color from styles."""
+        """Get resource bar background color from master UI config or legacy styles."""
+        if self.master_ui_config:
+            color_value = self.master_ui_config.get_color('ui_style_manager.bars.action_points_bars.background_color', '#333333')
+            if color_value is not None:
+                return color_value
         return self.get_color('bars.action_points_bar.background_color', (0.2, 0.2, 0.2, 1.0))
     
     def get_highlight_color(self, highlight_type: str) -> Any:

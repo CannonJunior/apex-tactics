@@ -18,7 +18,9 @@ from .models import ChatMessage, ModelPerformanceMetrics
 logger = structlog.get_logger()
 
 # Fast response configuration - optimized for sub-1-second responses
+ollama_model="gemma3:1b"  # Small, fast model
 ollama_model="qwen2.5:3b"  # Small, fast model
+ollama_model="qwen:1.8b"  # Small, fast model
 fast_temperature = 0.1  # Lower temperature for faster, more deterministic responses
 fast_top_p = 0.2  # Lower top_p for faster sampling
 fast_max_tokens = 32  # Very short responses for speed
