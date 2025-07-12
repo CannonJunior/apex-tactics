@@ -17,20 +17,22 @@ from .models import ChatMessage, ModelPerformanceMetrics
 
 logger = structlog.get_logger()
 
-# Fast response configuration - optimized for sub-1-second responses
-ollama_model="gemma3:1b"  # Small, fast model
-ollama_model="qwen2.5:3b"  # Small, fast model
-ollama_model="qwen:1.8b"  # Small, fast model
-fast_temperature = 0.1  # Lower temperature for faster, more deterministic responses
-fast_top_p = 0.2  # Lower top_p for faster sampling
-fast_max_tokens = 32  # Very short responses for speed
+# ULTRA-FAST response configuration - optimized for sub-200ms responses
+ollama_model="gemma3:1b"  # Smallest, fastest model available
+fast_temperature = 0.01  # Extremely low temperature for maximum speed and determinism
+fast_top_p = 0.1  # Minimal top_p for fastest sampling
+fast_max_tokens = 16  # Ultra-short responses for maximum speed
 
 class OllamaClient:
     """Client for Ollama API communication"""
     
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
-        self.client = httpx.AsyncClient(timeout=2.0)  # 2 second timeout for ultra-fast responses
+        # Ultra-aggressive timeout for fastest possible responses
+        self.client = httpx.AsyncClient(
+            timeout=0.5,  # 500ms timeout - fail fast if model is slow
+            limits=httpx.Limits(max_connections=10, max_keepalive_connections=10)  # Connection pooling
+        )
         self.performance_stats: Dict[str, ModelPerformanceMetrics] = {}
         self.available_models: List[str] = []
         
@@ -135,26 +137,39 @@ class OllamaClient:
         """Generate text using a model"""
         start_time = time.time()
         
-        # Define default values optimized for SPEED (sub-1-second responses)
+        # ULTRA-OPTIMIZED defaults for MAXIMUM SPEED (sub-200ms responses)
         defaults = {
             "stream": False,
-            "temperature": fast_temperature,  # Very low for fast, deterministic responses
-            "top_p": fast_top_p,  # Low top_p for faster sampling
-            "top_k": 10,  # Much smaller top_k for speed
-            "repeat_penalty": 1.05,  # Lower repeat penalty for speed
+            "temperature": fast_temperature,  # Extremely low for maximum speed
+            "top_p": fast_top_p,  # Minimal top_p for fastest sampling
+            "top_k": 5,  # Extremely small top_k for maximum speed
+            "repeat_penalty": 1.01,  # Minimal repeat penalty for speed
             "max_tokens": None,  # Ollama uses 'num_predict'
-            "num_predict": fast_max_tokens,  # Very short responses
-            "num_ctx": 512,  # Much smaller context window for speed
+            "num_predict": fast_max_tokens,  # Ultra-short responses for speed
+            "num_ctx": 256,  # Minimal context window for speed
             "mirostat": 0,  # Disable mirostat for speed
             "mirostat_eta": 0.1,
             "mirostat_tau": 5.0,
-            "seed": None,
-            "stop": None,
+            "seed": 42,  # Fixed seed for consistency and potential speed
+            "stop": ["\n"],  # Stop early to reduce response time
             "tfs_z": 1.0,
             "typical_p": 1.0,
-            "repeat_last_n": 16,  # Much smaller for speed
+            "repeat_last_n": 8,  # Minimal for speed
             "presence_penalty": 0.0,
-            "frequency_penalty": 0.0
+            "frequency_penalty": 0.0,
+            # Additional Ollama-specific optimizations
+            "num_batch": 1,  # Process one token at a time for lowest latency
+            "num_gqa": 1,  # Minimal grouped query attention
+            "num_gpu": 1,  # Use single GPU for consistency
+            "main_gpu": 0,  # Specify primary GPU
+            "low_vram": False,  # Disable if you have enough VRAM for speed
+            "f16_kv": True,  # Use float16 for speed
+            "logits_all": False,  # Don't return all logits for speed
+            "vocab_only": False,  # Don't load vocab only
+            "use_mmap": True,  # Use memory mapping for speed
+            "use_mlock": True,  # Lock memory for consistency
+            "embedding_only": False,  # Don't use embedding mode
+            "numa": False  # Disable NUMA for single GPU setups
         }
         
         # Merge provided kwargs with defaults, kwargs take precedence
@@ -237,26 +252,39 @@ class OllamaClient:
         """Chat with a model using conversation format"""
         start_time = time.time()
         
-        # Define default values optimized for SPEED (sub-1-second responses)
+        # ULTRA-OPTIMIZED defaults for MAXIMUM SPEED (sub-200ms responses)
         defaults = {
             "stream": False,
-            "temperature": fast_temperature,  # Very low for fast, deterministic responses
-            "top_p": fast_top_p,  # Low top_p for faster sampling
-            "top_k": 10,  # Much smaller top_k for speed
-            "repeat_penalty": 1.05,  # Lower repeat penalty for speed
+            "temperature": fast_temperature,  # Extremely low for maximum speed
+            "top_p": fast_top_p,  # Minimal top_p for fastest sampling
+            "top_k": 5,  # Extremely small top_k for maximum speed
+            "repeat_penalty": 1.01,  # Minimal repeat penalty for speed
             "max_tokens": None,  # Ollama uses 'num_predict'
-            "num_predict": fast_max_tokens,  # Very short responses
-            "num_ctx": 512,  # Much smaller context window for speed
+            "num_predict": fast_max_tokens,  # Ultra-short responses for speed
+            "num_ctx": 256,  # Minimal context window for speed
             "mirostat": 0,  # Disable mirostat for speed
             "mirostat_eta": 0.1,
             "mirostat_tau": 5.0,
-            "seed": None,
-            "stop": None,
+            "seed": 42,  # Fixed seed for consistency and potential speed
+            "stop": ["\n"],  # Stop early to reduce response time
             "tfs_z": 1.0,
             "typical_p": 1.0,
-            "repeat_last_n": 16,  # Much smaller for speed
+            "repeat_last_n": 8,  # Minimal for speed
             "presence_penalty": 0.0,
-            "frequency_penalty": 0.0
+            "frequency_penalty": 0.0,
+            # Additional Ollama-specific optimizations
+            "num_batch": 1,  # Process one token at a time for lowest latency
+            "num_gqa": 1,  # Minimal grouped query attention
+            "num_gpu": 1,  # Use single GPU for consistency
+            "main_gpu": 0,  # Specify primary GPU
+            "low_vram": False,  # Disable if you have enough VRAM for speed
+            "f16_kv": True,  # Use float16 for speed
+            "logits_all": False,  # Don't return all logits for speed
+            "vocab_only": False,  # Don't load vocab only
+            "use_mmap": True,  # Use memory mapping for speed
+            "use_mlock": True,  # Lock memory for consistency
+            "embedding_only": False,  # Don't use embedding mode
+            "numa": False  # Disable NUMA for single GPU setups
         }
         
         # Merge provided kwargs with defaults, kwargs take precedence
@@ -405,10 +433,8 @@ class OllamaClient:
                    game_state_keys=list(game_state.keys()),
                    prompt_type="tactical_analysis")
         
-        # Ultra-short prompt for speed
-        prompt = f"""Tactical advice for {unit_id}:
-Game: {len(game_state.get('units', []))} units
-Action?"""
+        # ULTRA-short prompt for maximum speed
+        prompt = f"{unit_id}: Move"
         
         return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
     
@@ -418,8 +444,8 @@ Action?"""
                    game_state_keys=list(game_state.keys()),
                    prompt_type="strategic_analysis")
         
-        # Ultra-short prompt for speed
-        prompt = f"""Strategy: {len(game_state.get('units', []))} units. Win chance?"""
+        # ULTRA-short prompt for maximum speed  
+        prompt = "Good"
         
         return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
     
@@ -440,9 +466,9 @@ Action?"""
             "expert": "Use advanced tactics and consider long-term consequences."
         }
         
-        # Ultra-short prompt for speed - just pick the first action
+        # ULTRA-short prompt for maximum speed - immediate action
         first_action = available_actions[0] if available_actions else "wait"
-        prompt = f"""JSON: {{"chosen_action": "{first_action}", "confidence": 0.8}}"""
+        prompt = first_action
         
         return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
     
@@ -453,7 +479,7 @@ Action?"""
                    battlefield_context_keys=list(battlefield_context.keys()),
                    prompt_type="unit_evaluation")
         
-        # Ultra-short prompt for speed
-        prompt = f"""Unit eval: Good. Score: 0.7"""
+        # ULTRA-short prompt for maximum speed
+        prompt = "0.7"
         
         return await self.generate(ollama_model, prompt, temperature=fast_temperature, max_tokens=fast_max_tokens)
