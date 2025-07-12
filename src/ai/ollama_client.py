@@ -18,7 +18,7 @@ from .models import ChatMessage, ModelPerformanceMetrics
 logger = structlog.get_logger()
 
 # ULTRA-FAST response configuration - optimized for sub-200ms responses
-ollama_model="gemma3:1b"  # Smallest, fastest model available
+ollama_model="gemma3:1b"  # Fast, commonly available model
 fast_temperature = 0.01  # Extremely low temperature for maximum speed and determinism
 fast_top_p = 0.1  # Minimal top_p for fastest sampling
 fast_max_tokens = 16  # Ultra-short responses for maximum speed
@@ -28,9 +28,9 @@ class OllamaClient:
     
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
-        # Ultra-aggressive timeout for fastest possible responses
+        # Balanced timeout for reliable responses
         self.client = httpx.AsyncClient(
-            timeout=0.5,  # 500ms timeout - fail fast if model is slow
+            timeout=0.01,  # 3 Times out on old NUC even with 10 seconds, 0.01 makes it such that it will always use fallback logic instead of ollama
             limits=httpx.Limits(max_connections=10, max_keepalive_connections=10)  # Connection pooling
         )
         self.performance_stats: Dict[str, ModelPerformanceMetrics] = {}
@@ -137,39 +137,29 @@ class OllamaClient:
         """Generate text using a model"""
         start_time = time.time()
         
-        # ULTRA-OPTIMIZED defaults for MAXIMUM SPEED (sub-200ms responses)
+        # Check if model exists, if not try to use a fallback
+        if model not in self.available_models:
+            logger.warning(f"Model {model} not available, available models: {self.available_models}")
+            # Try common fast models as fallbacks
+            fallback_models = ["gemma2:2b", "qwen2:1.5b", "phi3:mini", "llama3.2:1b", "tinyllama"]
+            for fallback in fallback_models:
+                if fallback in self.available_models:
+                    logger.info(f"Using fallback model: {fallback}")
+                    model = fallback
+                    break
+            else:
+                if self.available_models:
+                    model = self.available_models[0]  # Use first available model
+                    logger.info(f"Using first available model: {model}")
+        
+        # ULTRA-SIMPLIFIED for MAXIMUM COMPATIBILITY and SPEED
         defaults = {
             "stream": False,
             "temperature": fast_temperature,  # Extremely low for maximum speed
             "top_p": fast_top_p,  # Minimal top_p for fastest sampling
             "top_k": 5,  # Extremely small top_k for maximum speed
-            "repeat_penalty": 1.01,  # Minimal repeat penalty for speed
-            "max_tokens": None,  # Ollama uses 'num_predict'
             "num_predict": fast_max_tokens,  # Ultra-short responses for speed
-            "num_ctx": 256,  # Minimal context window for speed
-            "mirostat": 0,  # Disable mirostat for speed
-            "mirostat_eta": 0.1,
-            "mirostat_tau": 5.0,
-            "seed": 42,  # Fixed seed for consistency and potential speed
-            "stop": ["\n"],  # Stop early to reduce response time
-            "tfs_z": 1.0,
-            "typical_p": 1.0,
-            "repeat_last_n": 8,  # Minimal for speed
-            "presence_penalty": 0.0,
-            "frequency_penalty": 0.0,
-            # Additional Ollama-specific optimizations
-            "num_batch": 1,  # Process one token at a time for lowest latency
-            "num_gqa": 1,  # Minimal grouped query attention
-            "num_gpu": 1,  # Use single GPU for consistency
-            "main_gpu": 0,  # Specify primary GPU
-            "low_vram": False,  # Disable if you have enough VRAM for speed
-            "f16_kv": True,  # Use float16 for speed
-            "logits_all": False,  # Don't return all logits for speed
-            "vocab_only": False,  # Don't load vocab only
-            "use_mmap": True,  # Use memory mapping for speed
-            "use_mlock": True,  # Lock memory for consistency
-            "embedding_only": False,  # Don't use embedding mode
-            "numa": False  # Disable NUMA for single GPU setups
+            "num_ctx": 256  # Minimal context window for speed
         }
         
         # Merge provided kwargs with defaults, kwargs take precedence
@@ -240,11 +230,28 @@ class OllamaClient:
             
             return generated_text
             
+        except httpx.HTTPStatusError as e:
+            logger.error("❌ OLLAMA HTTP ERROR", 
+                        model=model, 
+                        prompt_length=len(prompt),
+                        status_code=e.response.status_code,
+                        response_text=e.response.text,
+                        parameters=final_params)
+            raise
+        except httpx.TimeoutException as e:
+            logger.error("❌ OLLAMA TIMEOUT", 
+                        model=model, 
+                        prompt_length=len(prompt),
+                        timeout=self.client.timeout,
+                        error=str(e),
+                        parameters=final_params)
+            raise
         except Exception as e:
             logger.error("❌ OLLAMA GENERATE FAILED", 
                         model=model, 
                         prompt_length=len(prompt),
                         error=str(e),
+                        error_type=type(e).__name__,
                         parameters=final_params)
             raise
     
@@ -252,39 +259,14 @@ class OllamaClient:
         """Chat with a model using conversation format"""
         start_time = time.time()
         
-        # ULTRA-OPTIMIZED defaults for MAXIMUM SPEED (sub-200ms responses)
+        # ULTRA-SIMPLIFIED for MAXIMUM COMPATIBILITY and SPEED
         defaults = {
             "stream": False,
             "temperature": fast_temperature,  # Extremely low for maximum speed
             "top_p": fast_top_p,  # Minimal top_p for fastest sampling
             "top_k": 5,  # Extremely small top_k for maximum speed
-            "repeat_penalty": 1.01,  # Minimal repeat penalty for speed
-            "max_tokens": None,  # Ollama uses 'num_predict'
             "num_predict": fast_max_tokens,  # Ultra-short responses for speed
-            "num_ctx": 256,  # Minimal context window for speed
-            "mirostat": 0,  # Disable mirostat for speed
-            "mirostat_eta": 0.1,
-            "mirostat_tau": 5.0,
-            "seed": 42,  # Fixed seed for consistency and potential speed
-            "stop": ["\n"],  # Stop early to reduce response time
-            "tfs_z": 1.0,
-            "typical_p": 1.0,
-            "repeat_last_n": 8,  # Minimal for speed
-            "presence_penalty": 0.0,
-            "frequency_penalty": 0.0,
-            # Additional Ollama-specific optimizations
-            "num_batch": 1,  # Process one token at a time for lowest latency
-            "num_gqa": 1,  # Minimal grouped query attention
-            "num_gpu": 1,  # Use single GPU for consistency
-            "main_gpu": 0,  # Specify primary GPU
-            "low_vram": False,  # Disable if you have enough VRAM for speed
-            "f16_kv": True,  # Use float16 for speed
-            "logits_all": False,  # Don't return all logits for speed
-            "vocab_only": False,  # Don't load vocab only
-            "use_mmap": True,  # Use memory mapping for speed
-            "use_mlock": True,  # Lock memory for consistency
-            "embedding_only": False,  # Don't use embedding mode
-            "numa": False  # Disable NUMA for single GPU setups
+            "num_ctx": 256  # Minimal context window for speed
         }
         
         # Merge provided kwargs with defaults, kwargs take precedence
