@@ -72,10 +72,25 @@ class CharacterAttackInterface:
     
     def _create_action_buttons(self):
         """Create action buttons with callbacks."""
-        self.end_turn_btn = Button(
-            text='END TURN',
-            color=color.orange
-        )
+        # Load master UI configuration for end turn button
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Get button configuration from master UI config
+            btn_color = ui_config.get_color('panels.control_panel.end_turn_button.color', '#FFA500')
+            btn_text = ui_config.get('panels.control_panel.end_turn_button.text', 'END TURN')
+            
+            self.end_turn_btn = Button(
+                text=btn_text,
+                color=btn_color
+            )
+        except ImportError:
+            # Fallback if master UI config not available
+            self.end_turn_btn = Button(
+                text='END TURN',
+                color=color.orange
+            )
         
         # Set up button functionality
         self.end_turn_btn.on_click = self.end_turn_clicked
@@ -88,17 +103,30 @@ class CharacterAttackInterface:
     
     def _create_main_interface(self):
         """Create the main interface using configuration values."""
-        config = get_config_manager()
-        
         # Main background panel removed per user request
         self.panel = None
         
         # Position end turn button independently (no panel parent)
         self.end_turn_btn.parent = camera.ui
-        btn_pos = config.get_scale('ui_layout.ui_layout.control_panel.end_turn_button.position', (0, -0.38, 0.01))
-        btn_scale = config.get_value('ui_layout.ui_layout.control_panel.end_turn_button.scale', 0.08)
-        self.end_turn_btn.position = btn_pos
-        self.end_turn_btn.scale = btn_scale
+        
+        # Load position and scale from master UI config
+        try:
+            from src.core.ui.ui_config_manager import get_ui_config_manager
+            ui_config = get_ui_config_manager()
+            
+            # Get button position and scale from master UI config
+            btn_pos = ui_config.get_position_tuple('panels.control_panel.end_turn_button.position', (0, -0.38, 0.01))
+            btn_scale = ui_config.get('panels.control_panel.end_turn_button.scale', 0.08)
+            
+            self.end_turn_btn.position = btn_pos
+            self.end_turn_btn.scale = btn_scale
+        except ImportError:
+            # Fallback if master UI config not available
+            config = get_config_manager()
+            btn_pos = config.get_scale('ui_layout.ui_layout.control_panel.end_turn_button.position', (0, -0.38, 0.01))
+            btn_scale = config.get_value('ui_layout.ui_layout.control_panel.end_turn_button.scale', 0.08)
+            self.end_turn_btn.position = btn_pos
+            self.end_turn_btn.scale = btn_scale
     
     def _position_elements(self):
         """Position the interface and carousel elements using configuration."""

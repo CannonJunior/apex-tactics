@@ -97,6 +97,20 @@ class TacticalRPG:
         except ImportError as e:
             print(f"ℹ️ MCP integration not available: {e}")
         
+        # Initialize ReactPy integration (embedded in Ursina UI)
+        self.reactpy_integration = None
+        try:
+            from src.ui.reactpy.ursina_webview import create_embedded_reactpy
+            self.reactpy_integration = create_embedded_reactpy(self)
+            if self.reactpy_integration:
+                print("✅ ReactPy integration enabled (embedded)")
+            else:
+                print("⚠️ ReactPy integration failed to start")
+        except ImportError as e:
+            print(f"ℹ️ ReactPy integration not available: {e}")
+        except Exception as e:
+            print(f"⚠️ ReactPy integration failed: {e}")
+        
         # Load battlefield configuration
         config_manager = get_config_manager()
         self.battlefield_config = config_manager.get_value('battlefield_config', {

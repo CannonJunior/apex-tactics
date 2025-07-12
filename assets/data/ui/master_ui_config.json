@@ -115,7 +115,7 @@
       "angle_y": 0,
       "move_speed": 0.5,
       "rotation_speed": 50,
-      "distance_limits": {"min": 3, "max": 15},
+      "distance_limits": {"min": 3, "max": 30},
       "angle_limits": {"min": -80, "max": 80},
       "mouse_sensitivity": {
         "orbit": 50,
@@ -136,7 +136,7 @@
         "angle_y": 0
       },
       "top_down": {
-        "distance": 12,
+        "distance": 25,
         "angle_x": 90,
         "angle_y": 0,
         "rotation": {"x": 90, "y": 0, "z": 0}
@@ -158,11 +158,11 @@
       },
       
       "end_turn_button": {
-        "position": {"x": 0.0, "y": -0.38, "z": 0.01},
+        "position": {"x": -0.7, "y": 0.3, "z": 0.01},
         "scale": 0.08,
         "color": "#FFA500",
         "text": "End Turn",
-        "text_color": "#FFFFFF",
+        "text_color": "#000000",
         "text_scale": 1.0
       },
       
@@ -434,8 +434,8 @@
       "rows": 1,
       "columns": 8,
       "slot_size": 0.06,
-      "slot_spacing": 0.01,
-      "start_position": {"x": -0.4, "y": 0.35, "z": 0.0}
+      "slot_spacing": 0.005,
+      "start_position": {"x": -0.43, "y": 0.32, "z": 0.0}
     },
     
     "visual_settings": {
