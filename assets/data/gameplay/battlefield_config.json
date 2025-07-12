@@ -1,7 +1,7 @@
 {
   "grid": {
-    "width": 8,
-    "height": 8,
+    "width": 10,
+    "height": 15,
     "tile_size": 1.0
   },
   "units": {
@@ -13,6 +13,12 @@
         "start_y": 1
       },
       {
+        "name": "Wargi",
+        "type": "WARGI",
+        "start_x": 3,
+        "start_y": 1
+      },
+      {
         "name": "Sage", 
         "type": "MAGI",
         "start_x": 2,
@@ -21,16 +27,46 @@
     ],
     "enemy_units": [
       {
-        "name": "Orc",
-        "type": "UBERMENSCH", 
-        "start_x": 6,
-        "start_y": 6
+        "name": "Vex",
+        "type": "SOUL_LINKED",
+        "start_x": 5,
+        "start_y": 12
       },
       {
-        "name": "Spirit",
+        "name": "Gorth",
+        "type": "UBERMENSCH", 
+        "start_x": 8,
+        "start_y": 13
+      },
+      {
+        "name": "Magna",
+        "type": "UBERMENSCH",
+        "start_x": 6,
+        "start_y": 13
+      },
+      {
+        "name": "Thane",
+        "type": "UBERMENSCH",
+        "start_x": 4,
+        "start_y": 13
+      },
+      {
+        "name": "Zephyr",
+        "type": "REALM_WALKER",
+        "start_x": 3,
+        "start_y": 14
+      },
+      {
+        "name": "Echo",
         "type": "REALM_WALKER",
         "start_x": 5,
-        "start_y": 6
+        "start_y": 14
+      },      
+      {
+        "name": "Shade",
+        "type": "REALM_WALKER",
+        "start_x": 7,
+        "start_y": 14
       }
     ]
   },

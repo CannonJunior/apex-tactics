@@ -73,7 +73,8 @@ class ConfigManager:
         # Define configuration file mappings
         self.config_files = {
             'combat': 'data/gameplay/combat_values.json',
-            'movement': 'data/gameplay/movement_values.json', 
+            'movement': 'data/gameplay/movement_values.json',
+            'battlefield_config': 'data/gameplay/battlefield_config.json',
             'ui_layout': 'data/ui/layout_config.json',
             'character_interface_config': 'data/ui/character_interface_config.json',
             'animations': 'data/visual/animation_config.json',
