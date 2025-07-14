@@ -1,0 +1,206 @@
+================================================================================
+APEX TACTICS PROJECT DEPENDENCY ANALYSIS
+================================================================================
+
+SUMMARY:
+  Total project files: 240
+  Used files: 73 (30.4%)
+  Unused files: 167 (69.6%)
+
+DEPENDENCY TREE FOR apex-tactics.py:
+  Total dependencies: 62
+  Direct imports (7):
+    src/game/controllers/tactical_rpg_controller.py
+    src/ui/panels/character_panel.py
+    src/ui/panels/control_panel.py
+    src/ui/panels/inventory_panel.py
+    src/ui/panels/party_panel.py
+    src/ui/panels/talent_panel.py
+    src/ui/panels/upgrade_panel.py
+
+DEPENDENCY TREE FOR apex-tactics-websocket-client.py:
+  Total dependencies: 63
+  Direct imports (8):
+    src/client/websocket_game_client.py
+    src/game/controllers/tactical_rpg_controller.py
+    src/ui/panels/character_panel.py
+    src/ui/panels/control_panel.py
+    src/ui/panels/inventory_panel.py
+    src/ui/panels/party_panel.py
+    src/ui/panels/talent_panel.py
+    src/ui/panels/upgrade_panel.py
+
+DEPENDENCY TREE FOR apex-tactics-enhanced.py:
+  Total dependencies: 67
+  Direct imports (12):
+    src/ai/ai_integration_manager.py
+    src/game/config/feature_flags.py
+    src/game/controllers/tactical_rpg_controller.py
+    src/integration/controller_bridge.py
+    src/ui/panels/character_panel.py
+    src/ui/panels/control_panel.py
+    src/ui/panels/inventory_panel.py
+    src/ui/panels/party_panel.py
+    src/ui/panels/talent_panel.py
+    src/ui/panels/upgrade_panel.py
+    src/ui/queue_management.py
+    src/ui/ui_integration.py
+
+DEPENDENCY TREE FOR run_game_engine.py:
+  Total dependencies: 3
+  Direct imports (2):
+    src/engine/game_engine.py
+    src/engine/integrations/websocket_handler.py
+
+UNUSED FILES BY CATEGORY:
+  AI (24 files):
+    src/ai/__init__.py
+    src/ai/adaptive_difficulty.py
+    src/ai/agents/__init__.py
+    src/ai/agents/mcp_tactical_agent.py
+    src/ai/decision_explainer.py
+    src/ai/difficulty/__init__.py
+    src/ai/difficulty/adaptive_scaling.py
+    src/ai/difficulty/difficulty_manager.py
+    src/ai/leaders/__init__.py
+    src/ai/leaders/leader_ai.py
+    ... and 14 more
+
+  COMPONENTS (10 files):
+    src/components/__init__.py
+    src/components/combat/__init__.py
+    src/components/equipment/__init__.py
+    src/components/equipment/equipment.py
+    src/components/equipment/equipment_manager.py
+    src/components/gameplay/__init__.py
+    src/components/gameplay/tactical_movement.py
+    src/components/gameplay/unit_stats.py
+    src/components/movement/__init__.py
+    src/components/stats/__init__.py
+
+  CORE (17 files):
+    src/core/__init__.py
+    src/core/assets/__init__.py
+    src/core/assets/talent_manager.py
+    src/core/ecs.py
+    src/core/ecs/__init__.py
+    src/core/events.py
+    src/core/events/__init__.py
+    src/core/events/event_bus.py
+    src/core/events_old/__init__.py
+    src/core/events_old/event_bus.py
+    ... and 7 more
+
+  DEMOS (1 files):
+    src/demos/__init__.py
+
+  ENGINE (14 files):
+    src/engine/battlefield.py
+    src/engine/components/equipment_component.py
+    src/engine/components/position_component.py
+    src/engine/components/stats_component.py
+    src/engine/components/status_effects_component.py
+    src/engine/components/team_component.py
+    src/engine/game_state.py
+    src/engine/integrations/__init__.py
+    src/engine/integrations/ai_integration.py
+    src/engine/integrations/ai_websocket.py
+    ... and 4 more
+
+  GAME (12 files):
+    src/game/battle/__init__.py
+    src/game/battle/action_queue.py
+    src/game/battle/battle_manager.py
+    src/game/controllers/__init__.py
+    src/game/effects/effect_system.py
+    src/game/factories/__init__.py
+    src/game/factories/unit_factory.py
+    src/game/interfaces/game_interfaces.py
+    src/game/managers/__init__.py
+    src/game/managers/base_manager.py
+    ... and 2 more
+
+  ROOT (12 files):
+    camera_controller.py
+    dependency_analyzer.py
+    integration_example.py
+    main.py
+    project_dependency_analyzer.py
+    scripts/launch_mcp_gateway.py
+    scripts/migrate_ui_config.py
+    scripts/run_game_with_mcp.py
+    scripts/run_tests.py
+    simple_test.py
+    ... and 2 more
+
+  SRC OTHER (21 files):
+    src/__init__.py
+    src/api/game_engine.py
+    src/api/models.py
+    src/api/websocket_manager.py
+    src/client/__init__.py
+    src/client/client_ui_bridge.py
+    src/client/panel_adapter.py
+    src/integration/__init__.py
+    src/integration/legacy_compatibility.py
+    src/integration/ursina_adapter.py
+    ... and 11 more
+
+  TESTS (17 files):
+    docker/test-services.py
+    src/ai/test_ai_behaviors.py
+    src/ai/test_ollama_logging.py
+    test_ap_validation.py
+    test_hotkey_mcp.py
+    test_reactpy.py
+    tests/integration/test_ai_service_integration.py
+    tests/integration/test_full_system_integration.py
+    tests/integration/test_game_engine_integration.py
+    tests/integration/test_mcp_gateway_integration.py
+    ... and 7 more
+
+  UI (39 files):
+    src/core/ui/__init__.py
+    src/engine/ui/__init__.py
+    src/engine/ui/game_ui_manager.py
+    src/engine/ui/notification_system.py
+    src/engine/ui/visual_effects.py
+    src/game/utils/ui/confirmation.py
+    src/ui/__init__.py
+    src/ui/action_prediction.py
+    src/ui/battlefield/unit_entity.py
+    src/ui/camera/__init__.py
+    ... and 29 more
+
+MOST IMPORTED PROJECT FILES:
+  src/core/ui/ui_config_manager.py: imported by 21 files
+  src/core/math/vector.py: imported by 19 files
+  src/core/ecs/component.py: imported by 18 files
+  src/core/ecs/entity.py: imported by 15 files
+  src/core/models/unit_types.py: imported by 10 files
+  src/components/stats/attributes.py: imported by 9 files
+  src/game/config/feature_flags.py: imported by 8 files
+  src/components/combat/damage.py: imported by 8 files
+  src/core/assets/unit_data_manager.py: imported by 6 files
+  src/core/assets/data_manager.py: imported by 6 files
+  src/core/assets/config_manager.py: imported by 6 files
+  src/components/combat/attack.py: imported by 6 files
+  src/ui/panels/control_panel.py: imported by 5 files
+  src/game/controllers/tactical_rpg_controller.py: imported by 5 files
+  src/engine/game_engine.py: imported by 5 files
+
+HIGH-CONFIDENCE REMOVAL CANDIDATES:
+  TESTS (17 files)
+  DEMOS (1 files)
+
+UNCERTAIN FILES (MAY BE DYNAMICALLY LOADED):
+  src/ai/difficulty/difficulty_manager.py
+  src/ai/managers/__init__.py
+  src/ai/managers/ai_agent_manager.py
+  src/api/websocket_manager.py
+  src/components/equipment/equipment_manager.py
+  src/core/assets/talent_manager.py
+  src/engine/ui/game_ui_manager.py
+  src/game/battle/battle_manager.py
+  src/game/factories/unit_factory.py
+  src/game/managers/__init__.py
