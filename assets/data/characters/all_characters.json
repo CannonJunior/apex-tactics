@@ -327,9 +327,9 @@
       "description": "Wise warrior with balanced combat and magical abilities",
       "faction": "player",
       "visual": {
-        "color": "blue",
-        "model": "cube",
-        "scale": [0.8, 2.0, 0.8]
+        "color": "red",
+        "model": "assets/fbx/Fierce_Feline_Warrior_0719232920_generate.fbx",
+        "scale": [0.004, 0.01, 0.004]
       },
       "stats": {
         "base_health": 95,
@@ -435,8 +435,8 @@
       "faction": "player",
       "visual": {
         "color": "cyan",
-        "model": "cube",
-        "scale": [0.8, 2.0, 0.8]
+        "model": "assets/fbx/Mystical_Warlock_0720131935_generate.fbx",
+        "scale": [0.004, 0.01, 0.004]
       },
       "stats": {
         "base_health": 70,
@@ -653,9 +653,9 @@
       "description": "A hero-mancer skilled in leadership and combat prowess",
       "faction": "player",
       "visual": {
-        "color": "orange",
-        "model": "cube",
-        "scale": [0.8, 2.0, 0.8]
+        "color": "white",
+        "model": "assets/fbx/Eternal_Sentinel_0719224703_texture_fbx/Eternal_Sentinel_0719224703_texture.fbx",
+        "scale": [0.004, 0.01, 0.004]
       },
       "stats": {
         "base_health": 100,
